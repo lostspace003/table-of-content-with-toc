@@ -1,0 +1,487 @@
+1
+00:00:01,200 --> 00:00:03,977
+A ticket asks for the traffic flow from the
+
+2
+00:00:03,977 --> 00:00:06,303
+branch office to the payments V I P.
+
+3
+00:00:06,303 --> 00:00:09,016
+Someone opens a terminal, runs traceroute,
+
+4
+00:00:09,016 --> 00:00:11,858
+runs ping, and starts drawing boxes by hand.
+
+5
+00:00:11,858 --> 00:00:14,183
+By the time the diagram is finished,
+
+6
+00:00:14,183 --> 00:00:16,056
+the path has already changed.
+
+7
+00:00:16,806 --> 00:00:19,711
+What if Claude ran the probes through code you
+
+8
+00:00:19,711 --> 00:00:21,858
+trust, read every hop as evidence,
+
+9
+00:00:21,858 --> 00:00:23,690
+and drew the diagram for you,
+
+10
+00:00:23,690 --> 00:00:27,037
+with a person approving before anything is published?
+
+11
+00:00:27,037 --> 00:00:29,815
+That is traffic and flow diagram automation,
+
+12
+00:00:29,815 --> 00:00:31,710
+done with Claude, done safely.
+
+13
+00:00:32,460 --> 00:00:36,622
+Gennoor Tech presents Traffic and Flow Diagram Automation with
+
+14
+00:00:36,622 --> 00:00:37,092
+Claude.
+
+15
+00:00:37,842 --> 00:00:40,396
+One request in. One proven diagram out.
+
+16
+00:00:40,396 --> 00:00:43,407
+Over three days you build a pipeline in eleven
+
+17
+00:00:43,407 --> 00:00:46,026
+modules where Claude plans and explains,
+
+18
+00:00:46,026 --> 00:00:49,038
+deterministic Python runs ping and traceroute,
+
+19
+00:00:49,038 --> 00:00:51,854
+and every hop in the picture traces back to
+
+20
+00:00:51,854 --> 00:00:53,360
+a probe you can replay.
+
+21
+00:00:53,360 --> 00:00:55,193
+Claude never guesses a path.
+
+22
+00:00:55,193 --> 00:00:56,764
+If a hop did not answer,
+
+23
+00:00:56,764 --> 00:00:58,074
+the diagram says so.
+
+24
+00:00:58,824 --> 00:01:02,304
+You begin with what traceroute and ping can actually
+
+25
+00:01:02,304 --> 00:01:04,178
+prove, and what they cannot.
+
+26
+00:01:04,178 --> 00:01:08,394
+Asymmetric return paths. Load balancers that hide pool members.
+
+27
+00:01:08,394 --> 00:01:10,268
+Firewalls that drop I C M P.
+
+28
+00:01:10,268 --> 00:01:12,276
+Then you set up the workbench.
+
+29
+00:01:12,276 --> 00:01:14,150
+Claude Code on your machine,
+
+30
+00:01:14,150 --> 00:01:16,358
+the Claude Agent S D K in Python,
+
+31
+00:01:16,358 --> 00:01:18,834
+and an M C P server that exposes only
+
+32
+00:01:18,834 --> 00:01:22,114
+read only probe tools, with every call logged and
+
+33
+00:01:22,114 --> 00:01:24,456
+credentials kept out of the prompt.
+
+34
+00:01:25,206 --> 00:01:27,419
+Next you build the probe runners.
+
+35
+00:01:27,419 --> 00:01:31,241
+Deterministic Python wrappers around ping and traceroute,
+
+36
+00:01:31,241 --> 00:01:34,929
+with timeouts, retries and parsers that turn raw output
+
+37
+00:01:34,929 --> 00:01:36,606
+into a typed path record.
+
+38
+00:01:36,606 --> 00:01:40,361
+Claude requests the probes through tool use and receives
+
+39
+00:01:40,361 --> 00:01:41,635
+structured J S O N.
+
+40
+00:01:41,635 --> 00:01:44,384
+It cannot run a shell command on its own.
+
+41
+00:01:44,384 --> 00:01:46,329
+And when a hop returns stars,
+
+42
+00:01:46,329 --> 00:01:49,682
+the record marks it unknown instead of filling the
+
+43
+00:01:49,682 --> 00:01:49,950
+gap.
+
+44
+00:01:50,700 --> 00:01:54,074
+Day two adds context. Hops are enriched from F5
+
+45
+00:01:54,074 --> 00:01:56,515
+through iControl REST and t m s h,
+
+46
+00:01:56,515 --> 00:01:59,818
+from Citrix NetScaler through the NITRO A P I,
+
+47
+00:01:59,818 --> 00:02:02,762
+from Radware Alteon and Cyber Controller,
+
+48
+00:02:02,762 --> 00:02:04,916
+and from other load balancers,
+
+49
+00:02:04,916 --> 00:02:08,146
+Anaya L B included, through a common adapter.
+
+50
+00:02:08,146 --> 00:02:10,516
+The Cisco A P I C tells you where
+
+51
+00:02:10,516 --> 00:02:12,741
+a path enters the A C I fabric.
+
+52
+00:02:12,741 --> 00:02:17,480
+Then Claude writes Mermaid. A deterministic renderer validates the
+
+53
+00:02:17,480 --> 00:02:20,711
+syntax, every node carries the probe I D that
+
+54
+00:02:20,711 --> 00:02:24,516
+placed it, and unknown segments are drawn as unknown.
+
+55
+00:02:25,266 --> 00:02:27,464
+Then the module most teams skip.
+
+56
+00:02:27,464 --> 00:02:31,655
+Guardrails. Probe targets are restricted to an approved scope
+
+57
+00:02:31,655 --> 00:02:34,746
+list, enforced in code and not in the prompt.
+
+58
+00:02:34,746 --> 00:02:38,662
+Rate limits and probe budgets keep automated tracing from
+
+59
+00:02:38,662 --> 00:02:41,547
+becoming a ping storm on production links.
+
+60
+00:02:41,547 --> 00:02:43,745
+Any diagram going to the C M D B
+
+61
+00:02:43,745 --> 00:02:47,249
+or into a shared repository needs a named approver,
+
+62
+00:02:47,249 --> 00:02:50,821
+and every tool call, device query and decision lands
+
+63
+00:02:50,821 --> 00:02:53,088
+in an audit log you can hand to a
+
+64
+00:02:53,088 --> 00:02:53,706
+reviewer.
+
+65
+00:02:54,456 --> 00:02:57,670
+Day three is publishing. The result is written to
+
+66
+00:02:57,670 --> 00:03:01,671
+the ServiceNow incident, change or request record through the
+
+67
+00:03:01,671 --> 00:03:04,097
+Table A P I, with the diagram and its
+
+68
+00:03:04,097 --> 00:03:07,639
+evidence bundle attached through the Attachment A P I,
+
+69
+00:03:07,639 --> 00:03:10,262
+and Flow Designer starting the pipeline.
+
+70
+00:03:10,262 --> 00:03:13,345
+A GitHub pull request carries the Mermaid file,
+
+71
+00:03:13,345 --> 00:03:15,968
+the evidence and a summary Claude wrote,
+
+72
+00:03:15,968 --> 00:03:18,264
+and a person reviews and merges it.
+
+73
+00:03:19,014 --> 00:03:22,457
+Then drift. A GitHub Actions schedule re-runs the probes
+
+74
+00:03:22,457 --> 00:03:25,778
+within scope, compares the new path with the published
+
+75
+00:03:25,778 --> 00:03:28,299
+one, and opens a pull request with a diff
+
+76
+00:03:28,299 --> 00:03:32,111
+only when something changed. Claude explains the difference in
+
+77
+00:03:32,111 --> 00:03:34,939
+plain language. You decide what to do with it.
+
+78
+00:03:34,939 --> 00:03:37,030
+The capstone ties it all together,
+
+79
+00:03:37,030 --> 00:03:39,059
+from request to approved diagram,
+
+80
+00:03:39,059 --> 00:03:42,072
+with nothing published that a person did not sign
+
+81
+00:03:42,072 --> 00:03:42,318
+off.
+
+82
+00:03:43,068 --> 00:03:46,322
+Every lab runs in a contained environment with lab
+
+83
+00:03:46,322 --> 00:03:48,469
+load balancers, a lab A P I C and
+
+84
+00:03:48,469 --> 00:03:52,113
+fictional hostnames. You will watch a traceroute go dark
+
+85
+00:03:52,113 --> 00:03:55,562
+behind a firewall, see Claude mark it unknown instead
+
+86
+00:03:55,562 --> 00:03:58,491
+of inventing a hop, and reject a publish that
+
+87
+00:03:58,491 --> 00:03:59,532
+has no approver.
+
+88
+00:04:00,282 --> 00:04:02,758
+Here is the full table of contents,
+
+89
+00:04:02,758 --> 00:04:04,669
+11 modules over three days.
+
+90
+00:04:04,669 --> 00:04:07,499
+Day one: What a flow diagram must prove,
+
+91
+00:04:07,499 --> 00:04:09,551
+and what probes can tell you;
+
+92
+00:04:09,551 --> 00:04:12,734
+Setting up Claude Code, the Agent SDK and MCP
+
+93
+00:04:12,734 --> 00:04:16,767
+for this workflow; Deterministic probe runners in Python;
+
+94
+00:04:16,767 --> 00:04:20,093
+and Path evidence model and structured outputs.
+
+95
+00:04:20,093 --> 00:04:23,701
+Day two: Enriching hops with load balancer context;
+
+96
+00:04:23,701 --> 00:04:26,673
+Data centre fabric and cloud path context;
+
+97
+00:04:26,673 --> 00:04:30,423
+Generating the traffic and flow diagram with Mermaid;
+
+98
+00:04:30,423 --> 00:04:34,880
+and Guardrails, approvals and audit for probing and publishing.
+
+99
+00:04:34,880 --> 00:04:38,205
+Day three: Publishing to ServiceNow and GitHub;
+
+100
+00:04:38,205 --> 00:04:41,106
+Drift detection and scheduled re-mapping;
+
+101
+00:04:41,106 --> 00:04:44,432
+and Capstone: request to approved flow diagram,
+
+102
+00:04:44,432 --> 00:04:45,210
+end to end.
+
+103
+00:04:45,960 --> 00:04:50,132
+Every build in this course follows six engineering principles.
+
+104
+00:04:50,132 --> 00:04:51,948
+Model output is a proposal,
+
+105
+00:04:51,948 --> 00:04:55,447
+never a fact. Authorization lives outside the model.
+
+106
+00:04:55,447 --> 00:04:58,407
+A human approves every consequential action.
+
+107
+00:04:58,407 --> 00:05:00,695
+Decisions and evidence are logged.
+
+108
+00:05:00,695 --> 00:05:04,665
+The stack stays provider-agnostic. And quality is measured,
+
+109
+00:05:04,665 --> 00:05:05,472
+not assumed.
+
+110
+00:05:06,222 --> 00:05:08,585
+Eleven build modules. Three days,
+
+111
+00:05:08,585 --> 00:05:11,449
+hands on. Four device families enriched.
+
+112
+00:05:11,449 --> 00:05:14,958
+And zero hops drawn without evidence behind them.
+
+113
+00:05:15,708 --> 00:05:18,508
+This course is for network operations,
+
+114
+00:05:18,508 --> 00:05:20,055
+N O C, load balancer,
+
+115
+00:05:20,055 --> 00:05:22,708
+data centre and cloud network teams,
+
+116
+00:05:22,708 --> 00:05:25,949
+and automation leads in India and worldwide.
+
+117
+00:05:25,949 --> 00:05:27,865
+You need T C P I P basics,
+
+118
+00:05:27,865 --> 00:05:31,254
+hands on familiarity with ping and traceroute,
+
+119
+00:05:31,254 --> 00:05:33,612
+and introductory Python and Git.
+
+120
+00:05:34,362 --> 00:05:36,325
+Stop drawing paths by hand.
+
+121
+00:05:36,325 --> 00:05:39,814
+Traffic and Flow Diagram Automation with Claude.
+
+122
+00:05:39,814 --> 00:05:41,922
+Enrol now at gennoor dot com.
