@@ -1,0 +1,400 @@
+{
+ "title": "Device Health Monitoring Automation with Claude",
+ "tagline": "From VIP, HA and version checks to the right ServiceNow ticket, automatically",
+ "days": 3,
+ "level": "Intermediate",
+ "audience": "Network operations, load balancer and data centre engineers, NOC leads, ITSM and automation teams running F5, NetScaler, Radware, other load balancers (Anaya LB) and Cisco ACI",
+ "prerequisites": [
+  "Working knowledge of load balancers (VIPs, pools, HA pairs, config sync)",
+  "Basic REST API and JSON concepts",
+  "Basic Python and Git",
+  "Familiarity with ServiceNow incidents and change requests is helpful, not required"
+ ],
+ "outcomes": [
+  "Define a platform-neutral health model covering VIP status, uptime, HA state, sync state, version and last change for every device class",
+  "Collect health signals from F5 iControl REST and tmsh, Citrix NetScaler NITRO, Radware Alteon via Cyber Controller, other load balancers (Anaya LB) and Cisco APIC REST",
+  "Use Claude with tool use and structured JSON outputs to turn raw evidence into a cited, severity-ranked health verdict",
+  "Create or update ServiceNow incidents through the Table API and Flow Designer with deduplication and correlation IDs",
+  "Run the whole workflow on a schedule under approvals, guardrails and a complete audit trail"
+ ],
+ "tools": [
+  [
+   "claude",
+   "Claude Code and Agent SDK"
+  ],
+  [
+   "anthropic",
+   "Model Context Protocol"
+  ],
+  [
+   "python",
+   "Python"
+  ],
+  [
+   "pydantic",
+   "Pydantic"
+  ],
+  [
+   "f5",
+   "F5 iControl REST / tmsh"
+  ],
+  [
+   "citrix",
+   "NetScaler NITRO API"
+  ],
+  [
+   "generic:radware",
+   "Radware Alteon / Cyber Controller"
+  ],
+  [
+   "cisco",
+   "Cisco APIC REST API"
+  ],
+  [
+   "generic:servicenow",
+   "ServiceNow Table API / Flow Designer"
+  ],
+  [
+   "github",
+   "GitHub"
+  ],
+  [
+   "githubactions",
+   "GitHub Actions"
+  ],
+  [
+   "pytest",
+   "pytest"
+  ]
+ ],
+ "modules": [
+  {
+   "day": 1,
+   "title": "What device health means across the fleet",
+   "icon": "generic:target",
+   "topics": [
+    "The six health signals: VIP status, uptime, HA status, sync status when in HA, software version and last change performed",
+    "How each signal looks on F5 BIG-IP, Citrix NetScaler, Radware Alteon, other load balancers (Anaya LB) and Cisco ACI",
+    "Why manual morning checks fail: missed sync drift, stale tickets, duplicate incidents",
+    "The pattern for the whole course: Claude plans and explains, deterministic code executes, a person approves, everything is logged"
+   ],
+   "lab": "Walk the lab fleet by hand with tmsh, NITRO and the APIC GUI and record what a healthy baseline looks like for each platform.",
+   "deliverable": "Health signal matrix per platform."
+  },
+  {
+   "day": 1,
+   "title": "Setting up Claude Code, the Agent SDK and MCP for this workflow",
+   "icon": "claude",
+   "topics": [
+    "Installing Claude Code, project CLAUDE.md conventions and the Agent SDK in Python",
+    "Building a read-only MCP server that exposes get_vip_status, get_ha_state and get_version tools over the lab devices",
+    "Tool use and structured JSON outputs: defining a HealthReading schema with Pydantic",
+    "Secrets handling for device and ServiceNow credentials outside the model context"
+   ],
+   "lab": "Scaffold the project with Claude Code, run the MCP server locally and have the agent read the version of lb-f5-01 through a tool call.",
+   "deliverable": "Working agent project with a read-only device MCP server."
+  },
+  {
+   "day": 1,
+   "title": "Collecting health from F5 and NetScaler",
+   "icon": "f5",
+   "topics": [
+    "F5 iControl REST: /mgmt/tm/ltm/virtual/stats for VIP availability, /mgmt/tm/cm/device and /mgmt/tm/cm/sync-status for HA and sync, /mgmt/tm/sys/version",
+    "tmsh equivalents (show sys failover, show cm sync-status, show sys version) for devices without REST access",
+    "NetScaler NITRO: /nitro/v1/stat/lbvserver, /nitro/v1/config/hanode, /nitro/v1/config/nsversion and system uptime",
+    "Normalising every response into the shared HealthReading schema with retries and timeouts"
+   ],
+   "lab": "Write the F5 and NetScaler collectors with Claude Code, inspect every diff, and run them against the lab HA pairs.",
+   "deliverable": "F5 and NetScaler collectors with pytest fixtures."
+  },
+  {
+   "day": 1,
+   "title": "Collecting health from Radware, other load balancers (Anaya LB) and Cisco ACI",
+   "icon": "cisco",
+   "topics": [
+    "Radware Alteon health through Cyber Controller REST and SNMP: virtual server state, VRRP peer status, sync status, image version",
+    "A generic adapter interface for other load balancers (Anaya LB) and devices that only offer CLI or SNMP",
+    "Cisco APIC REST API: topSystem and fabricNode for uptime and role, firmwareRunning for version, fabricHealthTotal for fabric health",
+    "Handling partial data: marking a signal as unknown rather than guessing"
+   ],
+   "lab": "Add the Alteon, generic and APIC collectors and prove a missing signal surfaces as unknown, not healthy.",
+   "deliverable": "Complete multi-platform collector library."
+  },
+  {
+   "day": 2,
+   "title": "Last change performed: correlating config history and change records",
+   "icon": "generic:clock",
+   "topics": [
+    "F5 audit log via tmsh show sys log audit (or /var/log/audit) and sync events in /var/log/ltm, NetScaler ns.log and config save timestamps, APIC audit log via the aaaModLR class",
+    "Pulling closed and scheduled change requests from the ServiceNow change_request table for each configuration item",
+    "Git-tracked configuration snapshots and diffs as a second source of truth",
+    "Building a timeline that links a health change to the last change performed on the device"
+   ],
+   "lab": "Make a controlled change on lb-ns-02, then watch the pipeline find it in the device log, the Git snapshot and the ServiceNow change record.",
+   "deliverable": "Change timeline per device."
+  },
+  {
+   "day": 2,
+   "title": "Claude as the triage analyst: structured health verdicts",
+   "icon": "anthropic",
+   "topics": [
+    "A HealthVerdict schema: severity, affected signals, cited evidence, likely cause, recommended action, confidence",
+    "Prompting with evidence bundles and forbidding conclusions without a cited reading",
+    "Severity rules as code: sync drift in an HA pair is never below major, a single VIP down on a standby is informational",
+    "Testing the analyst with contradictory and missing evidence"
+   ],
+   "lab": "Build the triage agent with the Agent SDK, feed it twenty synthetic evidence bundles and score its verdicts against the rules.",
+   "deliverable": "Triage agent with verdict test suite."
+  },
+  {
+   "day": 2,
+   "title": "Creating or updating ServiceNow tickets",
+   "icon": "generic:servicenow",
+   "topics": [
+    "ServiceNow Table API: incident create, query by correlation_id and cmdb_ci, update work notes and state",
+    "Decision logic: update the open ticket, reopen a resolved one, or create new, and never create duplicates",
+    "Flow Designer flows that assign, notify and set priority from the verdict severity",
+    "Idempotent runs and dry-run mode that prints the ticket payload without sending it"
+   ],
+   "lab": "Run the pipeline twice against a failing HA pair and prove it creates one incident, then updates it with new work notes.",
+   "deliverable": "ServiceNow ticket adapter with dedup logic."
+  },
+  {
+   "day": 2,
+   "title": "Guardrails, approvals and audit for health monitoring",
+   "icon": "generic:shield",
+   "topics": [
+    "Read-only by default: the MCP server exposes no write tools to devices",
+    "Approval gates for consequential actions: ticket priority P1 and P2, reopening resolved tickets, paging on-call",
+    "Audit record for every run: readings, prompt, verdict, ticket action, approver and timestamps in SQLite",
+    "Rate limits, timeouts and circuit breakers so a flapping device cannot flood ServiceNow"
+   ],
+   "lab": "Add the approval gate and audit log, then trigger a P1 verdict and watch the run pause until a person approves.",
+   "deliverable": "Approval and audit layer."
+  },
+  {
+   "day": 3,
+   "title": "Scheduling and running the workflow with GitHub Actions",
+   "icon": "githubactions",
+   "topics": [
+    "Repository layout, pull requests for every collector or rule change and required reviews",
+    "GitHub Actions on a schedule and on demand, with secrets and a self-hosted runner that can reach the devices",
+    "Run summaries as job artifacts and a daily health digest posted back to ServiceNow",
+    "Handling device maintenance windows and planned downtime without false tickets"
+   ],
+   "lab": "Ship the pipeline through a pull request, run it from Actions on a schedule and suppress alerts during a declared maintenance window.",
+   "deliverable": "Scheduled, reviewed and versioned monitoring pipeline."
+  },
+  {
+   "day": 3,
+   "title": "Testing, dashboards and operations",
+   "icon": "grafana",
+   "topics": [
+    "pytest suites for collectors, severity rules and ticket decision logic with recorded API fixtures",
+    "Exporting health readings to Prometheus and a Grafana fleet dashboard beside the ticket flow",
+    "Operator runbook: what to do when a collector fails, when a verdict is wrong, when ServiceNow is down",
+    "Measuring the outcome: time to ticket, duplicate rate, false positives"
+   ],
+   "lab": "Break a collector on purpose, watch the dashboard and the audit log explain it, and write the runbook entry.",
+   "deliverable": "Test suite, dashboard and operator runbook."
+  },
+  {
+   "day": 3,
+   "title": "Capstone: end-to-end device health monitoring for a mixed fleet",
+   "icon": "generic:capstone",
+   "topics": [
+    "Fleet in, verdicts out, with the right ServiceNow ticket created or updated and nothing consequential without approval",
+    "Scheduled GitHub Actions run against the full lab fleet with the approval gate and audit log exercised end to end",
+    "Dry-run and live run compared, with duplicate-ticket and false-positive checks against the acceptance criteria",
+    "Limitations statement, operator handover and team demo"
+   ],
+   "lab": "Capstone build and demo on the full lab fleet.",
+   "deliverable": "End-to-end monitoring platform and runbook."
+  }
+ ],
+ "capstone": "A scheduled platform that collects VIP, uptime, HA, sync, version and last-change evidence from F5, NetScaler, Radware, other load balancers (Anaya LB) and Cisco ACI, lets Claude produce a cited health verdict, and creates or updates the correct ServiceNow ticket with approvals and a full audit trail.",
+ "video": {
+  "hook_title": "Forty devices.\nOne morning check.",
+  "hook_sub": "Someone still logs in to every box to ask if it is healthy.",
+  "hook_q": "What if an agent checked\nevery VIP, HA pair and version,\nand raised the right ticket?",
+  "story_big": "Six signals.\nOne verdict.",
+  "story_num": "11",
+  "story_num_label": "build steps",
+  "story_sub": "From the first collector to a scheduled pipeline, every step is an increment you can test, review and demo.",
+  "paths": [
+   {
+    "name": "Set up and collect",
+    "items": [
+     [
+      "Health signal matrix",
+      "VIP, uptime, HA, sync, version, change"
+     ],
+     [
+      "Claude Code, Agent SDK, MCP",
+      "read-only device tools"
+     ],
+     [
+      "Multi-platform collectors",
+      "F5, NetScaler, Radware, ACI"
+     ]
+    ],
+    "panel": "terminal",
+    "panel_lines": [
+     "$ health collect --fleet lab",
+     "> lb-f5-01   version 17.1.1  uptime 212d  HA active   sync IN-SYNC   vips 48/48 up",
+     "> lb-f5-02   version 17.1.1  uptime 212d  HA standby  sync IN-SYNC   vips 48/48 up",
+     "> lb-ns-01   version 14.1    uptime 31d   HA primary  sync SUCCESS   vips 22/23 up",
+     "> lb-ns-02   version 13.1    uptime 2d    HA secondary sync FAILED    vips 22/23 up",
+     "> apic-01    version 6.0(3)  fabric health 97   nodes 12/12 active",
+     "> lb-alt-01  version 33.0    uptime 88d   VRRP master  sync UNKNOWN"
+    ]
+   },
+   {
+    "name": "Correlate and analyse",
+    "items": [
+     [
+      "Last change performed",
+      "device logs, Git, change_request"
+     ],
+     [
+      "Triage agent",
+      "cited, severity-ranked verdicts"
+     ]
+    ],
+    "panel": "terminal",
+    "panel_lines": [
+     "$ health analyse lb-ns-02",
+     "> last change: CHG0031877 'NetScaler 14.1 upgrade' closed 2d ago, primary only",
+     "> evidence: hanode sync state=FAILED  nsversion mismatch 14.1 vs 13.1",
+     "> verdict: MAJOR  cause: version mismatch blocks HA sync",
+     "> action: complete upgrade on lb-ns-02 under CHG0031877",
+     "> confidence: high   unknowns: none"
+    ]
+   },
+   {
+    "name": "Ticket with guardrails",
+    "items": [
+     [
+      "ServiceNow Table API",
+      "create or update, never duplicate"
+     ],
+     [
+      "Approvals and audit",
+      "P1 and P2 wait for a person"
+     ]
+    ],
+    "panel": "diff",
+    "panel_lines": [
+     "  incident lookup: correlation_id=lb-ns-02:ha-sync  found INC0048112 (open)",
+     "- state: In Progress   work_notes: (last update 26h ago)",
+     "+ state: In Progress   work_notes: sync still FAILED, version mismatch cited",
+     "+ priority: 2 -> PENDING APPROVAL (noc-lead)",
+     "  audit: run #214 readings=7 verdict=MAJOR action=update approver=pending",
+     "  dry-run: off   duplicates created: 0"
+    ]
+   },
+   {
+    "name": "Schedule and operate",
+    "items": [
+     [
+      "GitHub Actions",
+      "scheduled runs, reviewed changes"
+     ],
+     [
+      "Tests and dashboard",
+      "pytest, Prometheus, Grafana"
+     ],
+     [
+      "Runbook",
+      "collector down, verdict wrong, ServiceNow down"
+     ]
+    ],
+    "panel": "cards",
+    "panel_lines": [
+     "RUN #220  schedule: every 30 min   runner: noc-runner-01   fleet: 7 devices",
+     "healthy: 5   major: 1   unknown: 1   tickets: 1 updated, 0 created",
+     "maintenance window: lb-alt-01 (CHG0031902) alerts suppressed until 02:00",
+     "tests: 64/64 passed   time to ticket: 4m 12s   duplicates: 0",
+     "audit: complete   approver: noc-lead   dashboard: grafana/fleet-health"
+    ]
+   }
+  ],
+  "stats": [
+   [
+    "11",
+    "build steps"
+   ],
+   [
+    "3",
+    "days, hands-on"
+   ],
+   [
+    "5",
+    "device platforms covered"
+   ],
+   [
+    "0",
+    "duplicate tickets"
+   ]
+  ],
+  "cta": "Let the fleet report its own health, and let the ticket write itself.",
+  "narration": [
+   [
+    "hook",
+    "Forty devices. One morning check. And someone still logs in to every box to ask if it is healthy."
+   ],
+   [
+    "hook",
+    "What if an agent checked every V I P, every H A pair, every sync state and every version, worked out what changed, and raised the right ServiceNow ticket before your first coffee? That is device health monitoring, done with Claude, done safely."
+   ],
+   [
+    "intro",
+    "Gennoor Tech presents Device Health Monitoring Automation with Claude."
+   ],
+   [
+    "story",
+    "Six signals in. One verdict out. You build the platform in eleven increments, and every increment is something you can test, review and demonstrate. Claude plans the code and explains the evidence. Deterministic Python does the collecting. A person approves anything that matters. And everything is logged."
+   ],
+   [
+    "path0",
+    "You start by defining what healthy actually means. V I P status, uptime, H A status, sync status when a pair is in H A, software version, and the last change performed on the device. You map each signal to F5, NetScaler, Radware, other load balancers, and Cisco A C I. Then you set up Claude Code, the Agent S D K and an M C P server that exposes read-only device tools, with credentials kept well outside the model."
+   ],
+   [
+    "path0",
+    "Then the collectors. F5 iControl REST and t m s h for virtual server stats, failover state and sync status. The NetScaler NITRO A P I for load balancing virtual servers, H A nodes and version. Radware Alteon through Cyber Controller, a generic adapter for other load balancers, and the Cisco A P I C REST A P I for fabric nodes, firmware and health. Every reading lands in one shared schema, and a missing signal is marked unknown, never assumed healthy."
+   ],
+   [
+    "path1",
+    "On day two you answer the question every N O C asks first. What changed? You pull audit logs from the devices, configuration snapshots from Git, and change requests from ServiceNow, and build a timeline for every device. Then Claude becomes the triage analyst. It receives the evidence bundle and returns a structured verdict: severity, affected signals, cited readings, likely cause and recommended action. No citation, no conclusion. And the severity rules live in code, so a sync failure in an H A pair is never quietly downgraded."
+   ],
+   [
+    "path2",
+    "Next, the ticket. Through the ServiceNow Table A P I the pipeline looks up the open incident by correlation I D, decides whether to update it, reopen it or create a new one, and never creates a duplicate. Flow Designer handles assignment and notification. Then the guardrails. The M C P server has no write tools for devices. Priority one and priority two tickets wait for a person. Every run writes its readings, prompt, verdict, ticket action and approver to an audit log, and a flapping device cannot flood your queue."
+   ],
+   [
+    "path3",
+    "Day three is operations. The pipeline ships through a GitHub pull request, runs from GitHub Actions on a schedule using a runner that can reach the devices, and respects declared maintenance windows so a planned upgrade never becomes a false incident."
+   ],
+   [
+    "path3",
+    "You add pytest suites for the collectors, the severity rules and the ticket logic, export readings to Prometheus, and put a Grafana fleet dashboard beside the ticket flow. Then you write the runbook for the days when a collector fails, a verdict is wrong, or ServiceNow itself is down. And you measure the outcome: time to ticket, duplicate rate and false positives, so the platform proves its own value."
+   ],
+   [
+    "labs",
+    "Every lab runs against a lab fleet of F5, NetScaler, Radware and A C I devices with synthetic faults. Nothing touches production. You will break sync on purpose, upgrade one side of a pair, pull a collector out from under the agent, and watch the pipeline explain exactly what happened."
+   ],
+   [
+    "stats",
+    "Eleven build steps. Three days, hands-on. Five device platforms covered. And zero duplicate tickets."
+   ],
+   [
+    "who",
+    "This course is for network operations and load balancer engineers, N O C leads, data centre teams, and I T S M and automation teams in India and worldwide. You need working knowledge of load balancers, basic REST and JSON, and basic Python and Git."
+   ],
+   [
+    "cta",
+    "Let the fleet report its own health, and let the ticket write itself. Device Health Monitoring Automation with Claude. Enrol now at gennoor dot com."
+   ]
+  ]
+ }
+}

@@ -1,0 +1,385 @@
+{
+ "title": "Cisco ACI Upgrade Automation with Claude",
+ "tagline": "Plan, validate and execute ACI fabric upgrades the Cisco way, with Claude drafting and code executing",
+ "days": 3,
+ "level": "Intermediate to advanced",
+ "audience": "Enterprise network operations, data centre, NOC and network automation engineers who run Cisco ACI fabrics, in India and worldwide",
+ "prerequisites": [
+  "Working knowledge of Cisco ACI: APIC, leaf and spine, tenants, vPC",
+  "Basic Python and REST API calls with JSON",
+  "Familiarity with change management and maintenance windows",
+  "Familiarity with an AI coding assistant is helpful, not required"
+ ],
+ "outcomes": [
+  "Describe the Cisco-recommended ACI upgrade sequence: release selection, pre-upgrade validation, APIC cluster first, then switch groups, then post-checks",
+  "Build a Python client for the APIC REST API that discovers the fabric, runs the pre-upgrade validator and returns typed JSON",
+  "Use Claude Code, the Claude Agent SDK and an MCP server to plan upgrade groups and maintenance windows as schema-validated structured output",
+  "Create firmware and maintenance policies with deterministic Python and Ansible only after a human approves the plan in a GitHub pull request and a ServiceNow change",
+  "Produce pre and post upgrade evidence, a comparison report, a pause or rollback decision and a complete audit trail"
+ ],
+ "tools": [
+  [
+   "cisco",
+   "Cisco ACI / APIC REST API"
+  ],
+  [
+   "claude",
+   "Claude Code"
+  ],
+  [
+   "anthropic",
+   "Claude Agent SDK"
+  ],
+  [
+   "python",
+   "Python"
+  ],
+  [
+   "pydantic",
+   "Pydantic"
+  ],
+  [
+   "ansible",
+   "Ansible cisco.aci collection"
+  ],
+  [
+   "generic:servicenow",
+   "ServiceNow Table API"
+  ],
+  [
+   "github",
+   "GitHub pull requests"
+  ],
+  [
+   "githubactions",
+   "GitHub Actions"
+  ],
+  [
+   "pytest",
+   "pytest"
+  ],
+  [
+   "json",
+   "JSON Schema"
+  ]
+ ],
+ "modules": [
+  {
+   "day": 1,
+   "title": "The Cisco ACI upgrade process and where upgrades go wrong",
+   "icon": "cisco",
+   "topics": [
+    "Cisco's recommended sequence: target release and release notes, compatibility matrix, pre-upgrade validation, APIC cluster, switch upgrade groups, post-checks",
+    "Why vPC peers never share a group, why the cluster must be fully fit, and what bootflash space, faults and NTP drift do to an upgrade",
+    "Firmware repository, maintenance policies, maintenance groups and the scheduler as APIC objects",
+    "The teaching pattern: Claude plans and explains, deterministic code executes, a human approves, everything is logged"
+   ],
+   "lab": "Walk the lab fabric in the APIC GUI and API Inspector, map each Cisco process step to the APIC objects it touches, and write the workflow brief.",
+   "deliverable": "ACI upgrade workflow brief."
+  },
+  {
+   "day": 1,
+   "title": "Claude Code, Agent SDK and MCP setup for the ACI workflow",
+   "icon": "claude",
+   "topics": [
+    "Installing Claude Code and the Claude Agent SDK in the project repository with a CLAUDE.md that encodes the upgrade rules",
+    "Building an MCP server that exposes read-only APIC queries (nodes, firmware, faults, health) as tools",
+    "Tool use with structured JSON outputs: defining the inventory and plan schemas Claude must return",
+    "Separating read tools from write actions so the agent can observe but never trigger"
+   ],
+   "lab": "Stand up the MCP server against the lab APIC and have Claude Code answer fabric questions using only the exposed tools.",
+   "deliverable": "Working Claude Code and MCP environment."
+  },
+  {
+   "day": 1,
+   "title": "Fabric discovery through the APIC REST API",
+   "icon": "python",
+   "topics": [
+    "POST to aaaLogin, token refresh via aaaRefresh, and class and filter queries against fabricNode, topSystem, infraWiNode and firmwareCtrlrRunning",
+    "Typed inventory record: node id, role, model, running version, vPC peer, health score, cluster state",
+    "Pydantic validation, unit tests with pytest, and rejected-row reporting for incomplete nodes"
+   ],
+   "lab": "Implement the discovery client and tests with Claude Code, inspect every diff, and produce inventory.json for the lab fabric.",
+   "deliverable": "Fabric inventory client."
+  },
+  {
+   "day": 1,
+   "title": "Pre-upgrade validation and explained failures",
+   "icon": "generic:check",
+   "topics": [
+    "Running the APIC pre-upgrade validator and the Cisco aci-preupgrade-validation-script and parsing their results",
+    "Checking faults, bootflash space, cluster health, NTP, CIMC and configuration backups against the target release",
+    "Claude explains each failed check in plain language, cites the query that produced it and marks unknowns"
+   ],
+   "lab": "Fill a leaf's bootflash on purpose on the lab fabric, run validation, and have Claude explain the failure and the Cisco-recommended remediation.",
+   "deliverable": "Validation report with explained findings."
+  },
+  {
+   "day": 2,
+   "title": "Upgrade planning with structured outputs",
+   "icon": "generic:clock",
+   "topics": [
+    "Claude proposes upgrade groups from the inventory: APIC cluster first, vPC peers split, spines balanced, leaves balanced",
+    "Mapping groups to maintenance windows and scheduler times in the fabric's local time zone",
+    "JSON Schema validation of the plan and automatic rejection of plans that break a rule",
+    "Testing the planner with awkward fabrics: odd vPC pairs, mixed models, a degraded APIC"
+   ],
+   "lab": "Generate the plan for the lab fabric, feed it a fabric with an unpaired vPC leaf, and prove the schema gate rejects the bad plan.",
+   "deliverable": "Schema-validated upgrade plan."
+  },
+  {
+   "day": 2,
+   "title": "Firmware staging, backups and the change request",
+   "icon": "generic:servicenow",
+   "topics": [
+    "Uploading firmware to the APIC repository with firmwareFirmware and firmwareOSource and verifying checksums",
+    "Configuration export and snapshot with configExportP and configSnapshot before any change",
+    "Creating the ServiceNow change request through the Table API with the plan, windows and risk text drafted by Claude",
+    "Tracking approval state with Flow Designer and blocking execution until the change is approved"
+   ],
+   "lab": "Stage the target image, take the snapshot, and raise the lab ServiceNow change from the plan with one command.",
+   "deliverable": "Staged firmware, snapshot and change request."
+  },
+  {
+   "day": 2,
+   "title": "Guardrails, approvals and audit for fabric upgrades",
+   "icon": "generic:shield",
+   "topics": [
+    "The agent reads; code writes. Maintenance and firmware policies are created only by deterministic Python or Ansible cisco.aci modules",
+    "Plan review and approval in a GitHub pull request with GitHub Actions running the validator and schema checks",
+    "Window enforcement: no trigger outside the approved schedule, no next group while the last one is unhealthy",
+    "Audit log of prompts, tool calls, API calls, approvals and outcomes in a format the change board can read"
+   ],
+   "lab": "Open the plan as a pull request, try to apply it before approval and watch the gate refuse, then approve and apply to the lab.",
+   "deliverable": "Approval gate and audit log."
+  },
+  {
+   "day": 3,
+   "title": "Executing the APIC cluster and switch group upgrades",
+   "icon": "ansible",
+   "topics": [
+    "Upgrading the APIC cluster first and polling infraWiNode and firmwareCtrlrFwStatusCont until the cluster is fully fit",
+    "Creating maintenance policies and groups per the plan and triggering each group only inside its window",
+    "Polling firmwareRunning and maintUpgJob per node, with timeouts, retries and a pause when a node does not return",
+    "Claude drafts the status update for the on-call engineer when the runner pauses"
+   ],
+   "lab": "Run the APIC cluster upgrade and group A on the physical lab fabric, then replay a recorded node-not-returning response from a mocked APIC and watch the runner pause.",
+   "deliverable": "Deterministic upgrade runner."
+  },
+  {
+   "day": 3,
+   "title": "Post-upgrade verification, reporting and rollback decisions",
+   "icon": "generic:compare",
+   "topics": [
+    "Pre and post snapshots of versions, faults, endpoint counts, routes, vPC and interface state compared by code",
+    "Claude turns the diff into a readable report with a go, hold or roll back recommendation",
+    "Rollback and downgrade options as Cisco documents them, and when to stop the next group",
+    "Lessons captured into the runbook for the next fabric"
+   ],
+   "lab": "Compare pre and post state for group A, generate the report, and make the go or hold call for group B as a team.",
+   "deliverable": "Post-upgrade report and runbook."
+  },
+  {
+   "day": 3,
+   "title": "Capstone: end-to-end ACI fabric upgrade with evidence bundle",
+   "icon": "generic:capstone",
+   "topics": [
+    "Inventory in, upgraded fabric out: discovery, validation, plan, change, approval, execution, verification",
+    "Evidence bundle with validator output, plan, approvals, API log and post-check report",
+    "Demo and limitations statement"
+   ],
+   "lab": "Capstone build and demo.",
+   "deliverable": "End-to-end upgrade workflow and evidence bundle."
+  }
+ ],
+ "capstone": "A repeatable workflow that discovers a Cisco ACI fabric, runs the pre-upgrade validator, has Claude propose a schema-validated upgrade plan, raises and tracks the ServiceNow change, executes the APIC cluster and switch groups through deterministic code only after human approval, and ships a post-upgrade report with a full audit trail.",
+ "video": {
+  "hook_title": "Two hundred switches.\nOne weekend window.",
+  "hook_sub": "One bad group away from rebooting both vPC peers.",
+  "hook_q": "What if Claude read the validator,\ndrafted the plan, and code\nran it only after you approved?",
+  "story_big": "One fabric in.\nOne upgraded fabric out.",
+  "story_num": "10",
+  "story_num_label": "hands-on modules",
+  "story_sub": "Every Cisco-recommended step becomes a module you can run against the lab fabric, review and demonstrate.",
+  "paths": [
+   {
+    "name": "Learn, set up and discover",
+    "items": [
+     [
+      "Cisco upgrade process",
+      "cluster first, groups, vPC split"
+     ],
+     [
+      "Claude Code, Agent SDK, MCP",
+      "read-only APIC tools"
+     ],
+     [
+      "Discovery and validation",
+      "typed inventory, explained failures"
+     ]
+    ],
+    "panel": "terminal",
+    "panel_lines": [
+     "$ aci-upgrade discover --apic apic1.example.corp --out inventory.json",
+     "> login ok  fabric: dc1-lab  apics: 3  leaves: 4  spines: 2",
+     "> apic1 6.0(5h)  apic2 6.0(5h)  apic3 6.0(5h)  cluster: fully fit",
+     "> leaf-101 n9000-16.0(5h)  vpc peer: leaf-102  health: 98",
+     "$ aci-upgrade validate --target 6.0(8e)",
+     "> validator: all checks run  1 warn  1 FAIL (bootflash < 3 GB on leaf-104)",
+     "> claude: leaf-104 needs space cleared before firmware copy; see query faultInst"
+    ]
+   },
+   {
+    "name": "Plan and stage",
+    "items": [
+     [
+      "Upgrade planner",
+      "schema-validated groups and windows"
+     ],
+     [
+      "Firmware and snapshot",
+      "repository upload, configExportP"
+     ],
+     [
+      "ServiceNow change",
+      "Table API, Flow Designer"
+     ]
+    ],
+    "panel": "terminal",
+    "panel_lines": [
+     "> plan v3: target 6.0(8e)  order: apic cluster -> group A -> group B",
+     "> group A: leaf-101, leaf-103 + spine-201   window: Sat 02:00-06:00 IST",
+     "> group B: leaf-102, leaf-104 + spine-202   window: Sun 02:00-06:00 IST",
+     "> vpc check: leaf-101/leaf-102 split across groups  OK (2 pairs)",
+     "> schema: upgrade_plan.v1  valid",
+     "$ snow change create --plan plan-v3.json",
+     "> CHG0041233 created  state: assess  cab: 2026-11-05"
+    ]
+   },
+   {
+    "name": "Guard and approve",
+    "items": [
+     [
+      "Pull request gate",
+      "Actions run validator and schema"
+     ],
+     [
+      "Window enforcement",
+      "no trigger outside approval"
+     ]
+    ],
+    "panel": "diff",
+    "panel_lines": [
+     "  pull request #87  upgrade/dc1-lab-6.0-8e  reviewer: netops-lead",
+     "+ maint_policy group-A  schedule: 2026-11-08T02:00+05:30  adminState: untriggered",
+     "+ firmware_group group-A  nodes: 3",
+     "- apply before CHG0041233 approved      (blocked by policy)",
+     "  gate: CHG0041233 not approved -> apply refused, no policy created",
+     "  audit: 214 events written  approver: pending"
+    ]
+   },
+   {
+    "name": "Execute and verify",
+    "items": [
+     [
+      "Deterministic runner",
+      "cluster first, one group at a time"
+     ],
+     [
+      "Post-check report",
+      "diff by code, explained by Claude"
+     ],
+     [
+      "Go, hold or roll back",
+      "signed by a person"
+     ]
+    ],
+    "panel": "cards",
+    "panel_lines": [
+     "RUN 2026-11-08  apic cluster 6.0(8e)  fully fit at 02:41  status: done",
+     "group A  3/3 nodes upgraded  done 04:58  longest reboot: leaf-103 11m",
+     "post-check  faults: +0 critical  endpoints: 1,204 -> 1,204  vpc: 2 up",
+     "claude report: GO for group B  evidence bundle: run-2026-11-08.zip",
+     "go/hold for group B: netops-lead  GO signed 06:12"
+    ]
+   }
+  ],
+  "stats": [
+   [
+    "10",
+    "hands-on modules"
+   ],
+   [
+    "3",
+    "days"
+   ],
+   [
+    "6",
+    "physical switches upgraded in the lab"
+   ],
+   [
+    "0",
+    "upgrades without approval"
+   ]
+  ],
+  "cta": "Upgrade the fabric the Cisco way, every time, with proof.",
+  "narration": [
+   [
+    "hook",
+    "An A C I fabric upgrade is a weekend you do not get back. Two hundred switches, a cluster that must be fully fit before anything moves, and one bad group away from rebooting both v P C peers."
+   ],
+   [
+    "hook",
+    "What if Claude read the validator output, drafted the upgrade plan and explained every step, while deterministic code did the work and a person approved every window? That is A C I upgrade automation, done the Cisco way."
+   ],
+   [
+    "intro",
+    "Gennoor Tech presents Cisco ACI Upgrade Automation with Claude."
+   ],
+   [
+    "story",
+    "One fabric in. One upgraded fabric out, with every Cisco recommended check completed and recorded. You build the workflow in ten hands-on modules, and each one is something you can run against the lab fabric, review and demonstrate. Claude plans, drafts and explains. Python and Ansible execute. A human approves the consequential actions. Everything is logged."
+   ],
+   [
+    "path0",
+    "You start with the process itself, as Cisco documents it. Target release selection, the release notes and compatibility matrix, A P I C cluster first, then switch groups, and why a v P C pair must never sit in the same group. Then you set up Claude Code, the Claude Agent S D K and an M C P server that exposes read-only A P I C queries as tools."
+   ],
+   [
+    "path0",
+    "Then discovery. A Python client for the A P I C R E S T A P I that logs in, pulls every node, controller, firmware version, cluster state and health score, and returns typed J S O N. You run the Cisco pre-upgrade validator and the open-source validation script, parse the results, and let Claude explain each failure in plain language, citing the exact query that produced it."
+   ],
+   [
+    "path1",
+    "On day two the plan takes shape. Claude proposes upgrade groups from the inventory, keeps v P C peers apart, orders the A P I C cluster before the leaves and spines, and maps every group to a maintenance window. The output is structured J S O N, validated against a schema, so a bad plan is rejected before anyone reads it. You then stage firmware in the repository, take a configuration export and snapshot, and raise the change request in ServiceNow through the Table A P I."
+   ],
+   [
+    "path2",
+    "Guardrails come next, and they are specific to this workflow. The agent can read the fabric, but it cannot trigger an upgrade. Every maintenance policy and firmware group is created by deterministic code, after a person approves the plan in a GitHub pull request. Scheduled start times are checked against the approved window, an incomplete validator run blocks the next step, and every decision, prompt and A P I call is written to an audit log you can hand to the change board."
+   ],
+   [
+    "path3",
+    "Day three is execution. The runner upgrades the A P I C cluster, waits for the cluster to be fully fit, then moves through the switch groups one at a time, polling firmware status and never starting the next group until the last one is healthy. If a node does not come back, the run pauses and Claude writes the status update for the on-call engineer."
+   ],
+   [
+    "path3",
+    "Then verification. Pre and post snapshots of versions, faults, endpoint counts, routes and v P C state are compared by code, and Claude turns the diff into a readable report with a clear go, hold or roll back recommendation that a person signs off."
+   ],
+   [
+    "labs",
+    "Execution labs run on a small physical lab fabric with fictional hostnames, three A P I Cs, four leaves and two spines, so the cluster and switch groups really upgrade and reboot. The runner's failure paths are exercised against a mocked A P I C with recorded responses. You will fail a validator check on purpose, watch the pipeline block, fix the fault, and finish an end to end upgrade with the full evidence bundle."
+   ],
+   [
+    "stats",
+    "Ten hands-on modules. Three days. Six physical switches upgraded for real in the lab. And zero upgrades triggered without human approval."
+   ],
+   [
+    "who",
+    "This course is for enterprise network operations, data centre and automation engineers in India and worldwide who run Cisco A C I fabrics. You need working A C I knowledge, basic Python, and familiarity with R E S T A P I calls. Experience with an A I coding assistant helps but is not required."
+   ],
+   [
+    "cta",
+    "Upgrade the fabric the Cisco way, every time, with proof. Cisco ACI Upgrade Automation with Claude. Enrol now at gennoor dot com."
+   ]
+  ]
+ }
+}

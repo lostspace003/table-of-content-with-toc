@@ -1,0 +1,387 @@
+{
+ "title": "Troubleshooting Automation with Claude",
+ "tagline": "From ServiceNow acknowledgement to reason, action and next action",
+ "days": 3,
+ "level": "Intermediate",
+ "audience": "Network operations, load balancer and data centre engineers, NOC and service desk teams, IT automation leads in India and worldwide",
+ "prerequisites": [
+  "Basic networking and load balancer concepts (VIP, pool, HA)",
+  "Comfort with a CLI such as F5 tmsh or NetScaler shell",
+  "Basic Python and Git",
+  "Familiarity with ServiceNow incidents is helpful, not required"
+ ],
+ "outcomes": [
+  "Explain the incident-to-resolution workflow in ServiceNow and where an agent can and cannot act",
+  "Set up Claude Code, the Claude Agent SDK and MCP servers scoped to incident triage with read-only tools by default",
+  "Pull incidents through the ServiceNow Table API, draft the acknowledgement mail and ask for the primary troubleshooting details that are missing",
+  "Collect typed evidence from F5, NetScaler, Radware, other load balancers (Anaya LB) and Cisco ACI and have Claude suggest ranked CLI troubleshooting steps as structured JSON",
+  "Enforce read-only versus state-changing command classes, human approval and a full audit trail into ServiceNow work notes",
+  "Generate and post the reason, action and next action template and ship a tested troubleshooting page"
+ ],
+ "tools": [
+  [
+   "claude",
+   "Claude Code"
+  ],
+  [
+   "anthropic",
+   "Claude Agent SDK and MCP"
+  ],
+  [
+   "generic:servicenow",
+   "ServiceNow Table API and Flow Designer"
+  ],
+  [
+   "python",
+   "Python"
+  ],
+  [
+   "pydantic",
+   "Pydantic"
+  ],
+  [
+   "fastapi",
+   "FastAPI"
+  ],
+  [
+   "f5",
+   "F5 tmsh and iControl REST"
+  ],
+  [
+   "citrix",
+   "Citrix NetScaler NITRO"
+  ],
+  [
+   "generic:radware",
+   "Radware Alteon"
+  ],
+  [
+   "cisco",
+   "Cisco APIC REST API"
+  ],
+  [
+   "pytest",
+   "pytest"
+  ],
+  [
+   "githubactions",
+   "GitHub Actions"
+  ]
+ ],
+ "modules": [
+  {
+   "day": 1,
+   "title": "The troubleshooting workflow and the ServiceNow incident lifecycle",
+   "icon": "generic:servicenow",
+   "topics": [
+    "Incident states, assignment groups, acknowledgement mail and the first troubleshooting reply as they happen today",
+    "Mapping the manual workflow: ticket lands, details requested, evidence gathered, steps suggested, resolution note written",
+    "Where an agent may act (read, draft, explain) and where it may not (change a device, close a ticket) without a person",
+    "The lab: a ServiceNow developer instance, lab load balancers and a Cisco ACI sandbox"
+   ],
+   "lab": "Walk one real-style incident from creation to resolution by hand and record every decision an engineer makes.",
+   "deliverable": "Annotated workflow map and automation boundaries."
+  },
+  {
+   "day": 1,
+   "title": "Setting up Claude Code, the Agent SDK and MCP for incident triage",
+   "icon": "claude",
+   "topics": [
+    "Claude Code project configuration, CLAUDE.md conventions and permission rules for this workflow",
+    "Claude Agent SDK: sessions, tool definitions, structured JSON outputs and retries",
+    "MCP servers for ServiceNow and for device read-only queries, with tool allowlists",
+    "Keeping credentials in environment and vault, never in prompts or transcripts"
+   ],
+   "lab": "Build and register a read-only ServiceNow MCP server and a read-only device MCP server and call them from an Agent SDK script.",
+   "deliverable": "Working agent environment with scoped tools."
+  },
+  {
+   "day": 1,
+   "title": "Incident intake through the Table API and the acknowledgement mail",
+   "icon": "python",
+   "topics": [
+    "Querying incident and sys_journal_field through the ServiceNow Table API and validating records with Pydantic",
+    "A primary troubleshooting checklist: affected VIP or service, symptom, start time, scope, last change, error text",
+    "Claude compares the ticket against the checklist and lists exactly which details are missing",
+    "Drafting the acknowledgement mail with the missing-details questions; a person reviews and sends"
+   ],
+   "lab": "Ingest five synthetic incidents, generate the missing-details list and acknowledgement draft for each, and post it as a work note.",
+   "deliverable": "Intake service and acknowledgement mail generator."
+  },
+  {
+   "day": 2,
+   "title": "Evidence collection from load balancers and ACI",
+   "icon": "f5",
+   "topics": [
+    "F5: tmsh show ltm virtual and pool, iControl REST /mgmt/tm/ltm and /mgmt/tm/sys for stats and logs",
+    "Citrix NetScaler NITRO API: lbvserver, servicegroup and HA node status; Radware Alteon and other load balancers (Anaya LB) through their CLI",
+    "Cisco APIC REST API: fault, health score and endpoint lookups for the affected tenant",
+    "Typed evidence records with device, timestamp, command and raw output; nothing inferred without data"
+   ],
+   "lab": "Write deterministic collectors for each platform and run them against the lab devices for one incident.",
+   "deliverable": "Evidence bundle per incident."
+  },
+  {
+   "day": 2,
+   "title": "Claude suggests troubleshooting steps as structured JSON",
+   "icon": "json",
+   "topics": [
+    "Prompt design: ticket plus evidence in, ranked likely causes out, each with a confirming CLI command and expected result",
+    "JSON schema for a suggested step: platform, command, class (read_only or state_changing), rationale, evidence citations",
+    "Testing the prompt with missing, stale and contradictory evidence; unknowns must be marked",
+    "Comparing suggestions against a vendor-documented playbook for the same symptom"
+   ],
+   "lab": "Build the suggestion agent, run it on three incidents and score its first-step accuracy against the engineer's manual notes.",
+   "deliverable": "Troubleshooting step suggestion agent."
+  },
+  {
+   "day": 2,
+   "title": "Guardrails, approvals and audit for incident automation",
+   "icon": "generic:shield",
+   "topics": [
+    "Command classification and allowlists: read-only commands may run in the lab, state-changing commands always wait",
+    "Approval record: who approved, which command, which device, when, and the output captured",
+    "Writing every action to an audit log and to ServiceNow work notes through the Table API",
+    "Failure modes: wrong device, wrong incident, hallucinated command; detection and fail-closed behaviour"
+   ],
+   "lab": "Add the approval gate and audit writer, then try to push a state-changing command through without approval and watch it refuse.",
+   "deliverable": "Approval gate and audit trail."
+  },
+  {
+   "day": 2,
+   "title": "Running approved steps and reading the result",
+   "icon": "linux",
+   "topics": [
+    "Executing approved commands through SSH and REST wrappers with timeouts and output capture",
+    "Claude interprets command output against the expected result and proposes the next step",
+    "Loop control: maximum steps, stop conditions and escalation to a senior engineer",
+    "ServiceNow Flow Designer trigger that starts the loop when an incident is assigned to the group"
+   ],
+   "lab": "Run the suggest, approve, execute, interpret loop end to end on one incident until the cause is confirmed.",
+   "deliverable": "Supervised troubleshooting loop."
+  },
+  {
+   "day": 3,
+   "title": "The reason, action and next action template",
+   "icon": "generic:check",
+   "topics": [
+    "Template fields: reason (root cause with evidence), action (what was done, by whom, approved by whom), next action (owner and due date)",
+    "Claude drafts the template from the evidence bundle and command outputs with a citation for every claim",
+    "Posting resolution notes and close codes to the incident and creating a knowledge article draft",
+    "Template variants per symptom family: VIP down, pool member flapping, HA sync failure, certificate expiry"
+   ],
+   "lab": "Generate the template for the resolved incident, review it, post it to ServiceNow and create the knowledge article.",
+   "deliverable": "Reason, action and next action generator."
+  },
+  {
+   "day": 3,
+   "title": "The troubleshooting page: service, tests and delivery",
+   "icon": "fastapi",
+   "topics": [
+    "FastAPI troubleshooting page: incident queue, evidence view, suggested steps, approve and reject buttons, audit tab",
+    "pytest suites for intake, classification and template generation with recorded device output as fixtures",
+    "GitHub pull requests and Actions: lint, tests and a prompt regression check on every change",
+    "Operating the page: runbook, on-call handover and what to do when the agent is wrong"
+   ],
+   "lab": "Assemble the page, write the regression suite and merge through a reviewed pull request with Actions green.",
+   "deliverable": "Tested troubleshooting page and runbook."
+  },
+  {
+   "day": 3,
+   "title": "Capstone: incident to resolution note, end to end",
+   "icon": "generic:capstone",
+   "topics": [
+    "A new incident lands in ServiceNow; the team runs the full workflow from acknowledgement to posted template",
+    "Acceptance criteria review: no device change without approval, every claim cited, every action logged",
+    "Demo and limitations statement"
+   ],
+   "lab": "Capstone build and demo.",
+   "deliverable": "End-to-end troubleshooting automation and runbook."
+  }
+ ],
+ "capstone": "A repeatable troubleshooting workflow that picks up a ServiceNow incident, asks for the missing primary troubleshooting details, collects evidence from F5, NetScaler, Radware, other load balancers (Anaya LB) and Cisco ACI, suggests ranked CLI steps, runs only approved commands, and posts a reason, action and next action template with a full audit trail.",
+ "video": {
+  "hook_title": "An incident lands\nat nine at night.",
+  "hook_sub": "The acknowledgement goes out. Then the questions begin.",
+  "hook_q": "What if an agent asked the\nright questions, pulled the\nevidence and suggested the fix?",
+  "story_big": "One incident.\nOne resolution note.",
+  "story_num": "10",
+  "story_num_label": "modules that run",
+  "story_sub": "From ServiceNow acknowledgement to reason, action and next action, every module ends with something you can run and review.",
+  "paths": [
+   {
+    "name": "Understand and intake",
+    "items": [
+     [
+      "Incident lifecycle",
+      "where an agent may act"
+     ],
+     [
+      "Claude Code and MCP setup",
+      "read-only tools by default"
+     ],
+     [
+      "Table API intake",
+      "missing details, drafted mail"
+     ]
+    ],
+    "panel": "terminal",
+    "panel_lines": [
+     "$ triage intake INC0048211",
+     "> incident: INC0048211  P2  'app portal slow / timeouts'  group: lb-ops",
+     "> checklist: vip=MISSING start_time=21:05 scope=MISSING last_change=MISSING",
+     "> acknowledgement draft: 3 questions (affected VIP, user scope, last change)",
+     "> posted as work note (draft)  awaiting send approval: lb-ops engineer",
+     "> audit: intake#1  tools used: servicenow.read"
+    ]
+   },
+   {
+    "name": "Collect and suggest",
+    "items": [
+     [
+      "Evidence collectors",
+      "F5, NetScaler, Radware, ACI"
+     ],
+     [
+      "Suggested CLI steps",
+      "ranked, cited, structured JSON"
+     ]
+    ],
+    "panel": "terminal",
+    "panel_lines": [
+     "$ triage collect INC0048211 --device lb-f5-01.example.corp",
+     "> tmsh show ltm virtual vs_portal_443  status: available  conns: 1842",
+     "> tmsh show ltm pool pool_portal  members: 3/4 up  web-04:443 10.20.4.14: DOWN",
+     "> suggestions (schema v2):",
+     "   1  cause: pool member monitor fail  cmd: tmsh show ltm monitor https https_portal",
+     "   2  cause: backend reset  cmd: tmsh show sys connection cs-server-addr 10.20.4.14",
+     "> unknowns: no change record for web-04 in last 24h"
+    ]
+   },
+   {
+    "name": "Approve and execute",
+    "items": [
+     [
+      "Command classes",
+      "read-only runs, state-changing waits"
+     ],
+     [
+      "Approval and audit",
+      "every action in work notes"
+     ]
+    ],
+    "panel": "diff",
+    "panel_lines": [
+     "> step 1 tmsh show ltm monitor https https_portal          class: read_only",
+     "+ executed  lb-f5-01  monitor https_portal: recv string mismatch on web-04:443",
+     "> step 2 modify ltm pool pool_portal members modify { web-04:443 {state user-down} }",
+     "- BLOCKED  class: state_changing  awaiting approval",
+     "+ approved by: lb-ops-senior  21:34  executed  web-04:443 forced offline",
+     "> audit: 5 events written  work notes: INC0048211 updated"
+    ]
+   },
+   {
+    "name": "Document and deliver",
+    "items": [
+     [
+      "Reason, action, next action",
+      "cited, posted to ServiceNow"
+     ],
+     [
+      "Troubleshooting page",
+      "FastAPI, pytest, Actions"
+     ],
+     [
+      "Capstone",
+      "incident to resolution note"
+     ]
+    ],
+    "panel": "cards",
+    "panel_lines": [
+     "REASON  web-04 failed https_portal monitor after 20:58 app deploy (steps 1, 2)",
+     "ACTION  web-04:443 forced offline in pool_portal, approved by lb-ops-senior 21:34",
+     "NEXT    app team fixes health endpoint; re-enable web-04; owner: portal-dev",
+     "posted: INC0048211 resolution notes + KB draft KB0012077",
+     "page build #42  pytest 118 passed  prompt regression 12/12  Actions: green"
+    ]
+   }
+  ],
+  "stats": [
+   [
+    "10",
+    "modules that run"
+   ],
+   [
+    "3",
+    "days, hands-on"
+   ],
+   [
+    "4",
+    "device platforms in the lab"
+   ],
+   [
+    "0",
+    "device changes without approval"
+   ]
+  ],
+  "cta": "Turn every incident into a documented, repeatable fix.",
+  "narration": [
+   [
+    "hook",
+    "An incident lands in ServiceNow at nine at night. The acknowledgement mail goes out, and then the questions begin. Which V I P? Since when? What changed? Who is looking at it? And the engineer on call is typing the same first five commands they typed last week."
+   ],
+   [
+    "hook",
+    "What if an agent read the ticket, asked for the missing details, pulled the evidence from the load balancer, and suggested the exact C L I commands to run next? Troubleshooting, automated, with a person still in charge of every change."
+   ],
+   [
+    "intro",
+    "Gennoor Tech presents Troubleshooting Automation with Claude."
+   ],
+   [
+    "story",
+    "One incident in. One resolution note out. You build the troubleshooting workflow in ten modules, and every module ends with something that actually runs. Claude reads, plans and explains. Deterministic Python collects the evidence and updates the ticket. A person approves anything that touches a device. And every step is logged, in your audit trail and in the ServiceNow work notes."
+   ],
+   [
+    "path0",
+    "You start with the incident lifecycle in ServiceNow, from the moment the ticket is created to the acknowledgement mail and the first troubleshooting reply. You map where an agent may act and where it may not. Then you set up Claude Code, the Claude Agent S D K and M C P servers for this exact workflow, with a read only ServiceNow tool, a read only device tool, and nothing else. Credentials stay in the vault, never in a prompt."
+   ],
+   [
+    "path0",
+    "Then intake. You pull the incident through the ServiceNow Table A P I, validate it, and let Claude compare it against a primary troubleshooting checklist. Affected V I P, symptom, start time, scope, last change. The agent lists what is missing and drafts the clarification mail. An engineer reviews it and sends it."
+   ],
+   [
+    "path1",
+    "Day two is evidence and diagnosis. Deterministic collectors run F5 t m s h and iControl REST, the NetScaler NITRO A P I, Radware Alteon and other load balancers, and the Cisco A P I C REST interface, and return typed facts with a device, a timestamp and the raw output. Claude turns those facts into a ranked list of likely causes, and for each cause the exact C L I command that confirms or rules it out. Structured J S O N, with a citation for every claim, never free text."
+   ],
+   [
+    "path2",
+    "Then the guardrails. Every suggested command is classified read only or state changing. Read only commands can run in the lab automatically. Anything else waits for an engineer to approve, and the approval, the command and the output are written to the audit log and to the ServiceNow work notes. You will try to push a change through without approval, and you will watch it refuse. Then you run the full loop. Suggest, approve, execute, interpret, until the cause is confirmed or a senior engineer is paged."
+   ],
+   [
+    "path3",
+    "Day three is the template. Reason, action, next action. Claude drafts it from the evidence it was given, cites the command output behind every line, and marks what it could not verify. You post it to the incident through the Table A P I, with the close code, and you create the knowledge article the next incident will reuse."
+   ],
+   [
+    "path3",
+    "You finish by wiring it all into a troubleshooting page. A FastAPI service with the incident queue, the evidence, the suggested steps, the approve and reject buttons and the audit tab. Tested with pytest against recorded device output, and shipped through a reviewed GitHub pull request with Actions green."
+   ],
+   [
+    "labs",
+    "Every lab runs against a ServiceNow developer instance, lab load balancers and a Cisco A C I sandbox, with synthetic incidents that have real symptoms. You will watch the agent ask the right question, run the right command, and refuse the wrong one. And in the capstone a fresh incident lands and your team takes it from acknowledgement to posted resolution note."
+   ],
+   [
+    "stats",
+    "Ten modules that run. Three days, hands on. Four device platforms. And zero device changes without a person saying yes."
+   ],
+   [
+    "who",
+    "This course is for network operations, load balancer and data centre engineers, N O C and service desk teams, and I T automation leads in India and worldwide. You need basic networking, comfort with a C L I, and some Python. Familiarity with ServiceNow incidents helps, but it is not required."
+   ],
+   [
+    "cta",
+    "Turn every incident into a documented, repeatable fix. Troubleshooting Automation with Claude. Enrol now at gennoor dot com."
+   ]
+  ]
+ }
+}

@@ -1,0 +1,387 @@
+{
+ "title": "Configuration Comparison Automation with Claude",
+ "tagline": "Two platforms, one verified difference report, before the change window opens",
+ "days": 3,
+ "level": "Intermediate",
+ "audience": "Enterprise IT and network operations teams, load balancer and ADC engineers, cloud migration and platform engineers, infrastructure automation leads",
+ "prerequisites": [
+  "Working knowledge of load balancers or ADCs (F5, NetScaler, Radware or similar) and basic cloud networking",
+  "Comfort with the command line, REST APIs and JSON",
+  "Basic Python (reading and editing scripts)",
+  "Familiarity with Git; prior use of Claude or an AI coding assistant is helpful, not required"
+ ],
+ "outcomes": [
+  "Plan a configuration comparison for cloud-to-cloud, physical-to-cloud and cloud-to-physical migrations, including what must be proven and what cannot be compared",
+  "Collect running configuration from F5 (iControl REST and tmsh), Citrix NetScaler (NITRO API), Radware Alteon, other load balancers (Anaya LB), Cisco APIC and Terraform state with read-only credentials",
+  "Normalise every platform into one canonical Pydantic model with provenance and explicit unknowns",
+  "Use Claude Code, the Claude Agent SDK and MCP servers so that Claude plans and explains while deterministic Python computes the diff",
+  "Generate severity-classified difference reports, Claude-written explanations and remediation steps grounded in the report",
+  "Gate every consequential action behind GitHub pull request review and a ServiceNow change record, with a full audit trail of prompts, tool calls and decisions"
+ ],
+ "tools": [
+  [
+   "claude",
+   "Claude Code"
+  ],
+  [
+   "anthropic",
+   "Claude Agent SDK and MCP"
+  ],
+  [
+   "python",
+   "Python"
+  ],
+  [
+   "pydantic",
+   "Pydantic"
+  ],
+  [
+   "f5",
+   "F5 iControl REST / tmsh"
+  ],
+  [
+   "citrix",
+   "NetScaler NITRO API"
+  ],
+  [
+   "generic:radware",
+   "Radware Alteon"
+  ],
+  [
+   "cisco",
+   "Cisco APIC REST API"
+  ],
+  [
+   "terraform",
+   "Terraform"
+  ],
+  [
+   "github",
+   "GitHub"
+  ],
+  [
+   "githubactions",
+   "GitHub Actions"
+  ],
+  [
+   "generic:servicenow",
+   "ServiceNow"
+  ]
+ ],
+ "modules": [
+  {
+   "day": 1,
+   "title": "Configuration comparison as a migration discipline",
+   "icon": "generic:compare",
+   "topics": [
+    "The three directions: cloud-to-cloud, physical-to-cloud, cloud-to-physical, and what each must prove before cut-over",
+    "Why a raw text diff between an F5 and a NetScaler configuration is worthless; semantic objects versus syntax",
+    "Scoping the comparison: virtual servers, pools, monitors, persistence, SSL profiles, policies, routing and NAT",
+    "The course pattern: Claude plans, drafts and explains; deterministic code executes; a person approves; everything is logged"
+   ],
+   "lab": "Take a sample physical F5 configuration and a hand-built cloud NetScaler configuration and write, by hand, the comparison plan and object checklist that the pipeline must later automate.",
+   "deliverable": "Comparison plan template and object checklist."
+  },
+  {
+   "day": 1,
+   "title": "Setting up Claude Code, the Agent SDK and MCP for the workflow",
+   "icon": "claude",
+   "topics": [
+    "Installing Claude Code and configuring a project with CLAUDE.md conventions for the comparison repository",
+    "Claude Agent SDK basics: sessions, tool definitions, structured JSON outputs and when to use the SDK instead of the interactive CLI",
+    "Building a minimal MCP server that exposes read-only collector tools (get_virtual_servers, get_pools) to Claude",
+    "Secrets handling: credentials in environment variables and vaults, never in prompts or repositories"
+   ],
+   "lab": "Stand up the workbench, register the read-only MCP server, and have Claude list the virtual servers on the lab F5 through tool use without ever seeing a password.",
+   "deliverable": "Configured workbench with a working read-only MCP collector."
+  },
+  {
+   "day": 1,
+   "title": "Collecting configuration from every platform",
+   "icon": "f5",
+   "topics": [
+    "F5: iControl REST (/mgmt/tm/ltm) and tmsh list output; Citrix NetScaler: NITRO API config resources",
+    "Radware Alteon via Cyber Controller and CLI exports; other load balancers (Anaya LB) through CLI capture adapters",
+    "Cisco APIC REST API for fabric objects and Terraform state (terraform show -json) for cloud-side resources",
+    "Collector contract: idempotent, read-only, timestamped, raw payload retained as evidence"
+   ],
+   "lab": "Write Python collectors for F5 iControl REST and NetScaler NITRO against the lab devices, then Radware Alteon CLI export and Cisco APIC REST collectors against recorded API fixtures, with Claude drafting the code and you reviewing every diff.",
+   "deliverable": "Collector library with raw evidence capture for four platform families (F5, NetScaler, Radware Alteon, Cisco APIC)."
+  },
+  {
+   "day": 1,
+   "title": "Normalising into a canonical configuration model",
+   "icon": "pydantic",
+   "topics": [
+    "Designing the canonical Pydantic model: VirtualServer, Pool, Member, Monitor, Persistence, SSLProfile, Policy",
+    "Mapping tables per platform and the rule that unmapped fields are marked unknown, never dropped silently",
+    "Provenance on every field: source platform, object name, collection time, raw reference",
+    "Validation tests for round-tripping fixtures through the model"
+   ],
+   "lab": "Build the normaliser for F5 and NetScaler, run both lab configurations through it, and inspect the unknowns list with Claude explaining each one.",
+   "deliverable": "Canonical model, mapping tables and normalisation test suite."
+  },
+  {
+   "day": 2,
+   "title": "Migration planning with Claude",
+   "icon": "anthropic",
+   "topics": [
+    "Prompting Claude with the source inventory and target platform capabilities to draft a migration plan as structured JSON",
+    "Required fields: object mapping, feature gap, dependency order, risk, confidence, owner, and citation to the inventory",
+    "Handling incomplete or contradictory inventories: the plan must say what cannot be mapped",
+    "Reviewing and versioning plans in Git as the first human checkpoint"
+   ],
+   "lab": "Generate a physical-to-cloud plan for the lab inventory, then feed Claude a deliberately contradictory inventory and verify it flags the conflict instead of inventing a mapping.",
+   "deliverable": "Migration planning agent with JSON schema and review checklist."
+  },
+  {
+   "day": 2,
+   "title": "The deterministic diff engine",
+   "icon": "python",
+   "topics": [
+    "Field-by-field comparison of canonical models in Python; ordering, set semantics and tolerated differences",
+    "Severity classification rules: blocking, warning, informational, and platform-specific exemptions",
+    "Machine-readable diff report (JSON) plus a human summary; the engine never calls a model",
+    "Unit tests with pytest, including seeded mismatches that must always be caught"
+   ],
+   "lab": "Implement the diff engine, seed a hidden persistence timeout mismatch into the target configuration, and prove the test suite catches it.",
+   "deliverable": "Tested diff engine producing severity-classified JSON reports."
+  },
+  {
+   "day": 2,
+   "title": "Claude explains the differences",
+   "icon": "json",
+   "topics": [
+    "Giving Claude the diff report through tool use (get_diff, get_object) rather than pasting whole configurations",
+    "Structured explanation output: what differs, why it matters for traffic, recommended remediation, confidence, citation to the diff line",
+    "Drift summaries for operations managers and remediation steps for engineers from the same report",
+    "Guarding against hallucinated objects: every referenced object must exist in the report"
+   ],
+   "lab": "Build the explanation agent with the Agent SDK, run it on the day's diff report, and verify every statement traces to a report line.",
+   "deliverable": "Explanation agent and remediation report template."
+  },
+  {
+   "day": 3,
+   "title": "Guardrails, approvals and audit for configuration comparison",
+   "icon": "generic:shield",
+   "topics": [
+    "Read-only credentials for all collectors; no write capability exposed to Claude through MCP",
+    "Opening a ServiceNow change record with the Table API and attaching the report; Flow Designer approval routing to a named approver",
+    "Publishing each comparison as a GitHub pull request with the report, evidence and plan for review",
+    "Audit log of prompts, tool calls, model outputs and human decisions, retained alongside the raw evidence"
+   ],
+   "lab": "Wire the pipeline to create a ServiceNow change via the Table API and a GitHub pull request, then attempt an unapproved remediation and confirm it is blocked and logged.",
+   "deliverable": "Approval and audit workflow with blocked-action evidence."
+  },
+  {
+   "day": 3,
+   "title": "Scheduling, Terraform plan checks and GitHub Actions",
+   "icon": "githubactions",
+   "topics": [
+    "Running the comparison on a schedule in GitHub Actions and on pull requests that change Terraform code",
+    "Comparing terraform plan output against live collected state before apply; flagging drift on both sides",
+    "Notifications and report publishing: PR comments, ServiceNow updates, archived reports",
+    "Operating the pipeline: failures, retries, fixture refresh and runbook"
+   ],
+   "lab": "Build the GitHub Actions workflow that runs the comparison, compares a Terraform plan against the live cloud load balancer, and comments the result on the pull request.",
+   "deliverable": "Scheduled comparison pipeline with Terraform drift check and runbook."
+  },
+  {
+   "day": 3,
+   "title": "Capstone: end-to-end physical-to-cloud comparison",
+   "icon": "generic:capstone",
+   "topics": [
+    "Collect, normalise, plan, diff and explain a physical F5 to cloud NetScaler migration end to end",
+    "Produce the approval package: plan, severity report, Claude explanation, evidence, ServiceNow change, pull request",
+    "Demo and acceptance review against the module one checklist"
+   ],
+   "lab": "Run the full pipeline on the lab physical F5 and cloud NetScaler, produce the approval package with ServiceNow change and pull request, and present it for acceptance review against the module one checklist.",
+   "deliverable": "Complete comparison pipeline and approval package."
+  }
+ ],
+ "capstone": "A repeatable pipeline that collects configuration from two platforms, normalises both into a canonical model, has Claude draft the migration plan and explain a deterministic diff, and delivers an approval package through a GitHub pull request and a ServiceNow change record with a full audit trail and no change applied without approval.",
+ "video": {
+  "hook_title": "The cut-over\nis Saturday.",
+  "hook_sub": "The cloud configuration was rebuilt by hand from a spreadsheet, and nobody can prove the two sides match.",
+  "hook_q": "What if Claude compared\nboth platforms, object by object,\nbefore the window opened?",
+  "story_big": "Two platforms.\nOne verified report.",
+  "story_num": "10",
+  "story_num_label": "build modules",
+  "story_sub": "From collection to approval package, every module is an increment you can test, review and demo.",
+  "paths": [
+   {
+    "name": "Collect and normalise",
+    "items": [
+     [
+      "Comparison planning",
+      "what must be proven"
+     ],
+     [
+      "Workbench setup",
+      "Claude Code, Agent SDK, MCP"
+     ],
+     [
+      "Collectors and canonical model",
+      "iControl, NITRO, APIC, Terraform"
+     ]
+    ],
+    "panel": "terminal",
+    "panel_lines": [
+     "$ cfgcmp collect --source lb-f5-01.example.corp --target ns-cloud-01.example.corp",
+     "> f5: iControl REST /mgmt/tm/ltm  virtuals=42 pools=38 monitors=19 profiles=11",
+     "> netscaler: NITRO /nitro/v1/config  lbvservers=42 servicegroups=36 monitors=17",
+     "> normalising to canonical model v1.3 ...",
+     "> 118 objects mapped, 6 unknowns (f5 'fastL4' profile: no NITRO equivalent)",
+     "> evidence saved: runs/2026-10-28T09-14/raw/*.json"
+    ]
+   },
+   {
+    "name": "Plan with Claude",
+    "items": [
+     [
+      "Migration planning agent",
+      "structured JSON, cites inventory"
+     ],
+     [
+      "Gap and risk register",
+      "says what cannot be mapped"
+     ]
+    ],
+    "panel": "terminal",
+    "panel_lines": [
+     "$ cfgcmp plan --direction physical-to-cloud --inventory runs/latest",
+     "> plan: 42 virtual servers -> 42 lbvservers  order: monitors, pools, vips",
+     "> gap: F5 iRule 'redirect_legacy' has no NITRO equivalent -> responder policy",
+     "> risk: 2 pools use priority groups; NetScaler backup vserver proposed",
+     "> unknown: persistence timeout on vs_app_api (not in inventory)",
+     "> confidence: 0.82  owner: netops-lead  cited: inventory#f5-0007, inventory#f5-0031"
+    ]
+   },
+   {
+    "name": "Diff and explain",
+    "items": [
+     [
+      "Deterministic diff engine",
+      "field by field, severity classified"
+     ],
+     [
+      "Explanation agent",
+      "every claim tied to a report line"
+     ]
+    ],
+    "panel": "diff",
+    "panel_lines": [
+     "  diff run #12  lb-f5-01 vs ns-cloud-01  (canonical v1.3)",
+     "  vs_app_web      persistence: cookie 3600s   matches",
+     "- vs_app_api      persistence: source_ip 180s   BLOCKING",
+     "+ vs_app_api      persistence: source_ip 300s   (source value)",
+     "- pool_app_api    monitor interval: 10s  (source 5s)   WARNING",
+     "  summary: 1 blocking, 3 warning, 114 match",
+     "> explain: 'session drops likely after 180s idle; set timeout 300' (diff#L3)"
+    ]
+   },
+   {
+    "name": "Govern and ship",
+    "items": [
+     [
+      "Approvals and audit",
+      "ServiceNow change, GitHub PR"
+     ],
+     [
+      "GitHub Actions pipeline",
+      "Terraform plan vs live state"
+     ],
+     [
+      "Capstone",
+      "physical F5 to cloud NetScaler"
+     ]
+    ],
+    "panel": "cards",
+    "panel_lines": [
+     "COMPARISON REPORT  run #12   direction: physical-to-cloud",
+     "blocking: 1   warning: 3   match: 114   unknowns: 6",
+     "servicenow: CHG0041877 created via Table API   approver: netops-lead",
+     "github: PR #58 opened   checks: diff-engine passed, drift-check passed",
+     "remediation: NOT APPLIED  (awaiting approval)   audit: 212 events logged"
+    ]
+   }
+  ],
+  "stats": [
+   [
+    "3",
+    "migration directions"
+   ],
+   [
+    "5",
+    "platform API families"
+   ],
+   [
+    "1",
+    "canonical schema for every object"
+   ],
+   [
+    "0",
+    "changes applied without approval"
+   ]
+  ],
+  "cta": "Know every difference before the change window opens.",
+  "narration": [
+   [
+    "hook",
+    "A data centre load balancer is moving to the cloud. The cut-over is on Saturday. The configuration on the new platform was rebuilt by hand from a spreadsheet, and nobody can say with certainty that the two sides match."
+   ],
+   [
+    "hook",
+    "What if Claude read both sides, object by object, told you exactly what differs, why it matters, and what to fix before the change window opens? That is configuration comparison, automated with Claude, and governed by people."
+   ],
+   [
+    "intro",
+    "Gennoor Tech presents Configuration Comparison Automation with Claude."
+   ],
+   [
+    "story",
+    "Two platforms. One verified difference report. Cloud to cloud, physical to cloud, or cloud back to physical, the problem is always the same: two configurations written in different dialects that must mean the same thing. You build the pipeline in ten modules. Claude plans, drafts and explains. Deterministic Python collects and diffs. A person approves every consequential action. And everything is logged."
+   ],
+   [
+    "path0",
+    "You start with the planning discipline: what a migration comparison must prove, which objects matter, and why a raw text diff between an F five and a NetScaler is worthless. Then you set up the workbench. Claude Code for interactive work, the Claude Agent S D K for the pipeline, and M C P servers that expose read-only collectors as tools Claude can call but never bypass."
+   ],
+   [
+    "path0",
+    "Day one ends with collection and normalisation. You pull running configuration from F five through iControl R E S T and t m s h, from Citrix NetScaler through the N I T R O A P I, from Radware Alteon, from other load balancers such as Anaya L B, and from Cisco A P I C and Terraform state. Every virtual server, pool, monitor, certificate and policy lands in one canonical Pydantic model, with provenance on every field and unknowns marked explicitly instead of guessed."
+   ],
+   [
+    "path1",
+    "On day two Claude plans. Given the source inventory and the target platform, it drafts the migration plan as structured J S O N: object mappings, feature gaps, dependency order and risks. It must cite the inventory it was given, and it must say plainly what cannot be mapped. Each plan step carries a confidence and an owner, so the review meeting argues about facts, not formatting. You test it with incomplete and contradictory input and watch it refuse to invent a mapping."
+   ],
+   [
+    "path2",
+    "Then the diff engine. Deterministic code compares canonical models field by field, classifies each difference by severity, and produces a machine-readable report. Claude never computes the diff. It reads the diff through tool use and writes the explanation, the drift summary and the remediation steps an engineer can act on, with every claim tied to a report line. You will seed a hidden persistence mismatch and watch the engine find it."
+   ],
+   [
+    "path3",
+    "Day three is governance. Collectors run with read-only credentials. Every report becomes a GitHub pull request with the evidence attached, and a ServiceNow change record created through the Table A P I and routed for approval in Flow Designer. Nothing is applied to any platform without a named approver, and the approval itself is part of the audit record."
+   ],
+   [
+    "path3",
+    "You then wire it into GitHub Actions: Terraform plan output compared against live state before apply, scheduled drift checks between platforms, and an audit trail that records every prompt, every tool call and every decision, so a reviewer can replay the run months later."
+   ],
+   [
+    "labs",
+    "Every lab runs against lab devices and recorded A P I responses, so you can break things safely. You will compare a physical F five with a cloud NetScaler, seed a hidden persistence timeout mismatch into the target, and prove the diff engine catches it, Claude explains it, and the tests never let it slip through. Then you attempt an unapproved remediation and prove the pipeline blocks it and logs the attempt."
+   ],
+   [
+    "stats",
+    "Three migration directions. Five platform A P I families. One canonical schema for every object. And zero changes applied without approval."
+   ],
+   [
+    "who",
+    "This course is for enterprise I T and network operations teams, load balancer and cloud migration engineers, and automation leads, in India and worldwide. You need basic networking, Python and command line skills. Prior use of Claude is helpful, not required."
+   ],
+   [
+    "cta",
+    "Know every difference before the change window opens. Configuration Comparison Automation with Claude. Enrol now at gennoor dot com."
+   ]
+  ]
+ }
+}

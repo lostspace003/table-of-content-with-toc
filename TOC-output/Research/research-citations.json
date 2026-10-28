@@ -1,0 +1,1960 @@
+[
+ {
+  "course": "Credential and Access Management Automation with Claude",
+  "citations": [
+   {
+    "title": "Service Catalog API",
+    "url": "https://www.servicenow.com/docs/r/yokohama/api-reference/rest-apis/c_ServiceCatalogAPI.html",
+    "publisher": "ServiceNow (Yokohama API Reference)",
+    "supports": "Module 2: joiner access requests via ServiceNow Service Catalog REST API",
+    "key_fact": "The Service Catalog API lives under the sn_sc namespace at /api/sn_sc/servicecatalog/; POST items/{sys_id}/order_now orders an item directly (sysparm_quantity is required, with optional variables and sysparm_requested_for) and returns the resulting sc_request number and sys_id, while POST cart/submit_order checks out the cart and behaves differently under one-step vs two-step checkout."
+   },
+   {
+    "title": "Request (Jira Service Management Cloud REST API)",
+    "url": "https://developer.atlassian.com/cloud/jira/service-desk/rest/api-group-request/",
+    "publisher": "Atlassian Developer",
+    "supports": "Module 2: raising access requests through Jira Service Management",
+    "key_fact": "POST /rest/servicedeskapi/request creates a customer request; the body must include serviceDeskId, requestTypeId and requestFieldValues covering every field the request type requires, needs the write:servicedesk-request scope, and returns 201 Created with the request object."
+   },
+   {
+    "title": "Create User - Microsoft Graph v1.0 | Microsoft Learn",
+    "url": "https://learn.microsoft.com/en-us/graph/api/user-post-users?view=graph-rest-1.0",
+    "publisher": "Microsoft Learn",
+    "supports": "Module 3: joiner provisioning in Microsoft Entra ID via Microsoft Graph",
+    "key_fact": "POST /users creates an Entra ID user and requires accountEnabled, displayName, mailNickname, passwordProfile and userPrincipalName; the least-privileged permission for both delegated and application calls is User.Create, with User.ReadWrite.All and Directory.ReadWrite.All listed only as higher-privileged alternatives."
+   },
+   {
+    "title": "Add members - Microsoft Graph v1.0 | Microsoft Learn",
+    "url": "https://learn.microsoft.com/en-us/graph/api/group-post-members?view=graph-rest-1.0",
+    "publisher": "Microsoft Learn",
+    "supports": "Module 3: mover workflows - group membership changes via Microsoft Graph",
+    "key_fact": "POST /groups/{group-id}/members/$ref adds one member with an @odata.id reference and PATCH /groups/{group-id} with members@odata.bind adds up to 20 at once; GroupMember.ReadWrite.All is the least-privileged permission, and newly created groups may briefly return 400 due to directory replication delay, so callers should retry after a short wait."
+   },
+   {
+    "title": "Lease, Renew, and Revoke | Vault | HashiCorp Developer",
+    "url": "https://developer.hashicorp.com/vault/docs/concepts/lease",
+    "publisher": "HashiCorp Developer",
+    "supports": "Module 4: short-lived credentials and leaver revocation with HashiCorp Vault",
+    "key_fact": "Vault attaches a lease with a TTL to every dynamic secret and service token; consumers must renew before expiry or the secret is automatically revoked, and revoking a lease (or a token, which revokes all leases it created, or an entire path prefix) invalidates the credential immediately, e.g. deleting the AWS access keys it issued."
+   },
+   {
+    "title": "least privilege - Glossary | CSRC",
+    "url": "https://csrc.nist.gov/glossary/term/least_privilege",
+    "publisher": "NIST Computer Security Resource Center",
+    "supports": "Module 5: least-privilege design for automated access grants",
+    "key_fact": "NIST defines least privilege (per CNSSI 4009-2022, SP 800-53 Rev. 5 and SP 800-171r3) as restricting each user, process or entity to the minimum set of system resources and authorizations needed to perform its assigned function."
+   },
+   {
+    "title": "LLM02:2025 Sensitive Information Disclosure",
+    "url": "https://genai.owasp.org/llmrisk/llm022025-sensitive-information-disclosure/",
+    "publisher": "OWASP GenAI Security Project (OWASP Top 10 for LLM Applications)",
+    "supports": "Module 6: never placing secrets in LLM prompts (OWASP LLM Top 10)",
+    "key_fact": "OWASP lists security credentials among the sensitive data an LLM application can leak through its outputs, and recommends input validation and redaction before data reaches the model, least-privilege access, and tokenizing or masking sensitive content, warning that system-prompt restrictions alone can be bypassed via prompt injection."
+   },
+   {
+    "title": "Security Best Practices - Model Context Protocol",
+    "url": "https://modelcontextprotocol.io/specification/2025-06-18/basic/security_best_practices",
+    "publisher": "Model Context Protocol (modelcontextprotocol.io)",
+    "supports": "Module 6: secure MCP tool design for Claude-driven provisioning agents",
+    "key_fact": "The MCP spec forbids token passthrough: an MCP server MUST NOT accept or forward tokens that were not explicitly issued to it, and it recommends a progressive least-privilege scope model that starts with minimal scopes and elevates via targeted WWW-Authenticate challenges rather than granting omnibus scopes up front."
+   },
+   {
+    "title": "Security - Claude Code Docs",
+    "url": "https://code.claude.com/docs/en/security",
+    "publisher": "Anthropic (Claude Code documentation)",
+    "supports": "Module 6: hardening a Claude agent that touches identity systems",
+    "key_fact": "Anthropic states it does not security-audit or manage any MCP server and advises writing your own or using trusted providers with per-server permissions; it also recommends not piping untrusted content directly to Claude, reviewing commands before approval, and notes API keys and tokens are kept in the OS keychain or a 0600-mode file rather than in prompts."
+   }
+  ],
+  "verified": [
+   {
+    "url": "https://www.servicenow.com/docs/r/yokohama/api-reference/rest-apis/c_ServiceCatalogAPI.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real Yokohama API reference. Base path /api/sn_sc/servicecatalog/ confirmed. POST items/{sys_id}/order_now documented: sysparm_quantity 'Required. Quantity of the item'; variables (mandatory cart item variables) and sysparm_requested_for not marked required; response includes request_number and sys_id. POST cart/submit_order documented with one-step (saves cart, returns request number and order ID) vs two-step (returns cart order status) behavior. Page is very long (~200k chars); order_now/submit_order appear in the second half."
+   },
+   {
+    "url": "https://developer.atlassian.com/cloud/jira/service-desk/rest/api-group-request/",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real Atlassian reference. 'Create customer request' POST /rest/servicedeskapi/request: body has serviceDeskId, requestTypeId, requestFieldValues; must include any fields required by the request type; classic scope write:servicedesk-request (recommended), plus granular write:request:jira-service-management; 201 'Returned if the customer request was created'."
+   },
+   {
+    "url": "https://learn.microsoft.com/en-us/graph/api/user-post-users?view=graph-rest-1.0",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real Microsoft Learn page. POST /users; required properties table lists accountEnabled, displayName, mailNickname, passwordProfile, userPrincipalName (plus onPremisesImmutableId only for federated UPNs). Permissions table: least privileged User.Create for both delegated and application; higher privileged User.ReadWrite.All, Directory.ReadWrite.All. Minor nuance: when an identities property is supplied not all listed properties are required."
+   },
+   {
+    "url": "https://learn.microsoft.com/en-us/graph/api/group-post-members?view=graph-rest-1.0",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real Microsoft Learn page. Shows POST /groups/{group-id}/members/$ref with @odata.id and PATCH /groups/{group-id} with members@odata.bind (up to 20 members per request). GroupMember.ReadWrite.All is the least privileged permission for user/group members (device, orgContact, servicePrincipal need additional permissions). Explicit note that recently created groups may return 400 Bad Request due to replication delay; mitigation 'Retry after a brief delay'."
+   },
+   {
+    "url": "https://developer.hashicorp.com/vault/docs/concepts/lease",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real HashiCorp docs page. States Vault creates a lease with every dynamic secret and service-type token, consumers must renew before expiry or Vault automatically revokes, revoking a lease 'invalidates that secret immediately' (AWS keys deleted the moment lease is revoked), revoking a token revokes all leases created with it, and prefix revocation (vault lease revoke -prefix aws/) is supported."
+   },
+   {
+    "url": "https://csrc.nist.gov/glossary/term/least_privilege",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real CSRC glossary entry with definitions sourced to CNSSI 4009-2022 (via SP 800-12 Rev. 1), NIST SP 800-53 Rev. 5 and NIST SP 800-171r3: restrict access privileges / grant each entity only the minimum system resources and authorizations needed to perform its function. Matches the key_fact; wording 'user, process or entity' is a paraphrase of the three definitions."
+   },
+   {
+    "url": "https://genai.owasp.org/llmrisk/llm022025-sensitive-information-disclosure/",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real OWASP GenAI page for LLM02:2025. Lists 'security credentials' among sensitive information; recommends strict input validation and pattern-matching redaction before processing, least-privilege access, tokenization and masking/scrubbing; states system-prompt restrictions 'may not always be honored and could be bypassed via prompt injection or other methods'."
+   },
+   {
+    "url": "https://modelcontextprotocol.io/specification/2025-06-18/basic/security_best_practices",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page loads with full Security Best Practices content. Token Passthrough section: 'MCP servers MUST NOT accept any tokens that were not explicitly issued for the MCP server.' Scope Minimization section recommends a progressive least-privilege scope model with minimal initial scopes and incremental elevation via targeted WWW-Authenticate scope challenges, and lists wildcard/omnibus scopes as a common mistake. Caveat: the fetched content links to the 2025-11-25 spec revision, so the served page may be a newer revision than the 2025-06-18 URL implies; the Scope Minimization section may not exist in the original 2025-06-18 text. Consider citing the current/latest spec URL instead."
+   },
+   {
+    "url": "https://code.claude.com/docs/en/security",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real Claude Code docs page. MCP security section: 'We encourage either writing your own MCP servers or using MCP servers from providers that you trust. You are able to configure Claude Code permissions for MCP servers... Anthropic... does not security-audit or manage any MCP server.' Best practices list 'Review suggested commands before approval' and 'Avoid piping untrusted content directly to Claude'. Secure credential storage: macOS Keychain when available, Linux file with mode 0600, Windows file inheriting user-profile ACLs. The page does not literally say 'rather than in prompts' - that phrasing is the course's inference, not a page statement."
+   }
+  ]
+ },
+ {
+  "course": "Cisco ACI Upgrade Automation with Claude",
+  "citations": [
+   {
+    "title": "Cisco APIC Installation and ACI Upgrade and Downgrade Guide",
+    "url": "https://www.cisco.com/c/en/us/td/docs/dcn/aci/apic/all/apic-installation-aci-upgrade-downgrade/Cisco-APIC-Installation-ACI-Upgrade-Downgrade-Guide.html",
+    "publisher": "Cisco",
+    "supports": "Course foundation: primary upgrade/downgrade reference guide",
+    "key_fact": "The guide is organized into an ACI Firmware Upgrade Overview, an Upgrade/Downgrade Architecture chapter, Pre-Upgrade/Downgrade Checklists, mixed-version operation guidance, and per-interface procedures (GUI by release, REST API, CLI)."
+   },
+   {
+    "title": "Upgrade or downgrade Cisco ACI fabrics",
+    "url": "https://www.cisco.com/c/en/us/td/docs/dcn/aci/apic/all/apic-installation-aci-upgrade-downgrade/Cisco-APIC-Installation-ACI-Upgrade-Downgrade-Guide/g-aci-firmware-upgrade-overview/workflow-to-upgrade-downgrade-apic.html",
+    "publisher": "Cisco",
+    "supports": "Module: end-to-end upgrade workflow and order (APIC cluster first, then switches)",
+    "key_fact": "Cisco's workflow upgrades the APICs first (after backup, image download, pre-upgrade validation and HUU/CIMC updates), then re-runs validations and upgrades the ACI-mode switches only once the APIC cluster is Fully Fit; multistep upgrades repeat the cycle through an intermediate release."
+   },
+   {
+    "title": "Guidelines for ACI switch upgrades and downgrades",
+    "url": "https://www.cisco.com/c/en/us/td/docs/dcn/aci/apic/all/apic-installation-aci-upgrade-downgrade/Cisco-APIC-Installation-ACI-Upgrade-Downgrade-Guide/g-aci-firmware-upgrade-overview/guidelines-for-aci-switch-upgrades.html",
+    "publisher": "Cisco",
+    "supports": "Module: designing switch update groups",
+    "key_fact": "Split leaf and spine switches into at least two update groups (e.g. ODD/EVEN) so that one member of every vPC pair, one APIC-connected leaf, and at least one route-reflector and IPN-connected spine per pod stay up; from APIC 4.2(5) the default concurrent capacity per group is unlimited, so Cisco recommends separate groups for scheduling."
+   },
+   {
+    "title": "Pre-upgrade validation tools | Pre-Upgrade/Downgrade Checklists | Cisco APIC Installation and ACI Upgrade and Downgrade Guide",
+    "url": "https://www.cisco.com/c/en/us/td/docs/dcn/aci/apic/all/apic-installation-aci-upgrade-downgrade/Cisco-APIC-Installation-ACI-Upgrade-Downgrade-Guide/g-pre-upgrade-checklists/check-configurations-and-conditions-that-may-cause-an-upgrade-or-downgrade-failure.html",
+    "publisher": "Cisco",
+    "supports": "Module: pre-upgrade validation (built-in validator vs standalone script)",
+    "key_fact": "Three validation options exist: the built-in Pre-Upgrade Validator that runs automatically when an update group is configured, the now-obsolete App Center app (App Center deprecated in 6.1.2), and the standalone script run from the APIC CLI; Cisco advises running the script at least two weeks before the maintenance window, and from APIC 6.2(1) the script's external rules can be pulled into the Upgrade GUI via Intersight or manual download."
+   },
+   {
+    "title": "GitHub - datacenter/ACI-Pre-Upgrade-Validation-Script",
+    "url": "https://github.com/datacenter/ACI-Pre-Upgrade-Validation-Script",
+    "publisher": "Cisco (datacenter GitHub org)",
+    "supports": "Module: running and parsing the Pre-Upgrade Validation script with Claude",
+    "key_fact": "The script is copied to /data/techsupport on an APIC, run with Python using admin credentials against a target version already present on the APIC, and reports each check as PASS, FAIL or MANUAL CHECK REQUIRED with a recommended action for each FAIL and a summary count by status."
+   },
+   {
+    "title": "Introduction - ACI Pre-Upgrade Validation Script documentation",
+    "url": "https://datacenter.github.io/ACI-Pre-Upgrade-Validation-Script/",
+    "publisher": "Cisco (datacenter GitHub org)",
+    "supports": "Module: validation reference and automating check triage",
+    "key_fact": "The example output lists 47 checks (image/MD5, APIC cluster fitness, CIMC compatibility, SSD health, NTP, bootflash, overlapping VLAN pools, vPC pairing, L3Out MTU, ISIS metric for Multi-Pod) and the script saves results plus debug data in a .tgz bundle that can be attached to a TAC case."
+   },
+   {
+    "title": "Upgrade or downgrade the Cisco APIC software using the REST API",
+    "url": "https://www.cisco.com/c/en/us/td/docs/dcn/aci/apic/all/apic-installation-aci-upgrade-downgrade/Cisco-APIC-Installation-ACI-Upgrade-Downgrade-Guide/g-upgrading-the-software-using-the-rest-api/upgrading-apic-controller-software-using-api.html",
+    "publisher": "Cisco",
+    "supports": "Module: driving the APIC upgrade via REST API",
+    "key_fact": "A controller upgrade via REST is three POSTs: register the image source with firmwareRepoP/firmwareOSource at /api/node/mo/uni/fabric.xml, set the target version with firmwareCtrlrFwP at /api/node/mo/uni/controller.xml, then trigger it with maintCtrlrMaintP adminState=\"up\" adminSt=\"triggered\"."
+   },
+   {
+    "title": "Cisco APIC REST API Configuration Guide, Release 4.2(x) and Later - Using the REST API",
+    "url": "https://www.cisco.com/c/en/us/td/docs/dcn/aci/apic/all/apic-rest-api-configuration-guide/cisco-apic-rest-api-configuration-guide-42x-and-later/m_using_the_rest_api.html",
+    "publisher": "Cisco",
+    "supports": "Module: APIC REST API authentication and session handling for automation",
+    "key_fact": "Clients POST to aaaLogin (prefixing the username with apic:domain\\ when multiple login domains exist), receive a token in the APIC-cookie Set-Cookie header and aaaLogin token attribute with a default refreshTimeoutSeconds of 600, and must call aaaRefresh before expiry, storing the new token returned on every refresh."
+   },
+   {
+    "title": "Cisco Application Policy Infrastructure Controller Release Notes, Release 6.1(4)",
+    "url": "https://www.cisco.com/c/en/us/td/docs/dcn/aci/apic/6x/release-notes/cisco-apic-release-notes-614.html",
+    "publisher": "Cisco",
+    "supports": "Module: reading release notes and compatibility matrices before a target version is chosen",
+    "key_fact": "Release 6.1(4h) became available on August 13, 2025; the notes instruct installing only the CIMC versions listed in the compatibility table and reviewing software advisory CSCwo74485 for UCS C225 M6 (APIC-L4/M4) servers before upgrading, alongside new features such as virtual APIC on Nutanix AHV and TACACS+ over TLS."
+   }
+  ],
+  "verified": [
+   {
+    "url": "https://www.cisco.com/c/en/us/td/docs/dcn/aci/apic/all/apic-installation-aci-upgrade-downgrade/Cisco-APIC-Installation-ACI-Upgrade-Downgrade-Guide.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Guide landing page with full TOC: ACI Firmware Upgrade Overview, Upgrade/Downgrade Architecture, Operations Allowed During Mixed Versions, Pre-Upgrade/Downgrade Checklists, GUI procedures by release (pre-4.x, 4.x/5.0, 5.1+, 6.2+), REST API, NX-OS-style CLI. Matches the stated structure."
+   },
+   {
+    "url": "https://www.cisco.com/c/en/us/td/docs/dcn/aci/apic/all/apic-installation-aci-upgrade-downgrade/Cisco-APIC-Installation-ACI-Upgrade-Downgrade-Guide/g-aci-firmware-upgrade-overview/workflow-to-upgrade-downgrade-apic.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Workflow page: backup, image download, pre-upgrade validation, HUU/CIMC update, upgrade APICs then repeat validation, wait for Fully Fit, upgrade switches, multistep via intermediate release. Fully supports the key fact."
+   },
+   {
+    "url": "https://www.cisco.com/c/en/us/td/docs/dcn/aci/apic/all/apic-installation-aci-upgrade-downgrade/Cisco-APIC-Installation-ACI-Upgrade-Downgrade-Guide/g-aci-firmware-upgrade-overview/guidelines-for-aci-switch-upgrades.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page states: divide leaf/spine into at least two groups (ODD/EVEN example), keep one leaf of each vPC pair up, one APIC-connected leaf up, at least one RR spine and IPN-connected spine per pod, and that from 4.2(5) default concurrent capacity per group is unlimited."
+   },
+   {
+    "url": "https://www.cisco.com/c/en/us/td/docs/dcn/aci/apic/all/apic-installation-aci-upgrade-downgrade/Cisco-APIC-Installation-ACI-Upgrade-Downgrade-Guide/g-pre-upgrade-checklists/check-configurations-and-conditions-that-may-cause-an-upgrade-or-downgrade-failure.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page lists built-in Pre-Upgrade Validator (runs when update group configured), App Center app (obsolete; App Center deprecated in 6.1.2), and standalone script run from APIC CLI with the two-weeks-before recommendation; from 6.2(1) external rules obtained via Intersight (recommended) or manual download from Software Download site."
+   },
+   {
+    "url": "https://github.com/datacenter/ACI-Pre-Upgrade-Validation-Script",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "README Quick Start: copy script to /data/techsupport, run with python, enter admin credentials, pick target version already on the APIC; statuses FAIL and MANUAL CHECK REQUIRED with recommended actions and a summary count per status. 'PASS' is not explicitly named in the README text (it does appear in the docs site example output), minor wording nuance only."
+   },
+   {
+    "url": "https://datacenter.github.io/ACI-Pre-Upgrade-Validation-Script/",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Docs intro shows example output with Check 1/47 through 47/47 (TOTAL: 47), including MD5, APIC Cluster Fully-Fit, CIMC compatibility, SSD health, NTP, bootflash, overlapping VLAN pools, vPC-paired leafs, L3Out MTU, ISIS redistribution metric; result bundle saved as .tgz in /data/techsupport to attach to TAC SRs."
+   },
+   {
+    "url": "https://www.cisco.com/c/en/us/td/docs/dcn/aci/apic/all/apic-installation-aci-upgrade-downgrade/Cisco-APIC-Installation-ACI-Upgrade-Downgrade-Guide/g-upgrading-the-software-using-the-rest-api/upgrading-apic-controller-software-using-api.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page shows the three POSTs: firmwareRepoP/firmwareOSource to /api/node/mo/uni/fabric.xml, firmwareCtrlrFwP (version, ignoreCompat) to /api/node/mo/uni/controller.xml, and maintCtrlrMaintP with adminState=\"up\" adminSt=\"triggered\" to controller.xml."
+   },
+   {
+    "url": "https://www.cisco.com/c/en/us/td/docs/dcn/aci/apic/all/apic-rest-api-configuration-guide/cisco-apic-rest-api-configuration-guide-42x-and-later/m_using_the_rest_api.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Chapter covers aaaLogin POST, apic:domain\\ prefix for multiple login domains, APIC-cookie token, default session timeout of 600 seconds (sample response shows refreshTimeoutSeconds=300, so configured values can differ), aaaRefresh before expiry, and a new token returned on each refresh."
+   },
+   {
+    "url": "https://www.cisco.com/c/en/us/td/docs/dcn/aci/apic/6x/release-notes/cisco-apic-release-notes-614.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Release notes: 6.1(4h) available August 13, 2025; compatibility table lists CIMC HUU versions incl. C225 M6 (APIC-L4/M4) entries referencing software advisory CSCwo74485 to review before upgrading; new features include virtual APIC on Nutanix AHV and TACACS+ over TLS (TLS 1.3)."
+   }
+  ]
+ },
+ {
+  "course": "Bill Creation Automation with Claude",
+  "citations": [
+   {
+    "title": "GST Tax Invoice and other such instruments in GST (GST flyer, Directorate General of Taxpayer Services)",
+    "url": "https://www.gstcouncil.gov.in/sites/default/files/e-version-gst-flyers/Tax_Invoice_and_other_new.pdf",
+    "publisher": "GST Council / CBIC Directorate General of Taxpayer Services",
+    "supports": "Module 1: GST tax invoice vs bill of supply and Rule 46 mandatory fields",
+    "key_fact": "GST law prescribes no fixed invoice layout, but Rule 46 of the CGST Rules 2017 makes a set of fields mandatory; a registered person making taxable supplies issues a tax invoice, while composition dealers or exempt-only suppliers issue a bill of supply, and no invoice is needed for supplies under Rs. 200 subject to conditions."
+   },
+   {
+    "title": "List messages - Microsoft Graph v1.0",
+    "url": "https://learn.microsoft.com/en-us/graph/api/user-list-messages?view=graph-rest-1.0",
+    "publisher": "Microsoft Learn",
+    "supports": "Module 2: pulling vendor bills from an Outlook/M365 mailbox via Graph",
+    "key_fact": "GET /me/messages (or /users/{id}/messages) returns 10 messages per page by default, $top can raise it to 1000, Mail.ReadBasic is the least-privileged permission, and paging must follow the @odata.nextLink URL rather than hand-building $skip values."
+   },
+   {
+    "title": "Get message - Microsoft Graph v1.0",
+    "url": "https://learn.microsoft.com/en-us/graph/api/message-get?view=graph-rest-1.0",
+    "publisher": "Microsoft Learn",
+    "supports": "Module 2: reading a single bill email body as plain text or raw MIME",
+    "key_fact": "GET /me/messages/{id} returns the message object; appending /$value returns the raw MIME content instead, and sending Prefer: outlook.body-content-type=\"text\" returns the body as plain text rather than the default HTML."
+   },
+   {
+    "title": "List Gmail messages",
+    "url": "https://developers.google.com/workspace/gmail/api/guides/list-messages",
+    "publisher": "Google for Developers",
+    "supports": "Module 2: finding invoice emails in Gmail with search queries",
+    "key_fact": "messages.list returns only message IDs and thread IDs, so each message must then be fetched with messages.get; the q parameter accepts Gmail search syntax such as from:someuser@example.com is:unread to narrow results."
+   },
+   {
+    "title": "Method: users.messages.attachments.get | Gmail",
+    "url": "https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages.attachments/get",
+    "publisher": "Google for Developers",
+    "supports": "Module 2: downloading PDF bill attachments from Gmail",
+    "key_fact": "Attachments are fetched with a GET on users/{userId}/messages/{messageId}/attachments/{id} with an empty request body, returning the attachment data for downstream extraction."
+   },
+   {
+    "title": "PDF support",
+    "url": "https://platform.claude.com/docs/en/build-with-claude/pdf-support",
+    "publisher": "Anthropic (Claude Developer Platform docs)",
+    "supports": "Module 3: sending supplier invoice PDFs to Claude for extraction",
+    "key_fact": "Claude accepts standard unencrypted PDFs up to 32 MB per request and up to 600 pages (100 pages when the context window is under 1M tokens), and can read text, tables and charts to convert them into structured data."
+   },
+   {
+    "title": "Structured outputs",
+    "url": "https://platform.claude.com/docs/en/build-with-claude/structured-outputs",
+    "publisher": "Anthropic (Claude Developer Platform docs)",
+    "supports": "Module 3: schema-constrained JSON for invoice line items, GSTIN and tax totals",
+    "key_fact": "Setting output_config.format to type json_schema with a schema constrains Claude's response to that schema so it can be parsed without retry loops; output may still diverge only on refusals (stop_reason refusal) or max_tokens truncation, and the older output_format parameter is deprecated."
+   },
+   {
+    "title": "Page.pdf() method | Puppeteer",
+    "url": "https://pptr.dev/api/puppeteer.page.pdf",
+    "publisher": "Puppeteer (pptr.dev)",
+    "supports": "Module 4: rendering the HTML bill template to a PDF file",
+    "key_fact": "page.pdf() renders the page using the print CSS media type, so colours are adjusted for printing by default; call page.emulateMediaType('screen') first to render the on-screen styling instead."
+   }
+  ],
+  "verified": [
+   {
+    "url": "https://www.gstcouncil.gov.in/sites/default/files/e-version-gst-flyers/Tax_Invoice_and_other_new.pdf",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "PDF downloads (338 KB) and extracted text states: registered person dealing only in exempted supplies or availing composition scheme 'needs to issue a bill of supply in lieu of' tax invoice; 'prescribed particulars under rule 46 of CGST Rules, 2017'; 'An invoice or a bill of supply need not be issued if the value of the supply is less than Rs. 200/- subject to [conditions]'; 'There is no format prescribed for an invoice, however, Invoice rules makes it mandatory for an invoice to have following [fields]'. Fully supports the key fact."
+   },
+   {
+    "url": "https://learn.microsoft.com/en-us/graph/api/user-list-messages?view=graph-rest-1.0",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page states default page size is 10 messages, $top range 1 to 1000, Mail.ReadBasic is least privileged (delegated; Mail.ReadBasic.All for application), and 'Don't try to extract the $skip value from the @odata.nextLink URL' - apply the entire nextLink URL. Endpoints GET /me/messages and GET /users/{id}/messages shown."
+   },
+   {
+    "url": "https://learn.microsoft.com/en-us/graph/api/message-get?view=graph-rest-1.0",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page shows GET /me/messages/{id} returning a message object; GET /me/messages/{id}/$value 'returns the message content in MIME format, and not a message resource'; Prefer: outlook.body-content-type header with values text or html, default HTML, with Example 3 demonstrating text body retrieval."
+   },
+   {
+    "url": "https://developers.google.com/workspace/gmail/api/guides/list-messages",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page says messages.list 'returns an array of Gmail messages objects that contain the message id and threadId' and 'To retrieve full message details, use the messages.get method'; q described as 'Query string to filter messages, such as from:someuser@example.com is:unread'. Minor nuance: the response also carries nextPageToken and resultSizeEstimate, so 'only IDs' applies per-message object, not the whole envelope."
+   },
+   {
+    "url": "https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages.attachments/get",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page documents GET https://gmail.googleapis.com/gmail/v1/users/{userId}/messages/{messageId}/attachments/{id}, 'The request body must be empty', and response 'contains an instance of MessagePartBody' (the attachment body data). Supports the claim; the page uses the term MessagePartBody rather than 'attachment data'."
+   },
+   {
+    "url": "https://platform.claude.com/docs/en/build-with-claude/pdf-support",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page's requirements table: Maximum request size 32 MB (varies by platform), Maximum pages per request 600 (100 when the request's context window is under 1M tokens), Format: Standard PDF (no passwords/encryption). Intro lists analyzing charts/tables and 'Converting document information into structured formats'. Fully supports the key fact."
+   },
+   {
+    "url": "https://platform.claude.com/docs/en/build-with-claude/structured-outputs",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page documents output_config.format with type json_schema; states on refusal (stop_reason refusal) 'The output might not match your schema', on max_tokens 'The output might be incomplete and not match your schema'; and 'The output_format parameter is deprecated' (moved to output_config.format, beta header otherwise required). Supports the claim."
+   },
+   {
+    "url": "https://pptr.dev/api/puppeteer.page.pdf",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page states page.pdf() 'Generates a PDF of the page with the print CSS media type', 'By default, page.pdf() generates a pdf with modified colors for printing', and 'To generate a PDF with the screen media type, call page.emulateMediaType('screen') before calling page.pdf()'. Fully supports the claim."
+   }
+  ]
+ },
+ {
+  "course": "Certificate Renewal Automation with Claude",
+  "citations": [
+   {
+    "title": "APIRef_tm_sys_file_ssl-cert",
+    "url": "https://clouddocs.f5.com/api/icontrol-rest/APIRef_tm_sys_file_ssl-cert.html",
+    "publisher": "F5 (clouddocs.f5.com)",
+    "supports": "Module: F5 BIG-IP certificate install via iControl REST",
+    "key_fact": "The /mgmt/tm/sys/file/ssl-cert collection supports GET; individual certificate resources support GET, POST, PUT, PATCH and DELETE, are keyed by name, partition and subPath, and take an optional sourcePath property that names the URI the certificate file is copied from."
+   },
+   {
+    "title": "sslcertkey | configuration",
+    "url": "https://developer-docs.netscaler.com/en-us/adc-nitro-api/current-release/configuration/ssl/sslcertkey.html",
+    "publisher": "NetScaler (developer-docs.netscaler.com)",
+    "supports": "Module: NetScaler certificate install via NITRO API",
+    "key_fact": "Creating a certificate-key pair is a POST to /nitro/v1/config/sslcertkey with a JSON body whose mandatory fields are certkey and cert (paths point to files on the appliance disk, typically /nsconfig/ssl); a successful add returns 201, and UPDATE is a PUT to the same URL with certkey mandatory and optional fields such as expirymonitor and notificationperiod."
+   },
+   {
+    "title": "Create a certificate signing request and use SSL certificates on a NetScaler appliance | How-to articles | NetScaler",
+    "url": "https://docs.netscaler.com/en-us/citrix-adc/current-release/ssl/how-to-articles/create-and-use-ssl-certificates-on-a-citrix-adc-ap.html",
+    "publisher": "NetScaler (docs.netscaler.com)",
+    "supports": "Module: NetScaler certificate binding to SSL vservers",
+    "key_fact": "After installing the cert and key under /nsconfig/ssl you run add ssl certKey <name> -cert <file> -key <file> (optionally -expiryMonitor ENABLED -notificationPeriod <days>), link any intermediate certificates first, then bind with bind ssl vserver <vs> -certkeyName <name> and verify with show ssl vserver; every SSL virtual server needs its own valid binding."
+   },
+   {
+    "title": "Install an SSL Certificate on a Radware Alteon Application Switch",
+    "url": "https://knowledge.digicert.com/tutorials/ssl-certificate-installation-radware-alteon",
+    "publisher": "DigiCert Knowledge Base",
+    "supports": "Module: Radware Alteon certificate management",
+    "key_fact": "On Alteon the installation flow is to build one PEM file with the server certificate followed by the intermediate chain, enter the cfg then cert menu on the switch CLI, paste the PEM, terminate the input with three periods, and then run apply to activate the change (no official Radware public page could be fetched, so this CA guide is the best available source)."
+   },
+   {
+    "title": "RFC 8555: Automatic Certificate Management Environment (ACME)",
+    "url": "https://www.rfc-editor.org/rfc/rfc8555",
+    "publisher": "IETF / RFC Editor",
+    "supports": "Module: ACME and internal CA renewal workflow",
+    "key_fact": "ACME replaces manual Web PKI steps with machine-readable exchanges: a client creates an account, submits an order for identifiers, satisfies one of the challenges offered in each authorization to prove control, finalizes the order with a CSR and then downloads the issued certificate; the protocol also covers revocation."
+   },
+   {
+    "title": "openssl-verify - OpenSSL Documentation",
+    "url": "https://docs.openssl.org/master/man1/openssl-verify/",
+    "publisher": "OpenSSL Project",
+    "supports": "Module: OpenSSL verification of installed chains",
+    "key_fact": "openssl verify validates certificate chains and tries to report every problem it finds rather than stopping at the first; -CAfile supplies trusted anchors while -untrusted (repeatable) supplies intermediates used only for chain building, not as trust anchors."
+   },
+   {
+    "title": "What is the Model Context Protocol (MCP)?",
+    "url": "https://modelcontextprotocol.io/docs/getting-started/intro",
+    "publisher": "Model Context Protocol (modelcontextprotocol.io)",
+    "supports": "Module: building an MCP server for load balancer APIs",
+    "key_fact": "MCP is an open-source standard, likened to a USB-C port for AI applications, that lets AI apps connect to data sources, tools and workflows in a uniform way; it is supported by Claude, ChatGPT, VS Code, Cursor and others so a server built once works across clients."
+   },
+   {
+    "title": "Overview - Claude Code",
+    "url": "https://code.claude.com/docs/en/overview",
+    "publisher": "Anthropic (code.claude.com)",
+    "supports": "Module: orchestrating renewals with Claude Code",
+    "key_fact": "Claude Code is an agentic coding tool available in terminal, IDE, desktop app and browser; it can be scripted non-interactively with claude -p for piping and CI use, connects to external systems through MCP, supports hooks that run shell commands before or after its actions, and can run cloud or desktop scheduled tasks for recurring work."
+   },
+   {
+    "title": "Agent SDK overview",
+    "url": "https://code.claude.com/docs/en/agent-sdk/overview",
+    "publisher": "Anthropic (code.claude.com)",
+    "supports": "Module: building a renewal agent with the Claude Agent SDK",
+    "key_fact": "The Agent SDK exposes the same tools, agent loop and context management as Claude Code as a Python or TypeScript library, with built-in tools, hooks, subagents, MCP connections, permission controls, resumable sessions, skills and plugins; third-party products must use API-key authentication rather than claude.ai logins."
+   }
+  ],
+  "verified": [
+   {
+    "url": "https://clouddocs.f5.com/api/icontrol-rest/APIRef_tm_sys_file_ssl-cert.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page documents collection /mgmt/tm/sys/file/ssl-cert (OPTIONS, GET) and resource /mgmt/tm/sys/file/ssl-cert/~resource id (OPTIONS, GET, PUT, PATCH, DELETE, POST); natural key is name, partition, subPath; sourcePath is an optional read/write string 'Specifies the location (URI) from where the file will be copied.' Fully supports the key_fact."
+   },
+   {
+    "url": "https://developer-docs.netscaler.com/en-us/adc-nitro-api/current-release/configuration/ssl/sslcertkey.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Very long page (nav-heavy, body appears after ~200k chars). add: POST http://<netscaler-ip-address>/nitro/v1/config/sslcertkey, mandatory certkey and cert, 'HTTP Status Code on Success: 201 Created'. update: PUT same URL, certkey mandatory, optional expirymonitor, notificationperiod, deletecertkeyfilesonremoval, 200 OK. Properties say /nsconfig/ssl/ is the default path and files must be on the appliance disk. Supports the key_fact."
+   },
+   {
+    "url": "https://docs.netscaler.com/en-us/citrix-adc/current-release/ssl/how-to-articles/create-and-use-ssl-certificates-on-a-citrix-adc-ap.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Body is deep in the page past large nav. Contains 'add ssl certKey <certkeyName> -cert <string>' with '-expiryMonitor ( ENABLED | DISABLED ) [-notificationPeriod <positive_integer>]'; 'Link any intermediate certificates to this certificate before binding the certificate to an SSL virtual server'; 'bind ssl vserver <vServerName> -certkeyName <certificate-KeyPairName>'; 'show ssl vserver <vServerName>'; 'Certificates and keys are stored in the /nsconfig/ssl directory by default'; and 'a valid certificate-key pair must be bound to each of them'. Supports the key_fact."
+   },
+   {
+    "url": "https://knowledge.digicert.com/tutorials/ssl-certificate-installation-radware-alteon",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "DigiCert tutorial: prepend server cert to the intermediate chain file, log in, enter cfg then cert, paste PEM, press Enter, type three periods '...' and Enter, then 'apply'. Matches the key_fact; note it is a CA vendor guide, not Radware official documentation, as the citation itself acknowledges."
+   },
+   {
+    "url": "https://www.rfc-editor.org/rfc/rfc8555",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "RFC 8555 full text. Introduction contrasts manual natural-language CA instructions with automated issuance 'without user interaction'; overview covers account creation, orders for identifiers, authorizations with challenges, finalize with CSR, certificate download, and revocation. Supports the key_fact."
+   },
+   {
+    "url": "https://docs.openssl.org/master/man1/openssl-verify/",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page states 'If a certificate chain has multiple problems, this program attempts to display all of them' and that -untrusted is 'A file or URI of untrusted certificates to use for chain building' and 'can be specified more than once'; -show_chain flags those as 'untrusted'. Caveat: -CAfile is not described on this page itself; it only cross-references 'Trusted Certificate Options' in openssl-verification-options(1). The -CAfile part of the key_fact is accurate OpenSSL behaviour but is supported by the linked page rather than this one."
+   },
+   {
+    "url": "https://modelcontextprotocol.io/docs/getting-started/intro",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page says MCP 'is an open-source standard for connecting AI applications to external systems', 'Think of MCP like a USB-C port for AI applications', lists data sources, tools and workflows, and names Claude, ChatGPT, Visual Studio Code, Cursor, MCPJam with 'build once and integrate everywhere'. Fully supports the key_fact."
+   },
+   {
+    "url": "https://code.claude.com/docs/en/overview",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page states Claude Code is 'an agentic coding tool' available in 'terminal, IDE, desktop app, and browser'; shows 'claude -p' piping and CI examples; 'Connect your tools with MCP'; 'Hooks let you run shell commands before or after Claude Code actions'; and 'Schedule recurring tasks' with cloud scheduled tasks and desktop scheduled tasks. Fully supports the key_fact."
+   },
+   {
+    "url": "https://code.claude.com/docs/en/agent-sdk/overview",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page says the SDK 'gives you the same tools, agent loop, and context management that power Claude Code, programmable in Python and TypeScript'; capabilities table lists built-in tools, hooks, subagents, MCP, permissions, sessions (resume or fork), skills/commands/memory, plugins; note states Anthropic 'does not allow third party developers to offer claude.ai login' and to 'Use the API key authentication methods'. Fully supports the key_fact."
+   }
+  ]
+ },
+ {
+  "course": "Configuration Comparison Automation with Claude",
+  "citations": [
+   {
+    "title": "ltm virtual \u2014 F5 TMSH Reference v17",
+    "url": "https://clouddocs.f5.com/cli/tmsh-reference/latest/modules/ltm/ltm_virtual.html",
+    "publisher": "F5 (clouddocs.f5.com)",
+    "supports": "Module 1: parsing BIG-IP virtual server objects from bigip.conf / tmsh list",
+    "key_fact": "A BIG-IP virtual server is defined by properties such as destination (address:port), pool, profiles, persist, rules, policies, vlans and source-address-translation; `list virtual` prints the configuration while `show virtual` adds runtime statistics, and the older snat/snatpool options are deprecated in favor of source-address-translation."
+   },
+   {
+    "title": "System base operations | System | NetScaler",
+    "url": "https://docs.netscaler.com/en-us/citrix-adc/current-release/system/basic-operations.html",
+    "publisher": "NetScaler (docs.netscaler.com)",
+    "supports": "Module 2: extracting and diffing NetScaler ns.conf (running vs saved config)",
+    "key_fact": "NetScaler stores its saved configuration in /nsconfig/ns.conf; `save ns config` persists changes, `show ns runningConfig` and `show ns ns.conf` display running and saved config, and the built-in `diff ns config <file1> <file2>` command (or GUI Configuration difference) compares two configuration files."
+   },
+   {
+    "title": "Migrate NetScaler application configuration using StyleBooks Configuration Builder | StyleBooks | NetScaler",
+    "url": "https://docs.netscaler.com/en-us/netscaler-application-delivery-management-software/current-release/stylebooks/migrate-citirx-adc-application-configuration-using-stylebooks",
+    "publisher": "NetScaler (docs.netscaler.com)",
+    "supports": "Module 5: NetScaler config converter and instance-to-instance migration",
+    "key_fact": "The Configuration Builder accepts a live instance, pasted ns.conf CLI commands, or an uploaded config file, generates a StyleBook plus a reusable config pack for migrating to other instances, and does not detect named expressions or responder HTML pages, which must be pre-created on the target."
+   },
+   {
+    "title": "What is an Application Load Balancer?",
+    "url": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/introduction.html",
+    "publisher": "Amazon Web Services (docs.aws.amazon.com)",
+    "supports": "Module 3: mapping ADC objects to AWS ELB listeners, rules and target groups",
+    "key_fact": "An ALB is composed of listeners (protocol/port), listener rules (priority, conditions, actions, with a mandatory default rule) and target groups that route to registered targets with per-target-group health checks; a target may belong to multiple target groups and the default routing algorithm is round robin."
+   },
+   {
+    "title": "Application gateway components | Microsoft Learn",
+    "url": "https://learn.microsoft.com/en-us/azure/application-gateway/application-gateway-components",
+    "publisher": "Microsoft Learn",
+    "supports": "Module 3: mapping ADC objects to Azure Application Gateway components",
+    "key_fact": "Azure Application Gateway routes traffic through frontend IPs, listeners (basic or multi-site, up to 5 host names each), request routing rules (basic or path-based, one listener per rule), HTTP/backend settings, backend pools and health probes; HTTP/2 is client-side only and backend communication is always HTTP/1.1."
+   },
+   {
+    "title": "F5 BIG-IP Automation Config Converter (BIG-IP ACC)",
+    "url": "https://clouddocs.f5.com/products/extensions/f5-automation-config-converter/latest/",
+    "publisher": "F5 (clouddocs.f5.com)",
+    "supports": "Module 4: F5 migration tooling, converting imperative config to AS3/DO declarations",
+    "key_fact": "BIG-IP ACC converts existing BIG-IP configuration files into declarative AS3 (application/service) or Declarative Onboarding (system, network, clustering) JSON declarations, and is a community-supported tool whose source and issue tracker live on GitHub."
+   },
+   {
+    "title": "Welcome to the F5 BIG-IP Migration Assistant - Now the F5 Journeys App",
+    "url": "https://community.f5.com/t/welcome-to-the-f5-big-ip-migration-assistant-now-the-f5-journeys-app/65567",
+    "publisher": "F5 DevCentral community (community.f5.com)",
+    "supports": "Module 4: F5 Journeys UCS-based version and platform migration",
+    "key_fact": "F5 Journeys (successor to the BIG-IP Migration Assistant, code at github.com/f5devcentral/f5-journeys) accepts or generates a UCS archive, migrates full configurations from 11.5.0+ to newer releases including VELOS and rSeries, flags feature-parity gaps with built-in fixes, and can extract individual applications into AS3."
+   },
+   {
+    "title": "Tool use with Claude",
+    "url": "https://platform.claude.com/docs/en/build-with-claude/tool-use/overview",
+    "publisher": "Anthropic (platform.claude.com)",
+    "supports": "Module 6: building a Claude-driven comparison agent with tool calls",
+    "key_fact": "To let Claude invoke a custom function (for example a config parser or diff tool), you pass a tool with a JSON input_schema; Claude responds with stop_reason tool_use and a tool_use block, your code executes it and returns a tool_result block, and `strict: true` guarantees calls conform to the schema."
+   },
+   {
+    "title": "terraform plan command reference | Terraform | HashiCorp Developer",
+    "url": "https://developer.hashicorp.com/terraform/cli/commands/plan",
+    "publisher": "HashiCorp Developer",
+    "supports": "Module 7: semantic diff approaches and drift detection patterns",
+    "key_fact": "terraform plan refreshes state, compares desired configuration against prior state and reports a semantic diff using + create, - destroy, ~ update in-place and -/+ replace markers, with -detailed-exitcode returning 0 (no changes), 1 (error) or 2 (changes present) for automation pipelines."
+   }
+  ],
+  "verified": [
+   {
+    "url": "https://clouddocs.f5.com/cli/tmsh-reference/latest/modules/ltm/ltm_virtual.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real tmsh 'ltm virtual(1)' man page. Documents destination, pool, profiles, persist, rules, policies, vlans, source-address-translation; snat/snatpool marked 'DEPRECATED - see source-address-translation'; 'show virtual' described as displaying statistics and status. Minor nuance: page lists 'list virtual' under DISPLAY but does not explicitly say in prose that it prints configuration (that is standard tmsh behaviour; the page's explicit config-display example is 'show running-config virtual')."
+   },
+   {
+    "url": "https://docs.netscaler.com/en-us/citrix-adc/current-release/system/basic-operations.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real NetScaler doc page (article body is deep in the page after a very long nav). States configs are stored in /nsconfig/ns.conf, 'save ns config' persists them, 'show ns runningConfig' and 'show ns ns.conf' show running/saved config (GUI: System > Diagnostics), and 'diff ns config <configfile> <configfile2>' / GUI 'Configuration difference' compares two config files. Fully supports the key fact."
+   },
+   {
+    "url": "https://docs.netscaler.com/en-us/netscaler-application-delivery-management-software/current-release/stylebooks/migrate-citirx-adc-application-configuration-using-stylebooks",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real NetScaler Console/ADM doc page (URL typo 'citirx' is the actual published path). Describes three sources: a NetScaler instance, pasted ns.conf/application config CLI, or uploaded config file; converts to a StyleBook and config pack; and says named expressions and responderhtmlpages are not detected and must be configured on the target instance before migration."
+   },
+   {
+    "url": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/introduction.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page explicitly covers listeners (protocol/port), rules with priority/conditions/actions and a mandatory default rule per listener, target groups with per-target-group health checks, registering a target with multiple target groups, and 'The default routing algorithm is round robin'."
+   },
+   {
+    "url": "https://learn.microsoft.com/en-us/azure/application-gateway/application-gateway-components",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page covers frontend IPs, basic vs multi-site listeners ('up to 5 host names per listener'), basic vs path-based request routing rules ('One listener can be attached to one rule'), HTTP/backend settings, backend pools, health probes, and 'HTTP/2 protocol support is available to clients connecting to application gateway listeners only. The communication to backend server pools is always over HTTP/1.1.'"
+   },
+   {
+    "url": "https://clouddocs.f5.com/products/extensions/f5-automation-config-converter/latest/",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real F5 CloudDocs page (BIG-IP ACC v1.24). States ACC converts configuration files to AS3 or Declarative Onboarding declarations, is 'a community-supported offering', with source code and issue tracker on GitHub."
+   },
+   {
+    "url": "https://community.f5.com/t/welcome-to-the-f5-big-ip-migration-assistant-now-the-f5-journeys-app/65567",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real DevCentral thread, not login-gated. States the Migration Assistant is deprecated and replaced by F5 Journeys; links to the f5devcentral/f5-journeys GitHub repo; lists loading UCS or UCS+AS3 sources, migration 'from any version starting at 11.5.0 to a higher one, including VELOS and rSeries', flagging feature-parity gaps with built-in fixes, and an Application Service journey that migrates applications to AS3."
+   },
+   {
+    "url": "https://platform.claude.com/docs/en/build-with-claude/tool-use/overview",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "URL resolves (canonical path is now /docs/en/agents-and-tools/tool-use/overview). Page shows passing a tool with input_schema, Claude responding with stop_reason 'tool_use' and a tool_use block, your code returning a tool_result block, and a tip that 'strict: true' ensures tool calls always match the schema exactly. Consider updating the citation URL to the canonical agents-and-tools path."
+   },
+   {
+    "url": "https://developer.hashicorp.com/terraform/cli/commands/plan",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page states plan reads current state of remote objects (refresh), compares current configuration to prior state, uses +, -, ~ and -/+ symbols for create/destroy/update-in-place/replace, and -detailed-exitcode returns 0 (empty diff), 1 (error), 2 (non-empty diff)."
+   }
+  ]
+ },
+ {
+  "course": "Traffic and Flow Diagram Automation with Claude",
+  "citations": [
+   {
+    "title": "RFC 1393: Traceroute Using an IP Option",
+    "url": "https://www.rfc-editor.org/rfc/rfc1393",
+    "publisher": "IETF / RFC Editor",
+    "supports": "Module 1: traceroute fundamentals and the IP Traceroute option",
+    "key_fact": "Classic TTL-based traceroute needs roughly 2n packets for n hops; RFC 1393 proposed an IP Traceroute option plus an ICMP Traceroute message (type 30) so each router reports back directly, cutting this to about n+1 packets and avoiding mid-trace path shifts. It is Experimental and was later obsoleted by RFC 6814."
+   },
+   {
+    "title": "RFC 792: Internet Control Message Protocol",
+    "url": "https://www.rfc-editor.org/rfc/rfc792",
+    "publisher": "IETF / RFC Editor",
+    "supports": "Module 1: ping fundamentals (ICMP Echo/Echo Reply) and Time Exceeded",
+    "key_fact": "ICMP Echo is type 8 and Echo Reply is type 0, with identifier and sequence fields used to match replies to requests and the received data echoed back unchanged; Time Exceeded is type 11, with code 0 meaning TTL exceeded in transit, which is the message traceroute relies on."
+   },
+   {
+    "title": "Use the Traceroute Command on Operating Systems - Cisco",
+    "url": "https://www.cisco.com/c/en/us/support/docs/ip/ip-routed-protocols/22826-traceroute.html",
+    "publisher": "Cisco",
+    "supports": "Module 1: how traceroute probes work on Cisco IOS, Linux and Windows",
+    "key_fact": "Cisco IOS and Linux traceroute send UDP probes starting at destination port 33434 with TTL starting at 1 (default max 30 hops); each hop returns ICMP Time Exceeded (type 11, code 0) and the destination returns ICMP Port Unreachable (type 3, code 3). Windows tracert uses ICMP Echo instead, and Cisco routers rate-limit ICMP unreachables (default one per 500 ms), which can show up as missing hops."
+   },
+   {
+    "title": "GitHub - traviscross/mtr: Official repository for mtr, a network diagnostic tool",
+    "url": "https://github.com/traviscross/mtr",
+    "publisher": "mtr project (GitHub)",
+    "supports": "Module 2: continuous path measurement with mtr",
+    "key_fact": "mtr combines traceroute and ping in one tool: it sends probes with successively larger TTL values to discover the path and then prints running per-hop statistics. The README warns that routers may not respond to or may rate-limit ICMP, so apparent loss at an intermediate hop does not necessarily mean forwarded traffic is being dropped there."
+   },
+   {
+    "title": "Flowcharts Syntax | Mermaid",
+    "url": "https://mermaid.js.org/syntax/flowchart.html",
+    "publisher": "Mermaid (mermaid.js.org)",
+    "supports": "Module 3: Mermaid flowchart syntax for network path diagrams",
+    "key_fact": "Flowcharts start with `flowchart` (or `graph`) plus a direction keyword (TB/TD, BT, RL, LR); edges include `-->`, `---`, dotted `-.-`, thick `===`, and `--o`/`--x`; `subgraph id [Title] ... end` groups nodes and can carry its own direction; from v11.3.0 shapes can be set with `A@{ shape: ... }`. A lowercase `end` inside a node label breaks the diagram."
+   },
+   {
+    "title": "Creating diagrams - GitHub Docs",
+    "url": "https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-diagrams",
+    "publisher": "GitHub Docs",
+    "supports": "Module 3: rendering Claude-generated Mermaid in GitHub Markdown",
+    "key_fact": "GitHub renders a Mermaid diagram from a fenced code block labeled `mermaid` in issues, discussions, pull requests, wikis and Markdown files; placing `info` in a mermaid block reveals which Mermaid version GitHub is running."
+   },
+   {
+    "title": "Insert a diagram from specially formatted CSV data | draw.io",
+    "url": "https://www.drawio.com/blog/insert-from-csv",
+    "publisher": "draw.io (diagrams.net)",
+    "supports": "Module 4: draw.io CSV import for automated topology diagrams",
+    "key_fact": "Via Arrange > Insert > Advanced > CSV, configuration lines starting with `#` precede the CSV data; `# label:` builds shape text from `%column%` placeholders, `# connect:` takes a JSON object with `from`/`to` columns (plus label, style, invert), `# identity:` lets a re-import update existing shapes instead of duplicating them, and `# layout: auto` with spacing keys applies an automatic layout."
+   },
+   {
+    "title": "DOT Language | Graphviz",
+    "url": "https://graphviz.org/doc/info/lang.html",
+    "publisher": "Graphviz",
+    "supports": "Module 4: Graphviz DOT for programmatic path graphs",
+    "key_fact": "A DOT file declares `graph` (undirected, edges `--`) or `digraph` (directed, edges `->`), optionally prefixed with `strict` to forbid duplicate edges; attributes are `key=value` pairs in square brackets, `graph`/`node`/`edge` statements set defaults only for objects defined afterwards, and subgraph names beginning with `cluster` are drawn as grouped bounding boxes by some layout engines."
+   },
+   {
+    "title": "Prompting best practices",
+    "url": "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices",
+    "publisher": "Anthropic (Claude Developer Platform docs)",
+    "supports": "Module 5: prompting Claude to emit clean Mermaid/DOT output",
+    "key_fact": "To control output format, tell Claude what to do rather than what not to do, wrap content types in XML tags (e.g. instructions, context, input) to reduce misinterpretation, and use XML format indicators or structured outputs/tool calling for a fixed structure; the page also notes that few-shot examples are one of the most reliable ways to steer output format and structure."
+   }
+  ],
+  "verified": [
+   {
+    "url": "https://www.rfc-editor.org/rfc/rfc1393",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page states classic traceroute generates 2n packets, defines the IP Traceroute option (sec 2.2) and ICMP Traceroute message Type 30 (sec 2.3), says the path is logged with n+1 instead of 2n packets, that the algorithm does not suffer from a changing path, that the memo defines an Experimental Protocol, and that it is obsoleted by RFC 6814. Minor caveat: the RFC Editor header now labels its status 'Historic' (because it was obsoleted), while the body text says Experimental."
+   },
+   {
+    "url": "https://www.rfc-editor.org/rfc/rfc792",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page lists type 8 echo / type 0 echo reply, identifier and sequence number 'to aid in matching the replies with the echo requests', 'the data received in the echo message must be returned in the echo reply message', and Time Exceeded type 11 with code 0 = 'time to live exceeded in transit'. RFC 792 does not itself mention traceroute; that clause is the course's inference."
+   },
+   {
+    "url": "https://www.cisco.com/c/en/us/support/docs/ip/ip-routed-protocols/22826-traceroute.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page confirms UDP probes with initial TTL 1 and destination port 33434, default max 30 hops, ICMP time exceeded from each hop, ICMP type 3 code 3 port unreachable from the destination, Windows tracert using ICMP echo requests, and 'ICMP unreachables are limited to one packet per 500 ms'. Caveat: the page ties the rate limit to missing port-unreachable responses from the destination (shown as asterisks for the final hop), not to missing intermediate hops in general; the key_fact's 'missing hops' wording is slightly broader than the page."
+   },
+   {
+    "url": "https://github.com/traviscross/mtr",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "README states mtr 'combines the functionality of the traceroute and ping programs', 'sends probes to the destination with successively larger time-to-live values', 'prints running statistics for each hop', and that routers 'may be configured to never send these ICMP responses, or may rate-limit them, so apparent loss at an intermediate hop does not always mean that forwarded traffic is being lost at that point'."
+   },
+   {
+    "url": "https://mermaid.js.org/syntax/flowchart.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page documents flowchart/graph with TB, TD, BT, RL, LR; link types -->, ---, -.-, ===; circle/cross edges; subgraph with explicit id and direction; v11.3.0+ A@{ shape: rect } syntax; and the warning that lowercase 'end' breaks the flowchart. Minor syntax caveats: the page writes circle/cross edges as A--oB / A--xB forms (also shown as A---oB), and the subgraph id form is written 'subgraph ide1 [one]' which matches the claim."
+   },
+   {
+    "url": "https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-diagrams",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page says diagram rendering is available in GitHub Issues, Discussions, pull requests, wikis, and Markdown files; Mermaid diagrams are created with a fenced code block using the mermaid language identifier; and to check the Mermaid version in use it shows a mermaid block containing 'info'. The page does not spell out what the info output looks like, but the purpose (revealing the version) is stated."
+   },
+   {
+    "url": "https://www.drawio.com/blog/insert-from-csv",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page describes Arrange > Insert > Advanced > CSV, config lines beginning with #, '# label: %column1%' placeholders, '# connect:' JSON with from/to plus label, style and invert, '# identity:' so re-importing updates existing shapes, and '# layout: auto'. Spacing keys (nodespacing, levelspacing, edgespacing) appear only in the example script rather than the explained command list."
+   },
+   {
+    "url": "https://graphviz.org/doc/info/lang.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page states digraph uses -> and undirected graph uses --, 'strict' forbids multi-edges, attribute lists are bracketed ID=ID pairs per the grammar, attribute statements (graph/node/edge) apply to objects 'defined afterwards', and subgraphs named cluster* are drawn within a bounding rectangle 'if supported' by the layout engine."
+   },
+   {
+    "url": "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page contains 'Tell Claude what to do instead of what not to do', 'Use XML format indicators', XML tag section stating wrapping content in <instructions>, <context>, <input> tags reduces misinterpretation, migration note recommending XML tags, structured outputs, or tool calling for output structure, and 'Examples are one of the most reliable ways to steer Claude's output format, tone, and structure.' Note: this is a live docs page and its content changes with new model releases; the structured-outputs/tool-calling point sits in the migration section rather than the main format-control list."
+   }
+  ]
+ },
+ {
+  "course": "Device Health Monitoring Automation with Claude",
+  "citations": [
+   {
+    "title": "lbvserver (Statistics for Load Balancing Virtual Server resource)",
+    "url": "https://developer-docs.netscaler.com/en-us/adc-nitro-api/current-release/statistics/lb/lbvserver",
+    "publisher": "NetScaler (Cloud Software Group) developer docs",
+    "supports": "Module: NetScaler virtual server health via NITRO stat API",
+    "key_fact": "GET /nitro/v1/stat/lbvserver (or /lbvserver/<name>) returns per-vserver state values such as UP(7), DOWN(1), OFS(4), TROFS(5), plus vslbhealth (percentage of bound services that are UP), actsvcs and totalrequests."
+   },
+   {
+    "title": "hanode (Statistics for HA node resource)",
+    "url": "https://developer-docs.netscaler.com/en-us/adc-nitro-api/13/statistics/ha/hanode",
+    "publisher": "NetScaler (Cloud Software Group) developer docs",
+    "supports": "Module: NetScaler HA pair and config-sync status checks",
+    "key_fact": "GET /nitro/v1/stat/hanode exposes hacurmasterstate (PRIMARY/SECONDARY/CLAIMING/FORCE CHANGE), hacurstate (UP, DISABLED, PARTIALFAIL, COMPLETEFAIL, etc.) and haerrsyncfailure, a counter of failed primary/secondary config syncs since the last transition, commonly caused by an RPC password mismatch."
+   },
+   {
+    "title": "iControlREST Home",
+    "url": "https://clouddocs.f5.com/api/icontrol-rest/",
+    "publisher": "F5 CloudDocs",
+    "supports": "Module: F5 BIG-IP polling via iControl REST",
+    "key_fact": "iControl REST is the REST successor to the SOAP iControl framework; anything doable from the BIG-IP command line can be done programmatically, with LTM objects such as pools reached under /mgmt/tm/ltm/ (example: POST to /mgmt/tm/ltm/pool with basic-auth credentials)."
+   },
+   {
+    "title": "APIRef_tm_ltm_pool_members",
+    "url": "https://clouddocs.f5.com/api/icontrol-rest/APIRef_tm_ltm_pool_members.html",
+    "publisher": "F5 CloudDocs",
+    "supports": "Module: interpreting F5 pool member state/session fields",
+    "key_fact": "Pool member objects expose a state field (user-down forces the member offline overriding monitors; user-up returns it to its monitor-derived state), a session field (default user-enabled, controlling new sessions) and a monitor field listing assigned health monitors and their status."
+   },
+   {
+    "title": "Table API (Table - POST /now/table/{tableName})",
+    "url": "https://www.servicenow.com/docs/r/api-reference/rest-apis/c_TableAPI.html",
+    "publisher": "ServiceNow product documentation",
+    "supports": "Module: ServiceNow incident creation via Table API",
+    "key_fact": "POST /now/table/{tableName} inserts exactly one record (bulk insert not supported), accepts JSON or XML bodies via Content-Type, returns 201 with a Location header for the new record, and the calling user must hold roles sufficient to access the target table; an example posts short_description, assignment_group, urgency and impact to incident."
+   },
+   {
+    "title": "Create an incident record",
+    "url": "https://www.servicenow.com/docs/r/api-reference/rest-api-explorer/t_GetStartedCreateInt.html",
+    "publisher": "ServiceNow product documentation",
+    "supports": "Module: hands-on lab creating an incident from a health-check failure",
+    "key_fact": "The walkthrough POSTs to https://instance.service-now.com/api/now/v1/table/incident with a body like {\"short_description\":\"...\",\"comments\":\"...\"}; it requires the admin, web_service_admin or rest_api_explorer role and the response includes a Location header pointing at the new incident."
+   },
+   {
+    "title": "Events that trigger workflows",
+    "url": "https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule",
+    "publisher": "GitHub Docs",
+    "supports": "Module: scheduling health checks with GitHub Actions cron",
+    "key_fact": "The schedule event uses five-field POSIX cron in UTC (a time zone can be set), minimum interval is every 5 minutes, runs only from the default branch, can be delayed at the top of the hour under load, and scheduled workflows in public repos are auto-disabled after 60 days of inactivity."
+   },
+   {
+    "title": "Agent SDK overview",
+    "url": "https://code.claude.com/docs/en/agent-sdk/overview",
+    "publisher": "Anthropic (Claude Code docs)",
+    "supports": "Module: orchestrating device checks and ticketing with a Claude agent",
+    "key_fact": "The Claude Agent SDK, available in Python and TypeScript, runs the same agent loop as Claude Code with built-in tools (file read/write, run commands, web search), hooks, subagents, permissions, sessions and MCP support for connecting external tools and data sources."
+   },
+   {
+    "title": "Related Documentation (AlteonOS 31.0.11.0 Release Notes)",
+    "url": "https://portals.radware.com/releasenotes/Alteon_Release_Notes_31.0.11.0/Alteon_Release_Notes/AlteonOS-31_0_11_0-RN.1.51.html",
+    "publisher": "Radware",
+    "supports": "Module: Radware Alteon monitoring and REST API reference pointer",
+    "key_fact": "Radware's official Alteon documentation set includes a dedicated 'Alteon REST API User Guide' alongside the Command Reference, CLI Application Guide and Troubleshooting Guide, which are the primary references for programmatic status and uptime checks on Alteon ADCs."
+   }
+  ],
+  "verified": [
+   {
+    "url": "https://developer-docs.netscaler.com/en-us/adc-nitro-api/current-release/statistics/lb/lbvserver",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real NITRO stat reference page. Lists GET /nitro/v1/stat/lbvserver and /lbvserver/<name>; state values UP(7), DOWN(1), UNKNOWN(2), BUSY(3), OFS(4), TROFS(5), TROFS_DOWN(8); vslbhealth = percentage of UP services bound to the vserver; actsvcs and totalrequests present. Minor: breadcrumb says 14.1 while nav says 13.1 (version labeling inconsistent)."
+   },
+   {
+    "url": "https://developer-docs.netscaler.com/en-us/adc-nitro-api/13/statistics/ha/hanode",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real NITRO 13.1 hanode stat page. GET /nitro/v1/stat/hanode; hacurmasterstate values STAYSECONDARY/PRIMARY/SECONDARY/CLAIMING/FORCE CHANGE; hacurstate values UP/DISABLED/INIT/PARTIALFAIL/COMPLETEFAIL/DUMB/PARTIALFAILSSL/ROUTEMONITORFAIL; haerrsyncfailure counts config sync failures since last transition and explicitly cites RPC password mismatch as a cause."
+   },
+   {
+    "url": "https://clouddocs.f5.com/api/icontrol-rest/",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real iControl REST home page (v0.9.1). Says iControl REST is 'an evolution on the proven, stable iControl framework' using REST 'rather than a SOAP approach' (the word 'successor' is not used, but meaning matches). Quotes 'Anything that you're able to accomplish from the command line you can leverage programmatically via iControl REST.' Shows curl -u admin:admin -X POST https://192.168.25.42/mgmt/tm/ltm/pool example."
+   },
+   {
+    "url": "https://clouddocs.f5.com/api/icontrol-rest/APIRef_tm_ltm_pool_members.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real API reference for mgmt/tm/ltm/pool/~id/members. state: 'user-down forces the pool member offline, overriding monitors', user-up reverts it and displays the monitor state. session: default user-enabled, 'Enables or disables the pool member for new sessions'. monitor: displays configured health monitors and status of each. Matches claim."
+   },
+   {
+    "url": "https://www.servicenow.com/docs/r/api-reference/rest-apis/c_TableAPI.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real Table API reference page. POST /now/table/{tableName}: 'Inserts one record in the specified table. Multiple record insertion is not supported by this method'; Content-Type application/json or application/xml; 201 status and Location response header; 'The calling user must have sufficient roles to access the data in the table'; cURL example posts short_description, assignment_group, urgency, impact to incident. All elements confirmed."
+   },
+   {
+    "url": "https://www.servicenow.com/docs/r/api-reference/rest-api-explorer/t_GetStartedCreateInt.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real page 'Create an incident record' (REST API Explorer getting-started). POST to https://instance.service-now.com/api/now/v1/table/incident with body {\"short_description\":\"Test incident creation through REST\",\"comments\":\"These are my comments\"}; role required: admin, web_service_admin, or rest_api_explorer; response includes a Location header. Matches claim exactly."
+   },
+   {
+    "url": "https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real GitHub Docs page. Schedule section confirms POSIX cron (five fields), UTC default with optional IANA timezone, 'shortest interval ... once every 5 minutes', runs only on the default branch, can be delayed during high load including the start of every hour, and public-repo scheduled workflows auto-disabled after 60 days of no repository activity."
+   },
+   {
+    "url": "https://code.claude.com/docs/en/agent-sdk/overview",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real Agent SDK overview page. States the SDK gives 'the same tools, agent loop, and context management that power Claude Code, programmable in Python and TypeScript'; capabilities table lists built-in tools (read/write/edit files, run commands, search the web), hooks, subagents, MCP, permissions, sessions (plus skills/commands/memory and plugins). Fully supports claim."
+   },
+   {
+    "url": "https://portals.radware.com/releasenotes/Alteon_Release_Notes_31.0.11.0/Alteon_Release_Notes/AlteonOS-31_0_11_0-RN.1.51.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real Radware release-notes page with a 'Related Documentation' list for 31.x including 'Alteon REST API User Guide', 'Alteon Command Reference', 'Alteon Command Line Interface Application Guide' and 'Alteon Troubleshooting Guide' (13 titles total). Supports the pointer claim; note the page is only a list of titles, it does not itself describe status/uptime API calls. Separate note for the relayed user question about images all showing 'A critical CVE lands at 4 pm': that is outside this citation-verification step and was not investigated here; it likely points to a shared hardcoded title in the promo-video/image generator and should be checked by the parent."
+   }
+  ]
+ },
+ {
+  "course": "HR Hiring Flow Automation with Claude",
+  "citations": [
+   {
+    "title": "Harvest API | Greenhouse",
+    "url": "https://docs.greenhouse.io/harvest.html",
+    "publisher": "Greenhouse Software (developer documentation)",
+    "supports": "Module 2: exporting candidates and applications from an ATS via API",
+    "key_fact": "Harvest was built so customers can export their Greenhouse data; it uses Basic Auth over HTTPS with the API token as the username and blank password, exposes list/retrieve/add/edit/anonymize endpoints for candidates and advance/move/reject/hire endpoints for applications, and Harvest v1/v2 is deprecated for removal on 31 August 2026 in favour of v3."
+   },
+   {
+    "title": "Lever API Overview",
+    "url": "https://hire.lever.co/developer/documentation",
+    "publisher": "Lever (developer documentation)",
+    "supports": "Module 2: pulling candidate pipeline data from Lever",
+    "key_fact": "The Lever Data API is JSON over HTTPS at https://api.lever.co/v1, authenticates with Basic Auth API keys or OAuth 2.0 (access tokens expire after one hour), is rate limited to 10 requests/second per key with bursts to 20, and the Candidates endpoints are deprecated since 2020 in favour of Opportunities."
+   },
+   {
+    "title": "LinkedIn Talent Solutions - LinkedIn | Microsoft Learn",
+    "url": "https://learn.microsoft.com/en-us/linkedin/talent/",
+    "publisher": "LinkedIn / Microsoft Learn",
+    "supports": "Module 2: LinkedIn Talent API integration options for an ATS",
+    "key_fact": "LinkedIn Talent Solutions offers partner-facing APIs grouped as Apply Connect, Apply with LinkedIn, Job Posting API, CRM Connect and Recruiter System Connect; Recruiter System Connect synchronises candidate information between an ATS and LinkedIn Recruiter, while the Job Posting API ingests jobs already created in an ATS or job board."
+   },
+   {
+    "title": "Naukri",
+    "url": "https://docs.ashbyhq.com/naukri",
+    "publisher": "Ashby (ATS vendor documentation)",
+    "supports": "Module 2: Naukri job-posting integration and its access constraints",
+    "key_fact": "Naukri has no self-serve developer portal: an employer must request its team's API key from its Naukri point of contact, Naukri requires a paid subscription to post jobs (which may cap active postings), and postings fail unless location, experience range and job role are present and correctly formatted."
+   },
+   {
+    "title": "The Digital Personal Data Protection Act, 2023 (No. 22 of 2023) - Gazette of India Extraordinary",
+    "url": "https://www.trai.gov.in/sites/default/files/2024-09/DPDT_11082024.pdf",
+    "publisher": "Government of India (Gazette copy hosted by TRAI)",
+    "supports": "Module 5: lawful basis, notice and consent for candidate data under DPDP Act 2023",
+    "key_fact": "Section 5 requires every consent request to be accompanied or preceded by a notice stating the personal data and purpose, how to exercise rights and how to complain to the Board; Section 6 requires consent to be free, specific, informed, unconditional and unambiguous with a clear affirmative action; and Section 7(i) lists processing for the purposes of employment as a 'certain legitimate use' that does not require consent."
+   },
+   {
+    "title": "DPDP Rules, 2025 Notified - A Citizen-Centric Framework for Privacy Protection and Responsible Data Use",
+    "url": "https://static.pib.gov.in/WriteReadData/specificdocs/documents/2025/nov/doc20251117695301.pdf",
+    "publisher": "Press Information Bureau, Government of India",
+    "supports": "Module 5: compliance timeline, consent notices, breach notification and penalties",
+    "key_fact": "The DPDP Rules, 2025 were notified on 14 November 2025 with an eighteen-month phased compliance period; every Data Fiduciary must issue a separate, clear, purpose-specific consent notice, Consent Managers must be India-based companies, breaches must be reported to affected individuals and the Data Protection Board, and penalties run up to Rs 250 crore for failing to maintain reasonable security safeguards."
+   },
+   {
+    "title": "CEFR - Common European Framework of Reference for Languages",
+    "url": "https://www.lifelong-learning.lu/formation-tout-au-long-de-la-vie/cecr-cadre-europeen-commun-de-reference-pour-les-langues/en",
+    "publisher": "lifelong-learning.lu (INFPC, Government of Luxembourg lifelong-learning portal)",
+    "supports": "Module 3: scoring candidate English proficiency on the CEFR scale",
+    "key_fact": "CEFR has six levels grouped into three bands: Basic user (A1 Breakthrough, A2 Waystage), Independent user (B1 Threshold, B2 Vantage) and Proficient user (C1 Effective operational proficiency, C2 Mastery); B2 is where a candidate can follow complex technical text in their field and converse fluently with native speakers, and levels can be subdivided locally (for example A1.1/A1.2)."
+   },
+   {
+    "title": "Structured outputs",
+    "url": "https://platform.claude.com/docs/en/build-with-claude/structured-outputs",
+    "publisher": "Anthropic (Claude Developer Platform docs)",
+    "supports": "Module 4: schema-constrained screening output from Claude",
+    "key_fact": "Passing output_config.format with type json_schema makes Claude return JSON that matches the schema (no beta header needed; the older output_format parameter is deprecated); objects must set additionalProperties:false, recursive schemas and numeric min/max constraints are unsupported, and strict:true on a tool can be combined in the same request, with schemas cached for 24 hours so sensitive data must not be put in schema definitions."
+   },
+   {
+    "title": "Tool use with Claude",
+    "url": "https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview",
+    "publisher": "Anthropic (Claude Developer Platform docs)",
+    "supports": "Module 4: wiring ATS and portal APIs to Claude as tools",
+    "key_fact": "A client tool is defined with a name, description and JSON input_schema; Claude answers with stop_reason tool_use and a tool_use block, the application runs the call and returns a tool_result block in the next user turn, and tool_choice (auto by default, with disable_parallel_tool_use available) controls whether and how Claude must call a tool, while strict:true guarantees the inputs match the schema."
+   }
+  ],
+  "verified": [
+   {
+    "url": "https://docs.greenhouse.io/harvest.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Live Harvest API reference. Verbatim support for: 'designed to allow our customers to export their data from Greenhouse'; Basic Auth over HTTPS with API token as username and blank password; candidate endpoints List/Retrieve/Add/Edit/Anonymize; application endpoints Advance/Move/Reject/Hire; and 'The Harvest v1/v2 API is deprecated and will be removed on August 31, 2026 ... migrate to Harvest v3.'"
+   },
+   {
+    "url": "https://hire.lever.co/developer/documentation",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Live Lever Data API docs. Root URL https://api.lever.co/v1, JSON over HTTPS, Basic Auth with API key as username, OAuth tokens expire after 1 hour by default, 10 req/s steady state per key with bursts to 20 req/s, and 'The Candidates endpoints were deprecated as of 2020' pointing to Opportunities. All facts confirmed."
+   },
+   {
+    "url": "https://learn.microsoft.com/en-us/linkedin/talent/",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Live Microsoft Learn hub page. Lists Apply Connect, Apply with LinkedIn, Job Posting, CRM Connect and Recruiter System Connect. States 'Recruiter System Connect synchronizes customers' candidate information between your ATS and LinkedIn Recruiter' and that jobs 'already created externally on ATS, company site, or job board can be automatically ingested by LinkedIn.' Note: the hub names the section 'Job Posting' with a link titled 'Job Posting API'; the overview is brief but contains the cited facts."
+   },
+   {
+    "url": "https://docs.ashbyhq.com/naukri",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Live Ashby help article. Confirms: 'get in touch with your Naukri point of contact to request your team's API key'; 'Naukri requires a subscription to post jobs' and 'may include a cap on active job postings'; and that required fields 'like location, experience range, or job role must be present and correctly formatted' is listed among common failure reasons. Two caveats: the page never uses the phrase 'no self-serve developer portal' (that is an inference from the API-key-via-contact instruction), and the missing-field rule is one of several failure causes (salary format, unapproved company profile, unsupported role), so 'fail unless' slightly overstates it. Recommend softening to 'a common reason postings fail is...'."
+   },
+   {
+    "url": "https://www.trai.gov.in/sites/default/files/2024-09/DPDT_11082024.pdf",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "PDF downloads (177 KB, digitally signed). Extracted text confirms it is Gazette of India Extraordinary Part II Section 1, No. 25, 11 August 2023, Ministry of Law and Justice. Section 5(1) text matches (notice informing of personal data and purpose, manner to exercise rights under 6(4) and 13, manner to complain to the Board). Section 6(1) matches verbatim ('free, specific, informed, unconditional and unambiguous with a clear affirmative action'). Section 7(i) matches ('for the purposes of employment or those related to safeguarding the employer from loss or liability...'). Minor: the citation title says 'No. 22 of 2023' which is the Act number and is consistent with the gazette. The filename says DPDT_11082024 but the document itself is dated 11 August 2023."
+   },
+   {
+    "url": "https://static.pib.gov.in/WriteReadData/specificdocs/documents/2025/nov/doc20251117695301.pdf",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "PDF downloads (296 KB), PIB backgrounder dated 17 November 2025 titled 'DPDP Rules, 2025 Notified - A Citizen-Centric Framework...'. Extracted text confirms: 'DPDP Rules notified on 14 November 2025'; 'an eighteen-month period for phased compliance'; 'Every Data Fiduciary must issue a separate consent notice that is clear and easy to understand ... must explain the specific purpose'; 'Consent Managers ... must be companies based in India'; breach notification to affected individuals and the Board; 'highest penalty up to Rs 250 crore applies to failure of a Data Fiduciary to maintain reasonable security safeguards.' All facts supported."
+   },
+   {
+    "url": "https://www.lifelong-learning.lu/formation-tout-au-long-de-la-vie/cecr-cadre-europeen-commun-de-reference-pour-les-langues/en",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Live content page. Confirms three bands (basic/independent/proficient user), level names A1 Breakthrough, A2 Waystage, B1 Threshold, B2 Vantage, C1 Effective operational proficiency, C2 Mastery, and that levels 'can be divided into intermediate or sub-levels' with example A1.1/A1.2. B2 descriptor on the page: understands main ideas of complex text 'including technical discussions in his/her field of specialisation' and interaction with native speakers 'quite possible without strain'. The key_fact's wording 'follow complex technical text' is a slight paraphrase of 'understand the main ideas of complex text... technical discussions'; acceptable but could be quoted more precisely."
+   },
+   {
+    "url": "https://platform.claude.com/docs/en/build-with-claude/structured-outputs",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Live docs page. Confirms output_config.format with type json_schema, 'beta headers are no longer required', output_format deprecated, additionalProperties must be false for objects, recursive schemas and numerical constraints (minimum/maximum) not supported, combining with strict:true tools in one request, and schema cached up to 24 hours since last use. One nuance: the page's sensitive-data warning is specifically about PHI (HIPAA) not being included in schema definitions; the key_fact generalises this to 'sensitive data'. Reasonable generalisation but the source is PHI-specific."
+   },
+   {
+    "url": "https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Live docs page. Confirms client tools defined with name, description, input_schema; Claude responds with stop_reason 'tool_use' and tool_use blocks; application runs the call and returns a tool_result block in the next user message; default tool_choice is {type: auto} and the example uses disable_parallel_tool_use: true; and 'Add strict: true to your custom tool definitions to ensure Claude's tool calls always match your schema exactly.' All facts supported."
+   }
+  ]
+ },
+ {
+  "course": "Terraform and GitHub Automation with Claude",
+  "citations": [
+   {
+    "title": "State | Terraform | HashiCorp Developer",
+    "url": "https://developer.hashicorp.com/terraform/language/state",
+    "publisher": "HashiCorp",
+    "supports": "Module 1: Terraform fundamentals - state and common mistakes",
+    "key_fact": "Terraform maps real infrastructure to configuration through state stored per workspace; state is a JSON file that should not be hand-edited or committed to version control, and HashiCorp recommends a remote backend or HCP Terraform instead of the default local file."
+   },
+   {
+    "title": "Backend block configuration overview | Terraform | HashiCorp Developer",
+    "url": "https://developer.hashicorp.com/terraform/language/backend",
+    "publisher": "HashiCorp",
+    "supports": "Module 1: remote backends and shared state",
+    "key_fact": "A configuration may contain only one backend block; backend settings are written in plain text to .terraform/terraform.tfstate and plan files, so credentials should be supplied via environment variables rather than in the configuration."
+   },
+   {
+    "title": "Modules overview | Terraform | HashiCorp Developer",
+    "url": "https://developer.hashicorp.com/terraform/language/modules",
+    "publisher": "HashiCorp",
+    "supports": "Module 1: Terraform modules",
+    "key_fact": "A module is a collection of resources Terraform manages together; modules can be sourced from the local filesystem, a Terraform registry, or VCS repositories, and Terraform downloads registry modules automatically when source and version are set in a module block."
+   },
+   {
+    "title": "terraform fmt command reference | Terraform | HashiCorp Developer",
+    "url": "https://developer.hashicorp.com/terraform/cli/commands/fmt",
+    "publisher": "HashiCorp",
+    "supports": "Module 1: terraform fmt/validate in CI",
+    "key_fact": "terraform fmt rewrites files to a single canonical style with no customization options; the -check flag returns a non-zero exit status when files are not formatted, and -recursive is needed to process subdirectories, which makes it suitable as a CI gate."
+   },
+   {
+    "title": "About protected branches",
+    "url": "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches",
+    "publisher": "GitHub Docs",
+    "supports": "Module 2: branches, pull requests and branch protection rules",
+    "key_fact": "Branch protection rules can require passing status checks or a linear history before pushes, block force pushes and deletions by default, and do not apply to admins unless 'Do not allow bypassing the above settings' is enabled; only one branch protection rule applies to a branch at a time, a limitation rulesets do not share."
+   },
+   {
+    "title": "About code owners",
+    "url": "https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners",
+    "publisher": "GitHub Docs",
+    "supports": "Module 2: CODEOWNERS for Terraform review ownership",
+    "key_fact": "A CODEOWNERS file placed in .github/, the repo root, or docs/ automatically requests review from the listed owners when a PR touches their files; the file on the PR's base branch is used, owners must have write access, invalid lines are skipped, and files over 3 MB are not loaded."
+   },
+   {
+    "title": "Automate Terraform with GitHub Actions | Terraform | HashiCorp Developer",
+    "url": "https://developer.hashicorp.com/terraform/tutorials/automation/github-actions",
+    "publisher": "HashiCorp",
+    "supports": "Module 3: GitHub Actions workflows for Terraform plan/apply",
+    "key_fact": "The reference workflow runs terraform plan on every commit to a pull request branch so changes can be reviewed before merge, then runs apply when the PR is merged to main; it authenticates to HCP Terraform with a team token stored as the TF_API_TOKEN GitHub secret."
+   },
+   {
+    "title": "AS3 Integration with Terraform \u2014 F5 Modules for Terraform",
+    "url": "https://clouddocs.f5.com/products/orchestration/terraform/latest/userguide/as3-integration.html",
+    "publisher": "F5 (clouddocs.f5.com)",
+    "supports": "Module 4: F5 BIG-IP Terraform provider and AS3 declarations",
+    "key_fact": "The bigip_as3 resource takes a required as3_json argument pointing to an AS3 declaration file and an optional tenant_filter that restricts changes to a single tenant; it requires BIG-IP 12.1.x or later, AS3 extension 3.10 or later, and an Administrator-role account."
+   },
+   {
+    "title": "Claude Code GitHub Actions",
+    "url": "https://code.claude.com/docs/en/github-actions",
+    "publisher": "Anthropic (code.claude.com)",
+    "supports": "Module 5: Claude Code GitHub Actions for Terraform PR automation",
+    "key_fact": "The anthropics/claude-code-action runs in interactive mode (responding to @claude mentions in issues and PRs) when no prompt input is given, or in automation mode on any GitHub event when a prompt is supplied; it authenticates via an ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN secret, requires the triggering user to have write access, and rejects bot actors unless listed in allowed_bots."
+   }
+  ],
+  "verified": [
+   {
+    "url": "https://developer.hashicorp.com/terraform/language/state",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page states: 'Terraform uses your workspace's state to map real world resources to your configuration', 'stores your workspaces state as a JSON text file', 'Do not directly edit this file', 'Avoid storing your state in a version control system', and 'We recommend storing state in HCP Terraform or a remote backend'. All elements of the key fact supported."
+   },
+   {
+    "url": "https://developer.hashicorp.com/terraform/language/backend",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page states 'A configuration can only provide one backend block', that Terraform 'writes the backend configuration in plain text' to .terraform/terraform.tfstate and plan files, and 'We recommend using environment variables to supply credentials and other sensitive data'."
+   },
+   {
+    "url": "https://developer.hashicorp.com/terraform/language/modules",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page states 'A module is a collection of resources that Terraform manages together', lists local filesystem, registry and VCS sources, and says registry modules can be downloaded automatically 'if you specify the appropriate source and version'."
+   },
+   {
+    "url": "https://developer.hashicorp.com/terraform/cli/commands/fmt",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page states the command 'is intentionally opinionated and has no customization options', that with -check the exit status is non-zero when input is not properly formatted, and that -recursive is needed to process subdirectories. Caveat: the page does not itself mention CI; 'suitable as a CI gate' is an inference from the documented exit-status behaviour, not a stated recommendation."
+   },
+   {
+    "url": "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page confirms requirements 'such as passing status checks or a linear commit history', that each rule by default disables force pushes and prevents deletion, that restrictions 'don't apply to people with admin permissions' unless 'Do not allow bypassing the above settings' is enabled, and 'Only a single branch protection rule can apply at a time... This restriction does not apply to rulesets'."
+   },
+   {
+    "url": "https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page confirms CODEOWNERS location (.github/, root, or docs/), automatic review requests, 'must be on the base branch of the pull request', owners 'must have explicit write access', invalid-syntax lines are skipped, and files over 3 MB 'will not be loaded'. Minor nuance: draft PRs do not trigger automatic requests."
+   },
+   {
+    "url": "https://developer.hashicorp.com/terraform/tutorials/automation/github-actions",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Tutorial states it will 'Generate a plan for every commit to a pull request branch', that apply runs on pushes to main 'which includes Pull Request merges to main', and instructs creating an HCP Terraform team token stored as a GitHub secret named TF_API_TOKEN."
+   },
+   {
+    "url": "https://clouddocs.f5.com/products/orchestration/terraform/latest/userguide/as3-integration.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page documents bigip_as3 with as3_json '(Required) Path/Filename of Declarative AS3 JSON' and tenant_filter '(Optional)...set a particular tenant', and prerequisites: BIG-IP 12.1.x or newer, AS3 Extension 3.10 or newer, and a user account with the Administrator role."
+   },
+   {
+    "url": "https://code.claude.com/docs/en/github-actions",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page's 'Interactive and automation modes' section confirms interactive mode when no prompt input (responds to @claude trigger phrase) and automation mode on any GitHub event when prompt is supplied; setup section lists ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN secrets; 'Who can trigger runs' confirms write-access requirement on issue/PR events (with allowed_non_write_users exception) and rejection of bot actors unless listed in allowed_bots."
+   }
+  ]
+ },
+ {
+  "course": "Troubleshooting Automation with Claude",
+  "citations": [
+   {
+    "title": "Table API",
+    "url": "https://www.servicenow.com/docs/bundle/zurich-api-reference/page/integrate/inbound-rest/concept/c_TableAPI.html",
+    "publisher": "ServiceNow Product Documentation",
+    "supports": "Module: creating and updating incidents via the ServiceNow Table API",
+    "key_fact": "The Table API exposes CRUD endpoints under /now/table/{tableName}: GET lists or reads records, POST inserts a single record (no bulk insert), PATCH/PUT update by sys_id, and DELETE returns HTTP 204 on success; a versioned path /api/now/{api_version}/table/... is optional and defaults to the latest version."
+   },
+   {
+    "title": "Email and SMS notifications",
+    "url": "https://www.servicenow.com/docs/bundle/zurich-platform-administration/page/administer/notification/concept/c_EmailNotifications.html",
+    "publisher": "ServiceNow Product Documentation",
+    "supports": "Module: incident email notifications and acknowledgement replies",
+    "key_fact": "Every outbound notification carries a watermark label that lets ServiceNow match an inbound reply back to the originating record, and inbound email actions define how those replies (for example an acknowledgement) are processed; notifications can also be batched into digests over a time interval."
+   },
+   {
+    "title": "Architecture Overview (Flow Designer)",
+    "url": "https://www.servicenow.com/docs/bundle/washingtondc-build-workflows/page/administer/flow-designer/concept/flow-designer-arch-overview.html",
+    "publisher": "ServiceNow Product Documentation",
+    "supports": "Module: automating incident workflows with Flow Designer",
+    "key_fact": "A flow starts from a record-, schedule- or application-based trigger; matching trigger events are placed in an event queue and processed in order by a scheduler, so a flow may start with a delay, after which the engine builds a cached, just-in-time compiled process plan of published actions and subflows."
+   },
+   {
+    "title": "F5 TMSH Reference - 17.x",
+    "url": "https://clouddocs.f5.com/cli/tmsh-reference/latest/",
+    "publisher": "F5 (clouddocs.f5.com)",
+    "supports": "Module: F5 BIG-IP troubleshooting with tmsh",
+    "key_fact": "The TMSH reference is the collected BIG-IP TMOS Shell man pages organized into General, Commands and Modules sections, and which man pages apply depends on which modules are provisioned on the BIG-IP system."
+   },
+   {
+    "title": "ADC CLI Commands 14.1",
+    "url": "https://developer-docs.netscaler.com/en-us/adc-command-reference-int/current-release.html",
+    "publisher": "NetScaler (developer-docs.netscaler.com)",
+    "supports": "Module: Citrix NetScaler troubleshooting with show commands",
+    "key_fact": "The NetScaler ADC CLI command reference is indexed by feature area (aaa, lb, ssl, system, vpn and so on), with a commands page per area and sub-pages for individual configuration objects such as lb-vserver and ssl-certKey."
+   },
+   {
+    "title": "Understand the Extended Ping and Extended Traceroute Commands",
+    "url": "https://www.cisco.com/c/en/us/support/docs/ip/routing-information-protocol-rip/13730-ext-ping-trace.html",
+    "publisher": "Cisco",
+    "supports": "Module: Cisco IOS/NX-OS connectivity troubleshooting",
+    "key_fact": "The extended ping command on Cisco IOS is available only from privileged EXEC mode, whereas the basic ping works in both user EXEC and privileged EXEC modes."
+   },
+   {
+    "title": "Knowledge article templates",
+    "url": "https://www.servicenow.com/docs/r/washingtondc/servicenow-platform/knowledge-management/knowledge-article-templates.html",
+    "publisher": "ServiceNow Product Documentation",
+    "supports": "Module: knowledge base templates for troubleshooting runbooks",
+    "key_fact": "ServiceNow ships Standard, FAQ, How To, What Is and KCS Article templates (the KCS template has Issue, Environment, Cause and Resolution fields); all but Standard are inactive by default, a template must be active and linked to a knowledge base to appear to authors, and the feature requires the Knowledge Management Advanced plugin."
+   },
+   {
+    "title": "Connect Claude Code to tools via MCP",
+    "url": "https://code.claude.com/docs/en/mcp",
+    "publisher": "Anthropic (Claude Code docs)",
+    "supports": "Module: wiring Claude Code to ServiceNow and network devices via MCP servers",
+    "key_fact": "Servers are registered with claude mcp add using HTTP (recommended for remote), stdio (local process) or deprecated SSE transports, and stored at local, project (.mcp.json, shareable via version control) or user scope; when a server is defined in several places, local takes precedence over project, then user, then plugin and claude.ai connector definitions."
+   },
+   {
+    "title": "What is the Model Context Protocol (MCP)?",
+    "url": "https://modelcontextprotocol.io/introduction",
+    "publisher": "Model Context Protocol (modelcontextprotocol.io)",
+    "supports": "Module: MCP fundamentals for building troubleshooting agents",
+    "key_fact": "MCP is an open-source standard for connecting AI applications to external data sources, tools and workflows, described as a USB-C-style standardized port so a server can be built once and used across clients such as Claude, VS Code and Cursor."
+   }
+  ],
+  "verified": [
+   {
+    "url": "https://www.servicenow.com/docs/bundle/zurich-api-reference/page/integrate/inbound-rest/concept/c_TableAPI.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Full Table API reference. Page documents /api/now/table/{tableName}[/{sys_id}] for GET (list/single), POST ('Inserts one record... Multiple record insertion is not supported by this method'), PATCH/PUT by sys_id, DELETE with status 204 'request completed successfully' and no response body (204 shown in status table, not prose), and api_version 'Optional... Only specify this value to use an endpoint version other than the latest.'"
+   },
+   {
+    "url": "https://www.servicenow.com/docs/bundle/zurich-platform-administration/page/administer/notification/concept/c_EmailNotifications.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Zurich overview/hub page with short summaries and links. States 'a unique watermark label will be generated at the bottom of each notification email... to allow matching incoming email to existing records', 'Define an inbound email action to script how the system responds to an inbound email', and digests as 'a single email that summarizes the activity for a selected notification... during a specified time interval'. Supports the key fact, but details (reply handling, interval config) live on linked child pages; the word 'acknowledgement' does not appear."
+   },
+   {
+    "url": "https://www.servicenow.com/docs/bundle/washingtondc-build-workflows/page/administer/flow-designer/concept/flow-designer-arch-overview.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Loads as the Architecture Overview page, but the served content is labeled for the Brazil release (branded 'Workflow Studio') rather than Washington DC, so the title/bundle in the citation is slightly stale. Content confirms record-/schedule-/application-based triggers, a scheduler that processes queued events 'in the order in which they were added' with expected 'lag time', and a 'just-in-time compilation scheme' with a 'cached copy of the process plan' of published actions/subflows."
+   },
+   {
+    "url": "https://clouddocs.f5.com/cli/tmsh-reference/latest/",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page title 'F5 TMSH Reference - 17.x' (v17.0.0 selected). States 'TMOS Shell (tmsh) references are collections of the available BIG-IP tmsh man pages', lists General, Commands and Modules sections, and 'The available tmsh man pages will depend upon the BIG-IP system's provisioned modules.' Exact match."
+   },
+   {
+    "url": "https://developer-docs.netscaler.com/en-us/adc-command-reference-int/current-release.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Title 'ADC CLI Commands 14.1' (dated Aug 18, 2023), described as 'A detailed list of the commands that can be used to configure the Citrix ADC appliance through the CLI.' Navigation is indexed by feature area (aaa, lb, ssl, system, vpn, cache, dns, gslb...) each with an '<area>-commands' page and object sub-pages including lb-vserver and ssl-certKey. Note: 'current-release' URL may move to a newer version over time."
+   },
+   {
+    "url": "https://www.cisco.com/c/en/us/support/docs/ip/routing-information-protocol-rip/13730-ext-ping-trace.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Cisco TAC doc 13730 (updated Nov 4, 2025). Quotes: 'The extended ping command works only at the privileged EXEC command line.' and 'The normal ping works both in the user EXEC mode and the privileged EXEC mode.' Exact match. Note the doc covers IOS; it does not discuss NX-OS, so the module title's NX-OS reference is not supported by this source."
+   },
+   {
+    "url": "https://www.servicenow.com/docs/r/washingtondc/servicenow-platform/knowledge-management/knowledge-article-templates.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Full article. Table lists Standard, FAQ, How To, What Is and KCS Article templates; KCS row shows Issue, Environment, Cause, Resolution. States 'All pre-defined templates are inactive by default', Standard 'is available by default and can't be made inactive', 'Only templates which are active and associated with a knowledge base are shown', and activation via 'Knowledge Management Advanced (com.snc.knowledge_advanced) plugin'. Minor nuance: Standard being 'active' is implied rather than literally stated."
+   },
+   {
+    "url": "https://code.claude.com/docs/en/mcp",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Official Claude Code MCP page. Confirms claude mcp add, HTTP 'recommended option for connecting to remote MCP servers', stdio local processes, SSE 'deprecated. Use HTTP servers instead', scopes local (default, ~/.claude.json), project (.mcp.json checked into version control), user, and precedence local > project > user > plugin-provided > claude.ai connectors with the highest-precedence definition used whole. Page additionally documents a WebSocket transport and an org-managed managedMcpServers tier above all scopes, which the key_fact omits but does not contradict."
+   },
+   {
+    "url": "https://modelcontextprotocol.io/introduction",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page text: 'MCP (Model Context Protocol) is an open-source standard for connecting AI applications to external systems'... 'data sources... tools... and workflows', 'Think of MCP like a USB-C port for AI applications', and ecosystem list naming Claude, ChatGPT, Visual Studio Code, Cursor, MCPJam, 'making it easy to build once and integrate everywhere.' Exact match."
+   }
+  ]
+ },
+ {
+  "course": "Device Upgrade Automation with Claude",
+  "citations": [
+   {
+    "title": "Installing BIG-IP Version 17.5.1.4",
+    "url": "https://techdocs.f5.com/en-us/bigip-17-5-1-4/big-ip-release-notes/big-ip-install.html",
+    "publisher": "F5 TechDocs",
+    "supports": "Module: F5 BIG-IP software image install (tmsh install sys software image)",
+    "key_fact": "The ISO must be placed in /shared/images and installed to an inactive volume with `tmsh install sys software image <iso> volume HD1.x`; progress is watched with `tmsh show sys software` and logged to /var/log/liveinstall.log. A UCS backup must be saved first, mirroring turned off, and on redundant pairs the standby unit is upgraded and verified before the active unit."
+   },
+   {
+    "title": "Upgrading Version 11.x or 12.x BIG-IP Software",
+    "url": "https://techdocs.f5.com/kb/en-us/products/big-ip_ltm/manuals/product/bigip-system-upgrading-software-12-0-0/2.html",
+    "publisher": "F5 TechDocs",
+    "supports": "Module: F5 BIG-IP HA / device group upgrade sequence and pre-checks",
+    "key_fact": "Each device in a device group is forced offline (moving its traffic groups to a peer) before it is upgraded, one device at a time; mirroring does not function until every device has rebooted onto the new version, so F5 tells you to do this inside a maintenance window. Preparation includes config sync, RAID health check, QKView to iHealth, UCS backup, and image checksum verification."
+   },
+   {
+    "title": "Upgrade a high availability pair",
+    "url": "https://docs.netscaler.com/en-us/citrix-adc/current-release/upgrade-downgrade-citrix-adc-appliance/upgrade-downgrade-ha-pair",
+    "publisher": "NetScaler (Citrix) Product Documentation",
+    "supports": "Module: Citrix NetScaler HA pair upgrade order",
+    "key_fact": "Upgrade the secondary node first, force a failover so it becomes primary, then upgrade the former primary. While the two nodes run builds with different internal HA versions, config sync, command propagation, connection mirroring, and persistence-session sync are disabled; `show ha node` should be run beforehand to confirm the node state."
+   },
+   {
+    "title": "Before you begin | Upgrade and downgrade a NetScaler appliance",
+    "url": "https://docs.netscaler.com/en-us/citrix-adc/current-release/upgrade-downgrade-citrix-adc-appliance/upgrade-downgrade-before-you-begin",
+    "publisher": "NetScaler (Citrix) Product Documentation",
+    "supports": "Module: NetScaler disk space and pre-upgrade validation checks",
+    "key_fact": "NetScaler 14.1 requires at least 7 GB free in /var (1 GB bundle, 2 GB extraction, 4 GB upgrade process) and at least 250 MB free in /flash. The page also says to upgrade one major release at a time, allocate roughly twice the normal time, back up config/certs/licenses, remove /var/customizations, run the preconfiguration check tool, run fsck on hardware, and test in non-production first."
+   },
+   {
+    "title": "Upgrade Path (AlteonOS 33.5.2.0 Release Notes)",
+    "url": "https://portals.radware.com/ReleaseNotes/Alteon_Release_Notes_33_5_2_0/Alteon_Release_Notes/AlteonOS-33_5_2_0-Release_Notes.1.03.html",
+    "publisher": "Radware",
+    "supports": "Module: Radware Alteon software upgrade path, pre-upgrade steps and rollback",
+    "key_fact": "Before upgrading, back up the configuration and run the Upgrade Advisor Tool (from the Radware Customer Portal, with its database updated) against the current config and target version. Versions 31.x-33.x upgrade directly, older ones need intermediate hops; configuration rollback is not supported, so downgrading means booting the old image with factory config and re-uploading the saved configuration."
+   },
+   {
+    "title": "Updating Device Software",
+    "url": "https://webhelp.radware.com/lp/v613/Index/wwhelp/wwhimpl/js/Updating_Software.htm",
+    "publisher": "Radware (WebHelp)",
+    "supports": "Module: Radware device software update workflow (File > Software Update)",
+    "key_fact": "Radware's device update flow requires an upgrade password obtained from Radware support that is tied to the device's base MAC address and the software file size; after backing up the configuration, the operator enters the version and file, chooses whether to enable the new version immediately, applies the update, and the device reboots and must be verified on the console."
+   },
+   {
+    "title": "Guide to Enterprise Patch Management Planning: Preventive Maintenance for Technology (NIST SP 800-40 Rev. 4)",
+    "url": "https://csrc.nist.gov/pubs/sp/800/40/r4/final",
+    "publisher": "NIST Computer Security Resource Center",
+    "supports": "Module: scheduling and framing upgrades as routine preventive maintenance",
+    "key_fact": "Published April 2022, SP 800-40r4 defines enterprise patch management as identifying, prioritizing, acquiring, installing, and verifying patches, updates, and upgrades, and frames it as preventive maintenance that organizations should operationalize with an enterprise-wide strategy rather than treat as ad hoc work."
+   }
+  ],
+  "verified": [
+   {
+    "url": "https://techdocs.f5.com/en-us/bigip-17-5-1-4/big-ip-release-notes/big-ip-install.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page is the BIG-IP 17.5.1.4 install chapter. Confirms ISO in /shared/images, 'tmsh install sys software image <iso> volume HD1.x' (sample uses HD1.3), 'watch tmsh show sys software', /var/log/liveinstall.log on failure, saving UCS to /var/local/ucs and copying off-box, 'Turn off mirroring' prerequisite, and upgrading the standby unit before the active unit."
+   },
+   {
+    "url": "https://techdocs.f5.com/kb/en-us/products/big-ip_ltm/manuals/product/bigip-system-upgrading-software-12-0-0/2.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Legacy 12.0 manual chapter, body intact. Confirms forcing each device offline so traffic groups move to peers, one device at a time, 'mirroring does not function until all devices in the device group complete rebooting to the latest version', maintenance-window recommendation, config sync, RAID disk health check, QKView upload to iHealth, UCS backup ('save /sys ucs /shared/filename.ucs'), and md5 checksum verification of the image."
+   },
+   {
+    "url": "https://docs.netscaler.com/en-us/citrix-adc/current-release/upgrade-downgrade-citrix-adc-appliance/upgrade-downgrade-ha-pair",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Article body is buried behind ~200k chars of site navigation but is present. Confirms 'Upgrade the secondary node first and then the primary node', force failover so the secondary takes over as primary, then upgrade the former primary; and that with differing versions/internal HA versions, HA config sync, command propagation, connection mirroring and persistence-session sync (plus state-service sync) are disabled. Minor nuance: in the CLI procedure 'show ha node' is run after upgrading the secondary (to confirm it is secondary with sync disabled), not strictly 'beforehand'. Consider rewording key_fact to 'after upgrading the secondary, run show ha node to confirm its state'."
+   },
+   {
+    "url": "https://docs.netscaler.com/en-us/citrix-adc/current-release/upgrade-downgrade-citrix-adc-appliance/upgrade-downgrade-before-you-begin",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Article body present after heavy navigation. Confirms '/var directory requires 7 GB of free space (1 GB for the upgrade bundle, 2 GB for extraction, and 4 GB for the upgrade process)', at least 250 MB free in /flash, upgrade one major release at a time (12.1 -> 13.1 -> 14.1 example), allocate twice as much time, back up config/customization/certs/monitor scripts/licenses, delete /var/customizations before upgrade, run the preconfiguration check tool, run fsck on hardware, and verify procedures in a test environment. Nuance: the 7 GB figure is stated generically on the current-release page rather than labelled specifically '14.1'; 'non-production' is paraphrase of 'test environment'."
+   },
+   {
+    "url": "https://portals.radware.com/ReleaseNotes/Alteon_Release_Notes_33_5_2_0/Alteon_Release_Notes/AlteonOS-33_5_2_0-Release_Notes.1.03.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "'Upgrade Path' section of the AlteonOS 33.5.2.0 release notes loads. Confirms back up configuration before upgrade, run the Upgrade Advisor Tool on the Customer Portal and update its DB first, direct upgrade from 31.x/32.x/33.x, intermediate hops for older versions (e.g. 28.x -> 29.0.9.0 -> 30.5.3.0 -> this version), 'Configuration rollback (downgrade) is not supported', and downgrade by booting the older image with factory-default config then uploading the previously saved configuration. Note: the page's upgrade-path table references 33.5.1.0 as target while the title says 33.5.2.0 (doc inconsistency on Radware's side)."
+   },
+   {
+    "url": "https://webhelp.radware.com/lp/v613/Index/wwhelp/wwhimpl/js/Updating_Software.htm",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "WebHelp page renders real content (not just a frameset). Confirms upgrade password from Radware support based on the device Base MAC address and software file size, caution to save existing configuration first, entering version number and file, 'Enable New Version' checkbox (default on) controlling whether the new version runs immediately, clicking Set to apply, device reboot, and verifying the upgraded version in the console message. Publisher label 'Radware (WebHelp)' is accurate; page is for LinkProof v6.13 (lp/v613), so the module should not imply it is Alteon-specific."
+   },
+   {
+    "url": "https://csrc.nist.gov/pubs/sp/800/40/r4/final",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "CSRC publication page loads with abstract and history. Final dated 04/06/2022 (April 2022). Abstract defines enterprise patch management as 'the process of identifying, prioritizing, acquiring, installing, and verifying the installation of patches, updates, and upgrades throughout an organization', frames patching as 'a critical component of preventive maintenance', and 'recommends creating an enterprise strategy to simplify and operationalize patching'. 'Rather than treat as ad hoc work' is an editorial paraphrase, not a direct quote."
+   }
+  ]
+ },
+ {
+  "course": "Agentic Virtual Patching Platform",
+  "citations": [
+   {
+    "title": "Virtual Patching - OWASP Cheat Sheet Series",
+    "url": "https://cheatsheetseries.owasp.org/cheatsheets/Virtual_Patching_Cheat_Sheet.html",
+    "publisher": "OWASP Foundation",
+    "supports": "Module 1: virtual patching lifecycle and best practices",
+    "key_fact": "OWASP defines virtual patching as an enforcement layer that blocks exploitation of a known flaw without changing the vulnerable code, and lays out a six-phase process (Preparation, Identification, Analysis, Patch Creation, Implementation/Testing, Recovery/Follow-Up) that recommends deploying new rules in log-only mode first and retesting with alternate encodings before trusting them."
+   },
+   {
+    "title": "Anomaly Scoring :: CRS Documentation",
+    "url": "https://coreruleset.org/docs/2-how-crs-works/2-1-anomaly_scoring/",
+    "publisher": "OWASP CRS project",
+    "supports": "Module 2: OWASP CRS anomaly scoring and paranoia levels",
+    "key_fact": "CRS separates detection from blocking: each matching rule adds points by severity (CRITICAL 5, ERROR 4, WARNING 3, NOTICE 2) and the request is only denied when the summed inbound score reaches the threshold, which defaults to 5; per-paranoia-level scores are added together before the blocking check."
+   },
+   {
+    "title": "Reference Manual (v3.x) \u00b7 owasp-modsecurity/ModSecurity Wiki \u00b7 GitHub",
+    "url": "https://github.com/owasp-modsecurity/ModSecurity/wiki/Reference-Manual-(v3.x)",
+    "publisher": "OWASP ModSecurity project (GitHub)",
+    "supports": "Module 2: writing SecRule virtual patches and staged rollout with DetectionOnly",
+    "key_fact": "SecRuleEngine accepts On, Off (the default) and DetectionOnly; in DetectionOnly rules are evaluated and logged but disruptive actions such as deny, drop and redirect are never executed, which is the mechanism for a safe pre-block canary stage. SecRule syntax is SecRule VARIABLES OPERATOR [ACTIONS], with rule actions merged over the default action list."
+   },
+   {
+    "title": "F5 WAF for NGINX | NGINX Documentation",
+    "url": "https://docs.nginx.com/nginx-app-protect-waf/",
+    "publisher": "F5 / NGINX",
+    "supports": "Module 3: deploying virtual patches on NGINX WAF",
+    "key_fact": "NGINX App Protect WAF is now branded F5 WAF for NGINX; it can be installed on VMs or bare metal, Kubernetes, Docker and air-gapped environments, and its policies combine attack signatures, bot signatures, threat campaigns, response and server-technology signatures plus user-defined signatures, with separate guidance for signature updates."
+   },
+   {
+    "title": "Common Vulnerability Scoring System version 4.0: Specification Document",
+    "url": "https://www.first.org/cvss/v4-0/specification-document",
+    "publisher": "FIRST",
+    "supports": "Module 4: CVE triage and severity thresholds for auto-patching",
+    "key_fact": "CVSS v4.0 has Base, Threat, Environmental and Supplemental metric groups (Supplemental metrics never change the score), and maps numeric scores to severity bands: Low 0.1-3.9, Medium 4.0-6.9, High 7.0-8.9, Critical 9.0-10.0."
+   },
+   {
+    "title": "Known Exploited Vulnerabilities Catalog | CISA",
+    "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+    "publisher": "CISA",
+    "supports": "Module 4: prioritizing CVEs with the KEV catalog",
+    "key_fact": "CISA describes the KEV catalog as the authoritative list of vulnerabilities exploited in the wild (about 1,760 entries at time of access), publishes it as CSV and JSON for automation, and tells organizations to use it as an input to their vulnerability-management prioritization alongside vendor mitigations and asset internet-exposure assessment."
+   },
+   {
+    "title": "BOD 26-04: Prioritizing Security Updates Based on Risk | CISA",
+    "url": "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+    "publisher": "CISA",
+    "supports": "Module 5: SLA-driven approval and remediation timelines",
+    "key_fact": "Under BOD 26-04 remediation urgency is driven by four factors (public exposure, KEV listing, automatable exploitation, technical impact); the clock starts when CISA adds a CVE to KEV or the agency detects it on an asset, and cases marked for forensic triage must be mitigated within three days with the asset checked for compromise."
+   },
+   {
+    "title": "2025 Top 10 Risk & Mitigations for LLMs and Gen AI Apps (LLMRisks Archive - OWASP Gen AI Security Project)",
+    "url": "https://genai.owasp.org/llm-top-10/",
+    "publisher": "OWASP Gen AI Security Project",
+    "supports": "Module 6: agent safety risks (prompt injection, excessive agency)",
+    "key_fact": "The 2025 list places Prompt Injection at LLM01 and Excessive Agency at LLM06, alongside Improper Output Handling (LLM05) and Unbounded Consumption (LLM10), which together frame the controls an autonomous patching agent needs around untrusted CVE text and tool permissions."
+   },
+   {
+    "title": "Tool use with Claude",
+    "url": "https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview",
+    "publisher": "Anthropic (Claude Developer Platform)",
+    "supports": "Module 7: building the patching agent with Claude tool use",
+    "key_fact": "Client tools return a stop_reason of tool_use with tool_use blocks that your application executes and answers with tool_result blocks, while server tools run on Anthropic infrastructure; tool_choice can force or disable parallel calls and strict: true guarantees schema-conformant tool inputs."
+   },
+   {
+    "title": "Specification - Model Context Protocol (2025-06-18)",
+    "url": "https://modelcontextprotocol.io/specification/2025-06-18",
+    "publisher": "Model Context Protocol (modelcontextprotocol.io)",
+    "supports": "Module 7: human-in-the-loop approval gates for agent tools",
+    "key_fact": "The MCP spec's Security and Trust & Safety section states that tools represent arbitrary code execution, that hosts must obtain explicit user consent before invoking any tool, and that tool descriptions and annotations should be treated as untrusted unless they come from a trusted server."
+   }
+  ],
+  "verified": [
+   {
+    "url": "https://cheatsheetseries.owasp.org/cheatsheets/Virtual_Patching_Cheat_Sheet.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page defines virtual patching as 'a security policy enforcement layer that detects and blocks matching exploitation attempts against a known vulnerability without changing the vulnerable code', lays out a six-step process from Preparation to Recovery/Follow-Up, and says to implement patches initially in a 'Log Only' configuration. Minor nuance: the 'test alternate encodings' advice appears in the 'Value of Virtual Patching' section, not as a formal retest step in the Testing Steps list."
+   },
+   {
+    "url": "https://coreruleset.org/docs/2-how-crs-works/2-1-anomaly_scoring/",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page lists default severity scores CRITICAL 5, ERROR 4, WARNING 3, NOTICE 2; states inbound threats carry a default anomaly score of 5 (defaults 5 for requests, 4 for responses); and states 'the individual paranoia level anomaly scores are added together before each round of blocking evaluation takes place'."
+   },
+   {
+    "url": "https://github.com/owasp-modsecurity/ModSecurity/wiki/Reference-Manual-(v3.x)",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page documents 'SecRuleEngine On|Off|DetectionOnly', default Off, with DetectionOnly described as 'process rules but never executes any disruptive actions (block, deny, drop, allow, proxy and redirect)'; gives syntax 'SecRule VARIABLES OPERATOR [ACTIONS]' and says rule actions are merged with the default list. Caveat: the wiki carries a banner saying it is deprecated/under revision in favor of modsecurity.org/docs."
+   },
+   {
+    "url": "https://docs.nginx.com/nginx-app-protect-waf/",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page title is 'F5 WAF for NGINX' and states 'This product was formerly known as NGINX App Protect WAF.' Navigation lists install guides for VM/bare metal, Kubernetes, Docker and disconnected/air-gapped environments, policy pages for attack, bot, threat campaign, response, server-technology and user-defined signatures, and an 'Update F5 WAF for NGINX signatures' page. This is a landing/index page: the signature types are linked, not described in body text."
+   },
+   {
+    "url": "https://www.first.org/cvss/v4-0/specification-document",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page states 'CVSS consists of four metric groups: Base, Threat, Environmental, and Supplemental', that Supplemental metrics have no impact on the calculated score, and Table 22 maps Low 0.1-3.9, Medium 4.0-6.9, High 7.0-8.9, Critical 9.0-10.0 (plus None 0.0; ratings are optional)."
+   },
+   {
+    "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page says 'CISA maintains the authoritative source of vulnerabilities that have been exploited in the wild', links CSV and JSON feeds, shows 'Showing 1 to 20 of 1760 results' at time of fetch, and says 'Organizations should use the KEV catalog as an input to their vulnerability management prioritization framework.' Vendor-mitigation and internet-exposure guidance appears in the per-entry 'Action' text rather than the intro paragraph. Entry count is live and will drift."
+   },
+   {
+    "url": "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Full directive text (dated June 10, 2026). Urgency is set by four variables: Asset Exposure, KEV Status, Exploit Automation, Technical Impact. Timelines 'begin when either (1) CISA adds the vulnerability to the KEV Catalog, or (2)' the agency identifies it on an asset, whichever first. '& forensic triage' entries require remediation within three days plus a forensic triage to assess compromise."
+   },
+   {
+    "url": "https://genai.owasp.org/llm-top-10/",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page lists the 2025 Top 10 with LLM01 Prompt Injection, LLM05 Improper Output Handling, LLM06 Excessive Agency, LLM10 Unbounded Consumption, exactly as claimed."
+   },
+   {
+    "url": "https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page states client tools run in your application and Claude responds with stop_reason 'tool_use' plus tool_use blocks that your code answers with a tool_result, while server tools run on Anthropic's infrastructure. It shows tool_choice with disable_parallel_tool_use and says to set tool_choice to require a tool call, and has a tip that 'strict: true' ensures tool calls always match your schema exactly. Fully supports the key fact."
+   },
+   {
+    "url": "https://modelcontextprotocol.io/specification/2025-06-18",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "The 'Security and Trust & Safety' section's Tool Safety principle states 'Tools represent arbitrary code execution and must be treated with appropriate caution', that 'descriptions of tool behavior such as annotations should be considered untrusted, unless obtained from a trusted server', and 'Hosts must obtain explicit user consent before invoking any tool'. Verbatim match."
+   }
+  ]
+ },
+ {
+  "course": "Agentic AI Vulnerability Management",
+  "citations": [
+   {
+    "title": "Common Vulnerability Scoring System version 4.0: Specification Document",
+    "url": "https://www.first.org/cvss/v4-0/specification-document",
+    "publisher": "FIRST",
+    "supports": "Module 2: scoring with CVSS v4.0",
+    "key_fact": "CVSS v4.0 defines four metric groups (Base, Threat, Environmental, Supplemental) and requires scores to be labeled by which groups were used: CVSS-B, CVSS-BT, CVSS-BE or CVSS-BTE; the Base score ranges 0.0 to 10.0."
+   },
+   {
+    "title": "Common Vulnerability Scoring System v3.1: Specification Document",
+    "url": "https://www.first.org/cvss/v3-1/specification-document",
+    "publisher": "FIRST",
+    "supports": "Module 2: CVSS v3.1 severity bands",
+    "key_fact": "CVSS v3.1 uses Base, Temporal and Environmental metric groups, and maps scores to qualitative ratings: None 0.0, Low 0.1-3.9, Medium 4.0-6.9, High 7.0-8.9, Critical 9.0-10.0."
+   },
+   {
+    "title": "Exploit Prediction Scoring System (EPSS)",
+    "url": "https://www.first.org/epss/",
+    "publisher": "FIRST",
+    "supports": "Module 3: exploit likelihood with EPSS",
+    "key_fact": "EPSS is a machine-learning model that outputs, daily for every published CVE, a 0-1 probability (plus percentile) that the CVE will be exploited in the wild within the next 30 days; data is free via CSV download and an API."
+   },
+   {
+    "title": "Known Exploited Vulnerabilities Catalog | CISA",
+    "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+    "publisher": "CISA",
+    "supports": "Module 3: KEV-driven prioritization",
+    "key_fact": "CISA positions the KEV catalog as the authoritative source of vulnerabilities exploited in the wild and publishes it as CSV and JSON with a JSON Schema; each entry carries a date added, a due date and a known-ransomware-use flag."
+   },
+   {
+    "title": "BOD 22-01: Reducing the Significant Risk of Known Exploited Vulnerabilities (Revoked)",
+    "url": "https://www.cisa.gov/news-events/directives/bod-22-01-reducing-significant-risk-known-exploited-vulnerabilities",
+    "publisher": "CISA",
+    "supports": "Module 3: KEV inclusion criteria and remediation SLAs",
+    "key_fact": "A vulnerability enters the KEV catalog only if it has a CVE ID, clear remediation guidance and reliable evidence of in-the-wild exploitation; the directive set two-week remediation for newer CVEs and six months for pre-2021 CVEs, and has since been superseded by BOD 26-04."
+   },
+   {
+    "title": "Guide to Enterprise Patch Management Planning: Preventive Maintenance for Technology (NIST SP 800-40 Rev. 4)",
+    "url": "https://csrc.nist.gov/pubs/sp/800/40/r4/final",
+    "publisher": "NIST",
+    "supports": "Module 7: patch management process per NIST SP 800-40",
+    "key_fact": "SP 800-40 Rev. 4 (final, April 2022, superseding Rev. 3 from 2013) frames patching as routine preventive maintenance and recommends an enterprise-wide patching strategy to operationalize the process and reduce risk."
+   },
+   {
+    "title": "Reporting - Trivy",
+    "url": "https://trivy.dev/latest/docs/configuration/reporting/",
+    "publisher": "Aqua Security (Trivy docs)",
+    "supports": "Module 4: ingesting Trivy JSON and SARIF exports",
+    "key_fact": "Trivy's --format flag supports table (default), JSON, SARIF (2.1.0), template, SBOM and GitHub dependency snapshot; in JSON output VulnerabilityID, PkgName, InstalledVersion and Severity are always populated while other fields may be empty."
+   },
+   {
+    "title": "SARIF support for code scanning",
+    "url": "https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/sarif-support-for-code-scanning",
+    "publisher": "GitHub Docs",
+    "supports": "Module 4: SARIF format constraints for scanner normalization",
+    "key_fact": "GitHub code scanning accepts only SARIF 2.1.0, limits each gzip-compressed upload to 10 MB and each run to 25,000 results (top 5,000 retained), and rejects empty strings for required properties."
+   },
+   {
+    "title": "Table API",
+    "url": "https://www.servicenow.com/docs/bundle/zurich-api-reference/page/integrate/inbound-rest/concept/c_TableAPI.html",
+    "publisher": "ServiceNow Docs",
+    "supports": "Module 6: creating and updating tickets via the ServiceNow Table API",
+    "key_fact": "The Table API exposes /api/now/table/{tableName} and /api/now/table/{tableName}/{sys_id} with GET, POST, PATCH, PUT and DELETE; collection GETs return up to 10,000 records by default and sysparm_query accepts encoded queries for filtering and sorting."
+   }
+  ],
+  "verified": [
+   {
+    "url": "https://www.first.org/cvss/v4-0/specification-document",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Full CVSS v4.0 spec (Doc Version 1.2). States 'CVSS consists of four metric groups: Base, Threat, Environmental, and Supplemental'; Nomenclature section defines CVSS-B, CVSS-BE, CVSS-BT, CVSS-BTE and says this nomenclature should be used wherever a numerical CVSS value is displayed; Base assessment 'results in a score ranging from 0.0 to 10.0'."
+   },
+   {
+    "url": "https://www.first.org/cvss/v3-1/specification-document",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Full CVSS v3.1 spec. 'CVSS consists of three metric groups: Base, Temporal, and Environmental.' Table 14 qualitative severity rating scale: None 0.0, Low 0.1-3.9, Medium 4.0-6.9, High 7.0-8.9, Critical 9.0-10.0."
+   },
+   {
+    "url": "https://www.first.org/epss/",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "EPSS landing page states it is 'a data-driven machine-learning model that estimates the probability that a published CVE will be exploited in the wild in the next 30 days', publishes a 0-1 probability with ranking percentiles every day for every CVE, and makes data freely available via daily CSV downloads and an API."
+   },
+   {
+    "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Live catalog page. Says CISA 'maintains the authoritative source of vulnerabilities that have been exploited in the wild'; offers CSV and JSON downloads plus a JSON Schema link; each entry shows Date Added, Due Date, and 'Known To Be Used in Ransomware Campaigns?'."
+   },
+   {
+    "url": "https://www.cisa.gov/news-events/directives/bod-22-01-reducing-significant-risk-known-exploited-vulnerabilities",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Directive page with revocation banner 'This Directive has been revoked. It is superseded by' BOD 26-04. FAQ lists three KEV criteria (CVE ID, clear remediation guidance, reliable evidence of exploitation in the wild). Required Actions: 6 months for CVEs assigned prior to 2021, two weeks for all others."
+   },
+   {
+    "url": "https://csrc.nist.gov/pubs/sp/800/40/r4/final",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "NIST CSRC publication page: Date Published April 2022, 04/06/22 Final, 'Supersedes: SP 800-40 Rev. 3 (07/22/2013)'. Abstract 'frames patching as a critical component of preventive maintenance' and 'recommends creating an enterprise strategy to simplify and operationalize patching while also improving reduction of risk'."
+   },
+   {
+    "url": "https://trivy.dev/latest/docs/configuration/reporting/",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real 'Reporting - Trivy' docs page listing formats Table, JSON, SARIF (complying with SARIF 2.1.0 OASIS standard), Template, SBOM, GitHub dependency snapshot, and stating VulnerabilityID, PkgName, InstalledVersion and Severity 'are always filled with values, but other fields might be empty'. Caveat: page shows a banner that this is not the latest docs version despite the /latest/ path; content still matches."
+   },
+   {
+    "url": "https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/sarif-support-for-code-scanning",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "GitHub Docs page: 'Code scanning only supports SARIF version 2.1.0'; 'For each gzip-compressed SARIF file, SARIF upload supports a maximum size of 10 MB'; table lists 25,000 results per run maximum with 'Only the top 5,000 results will be included, prioritized by severity'; 'The empty string is not supported for required properties'."
+   },
+   {
+    "url": "https://www.servicenow.com/docs/bundle/zurich-api-reference/page/integrate/inbound-rest/concept/c_TableAPI.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Substantive Table API reference with parameter tables and cURL examples. Documents /api/now/table/{tableName} (GET, POST) and /api/now/table/{tableName}/{sys_id} (GET, PATCH, PUT, DELETE); sysparm_limit default 10000; sysparm_query encoded queries with ^/^OR conditions and ORDERBY/ORDERBYDESC. Minor precision: DELETE applies only to the {sys_id} endpoint, and 10,000 is a default rather than a hard maximum, which is consistent with the key_fact wording."
+   }
+  ]
+ },
+ {
+  "course": "Agentic Attack Surface Management",
+  "citations": [
+   {
+    "title": "What Is AWS Config?",
+    "url": "https://docs.aws.amazon.com/config/latest/developerguide/WhatIsConfig.html",
+    "publisher": "Amazon Web Services (AWS Documentation)",
+    "supports": "Module: cloud inventory APIs (AWS Config)",
+    "key_fact": "AWS Config records the configuration and inter-resource relationships of AWS resources over time, and an aggregator can pull configuration and compliance data from many accounts and Regions into one place for a centralized inventory view."
+   },
+   {
+    "title": "Overview of Azure Resource Graph - Azure Resource Graph | Microsoft Learn",
+    "url": "https://learn.microsoft.com/en-us/azure/governance/resource-graph/overview",
+    "publisher": "Microsoft Learn",
+    "supports": "Module: cloud inventory APIs (Azure Resource Graph)",
+    "key_fact": "Azure Resource Graph lets you query resource properties at scale across subscriptions using a KQL-based language, returns only resources you have at least read RBAC access to, and keeps 14 days of resource configuration change history; its data is eventually consistent rather than strongly consistent."
+   },
+   {
+    "title": "Certificate Transparency",
+    "url": "https://www.rfc-editor.org/rfc/rfc6962",
+    "publisher": "IETF RFC Editor (RFC 6962)",
+    "supports": "Module: Certificate Transparency logs as an asset-discovery source",
+    "key_fact": "CT logs are publicly auditable, append-only, untrusted logs of issued certificates, designed so anyone can monitor CA activity and detect suspicious or unexpected certificates."
+   },
+   {
+    "title": "Certificate Transparency Version 2.0",
+    "url": "https://www.rfc-editor.org/rfc/rfc9162.html",
+    "publisher": "IETF RFC Editor (RFC 9162)",
+    "supports": "Module: building a CT log monitor for new subdomains/certificates",
+    "key_fact": "RFC 9162 defines the monitor role and requires that a monitor inspect at least every new entry in every log it watches, which is the same pattern an attack surface tool uses when watching CT logs for newly issued certificates on an organization's domains."
+   },
+   {
+    "title": "crt.sh | Certificate Search",
+    "url": "https://crt.sh/",
+    "publisher": "crt.sh (Sectigo)",
+    "supports": "Module: hands-on subdomain discovery via crt.sh",
+    "key_fact": "crt.sh is a search front end over Certificate Transparency data that lets you look up certificates by identity (domain or organization name), by SHA-1/SHA-256 fingerprint, or by crt.sh ID, with an advanced search mode available."
+   },
+   {
+    "title": "Domain Names - Concepts and Facilities",
+    "url": "https://www.rfc-editor.org/rfc/rfc1034",
+    "publisher": "IETF RFC Editor (RFC 1034)",
+    "supports": "Module: DNS fundamentals and passive DNS",
+    "key_fact": "DNS data is organized into zones, each authoritative for a connected region of the name space; each node holds a set of resource records whose order carries no meaning, and name servers may also cache non-authoritative data for other parts of the tree."
+   },
+   {
+    "title": "Technical Guide to Information Security Testing and Assessment (NIST SP 800-115)",
+    "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-115.pdf",
+    "publisher": "NIST",
+    "supports": "Module: authorized scope and rules of engagement",
+    "key_fact": "NIST defines Rules of Engagement as detailed guidelines and constraints for executing security testing, established before testing starts so the team has authority to perform defined activities without needing further permission; Appendix B supplies an ROE template."
+   },
+   {
+    "title": "Configuration Management Database (CMDB)",
+    "url": "https://www.servicenow.com/docs/r/zurich/servicenow-platform/configuration-management-database-cmdb/c_ITILConfigurationManagement.html",
+    "publisher": "ServiceNow Docs",
+    "supports": "Module: CMDB concepts and entity resolution against the inventory",
+    "key_fact": "A CMDB stores assets, services and the relationships between them as configuration items (CIs), which teams rely on to monitor infrastructure and keep it stable; external discovery results must be reconciled against these CIs."
+   },
+   {
+    "title": "WSTG - v4.2 | OWASP Web Security Testing Guide (4.1 Information Gathering)",
+    "url": "https://wstg.owasp.org/v4.2/4-Web_Application_Security_Testing/01-Information_Gathering/",
+    "publisher": "OWASP",
+    "supports": "Module: reconnaissance and application enumeration on discovered assets",
+    "key_fact": "WSTG section 4.1 lists ten information gathering tests, including search engine reconnaissance for information leakage, fingerprinting the web server, enumerating applications on a web server, identifying application entry points and mapping application architecture."
+   }
+  ],
+  "verified": [
+   {
+    "url": "https://docs.aws.amazon.com/config/latest/developerguide/WhatIsConfig.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page states AWS Config shows how resources are related and how they were configured in the past so you can see configurations and relationships change over time; the Aggregators feature section says an aggregator collects configuration and compliance data from multiple accounts and Regions into a single account and Region for a centralized view of resource inventory and compliance."
+   },
+   {
+    "url": "https://learn.microsoft.com/en-us/azure/governance/resource-graph/overview",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page confirms query at scale across subscriptions, KQL-based query language, 'View the last 14 days of resource configuration changes', at least 'read' RBAC access required or no results returned, and 'Azure Resource Graph data isn't strongly consistent' (eventual consistency)."
+   },
+   {
+    "url": "https://www.rfc-editor.org/rfc/rfc6962",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Introduction describes 'publicly auditable, append-only, untrusted logs of all issued certificates' and says anyone can monitor the logs to detect misissued certificates."
+   },
+   {
+    "url": "https://www.rfc-editor.org/rfc/rfc9162.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Section 8.2 (Monitor): 'A monitor MUST at least inspect every new entry in every log it watches, and it MAY also choose to keep copies of entire logs.' The attack-surface analogy in the key_fact is the course's own interpretation, but the RFC text it rests on is accurate."
+   },
+   {
+    "url": "https://crt.sh/",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Home page search accepts Identity (domain/org name), Certificate Fingerprint (SHA-1 or SHA-256), and crt.sh ID, and has an 'Advanced...' link. Content is minimal (a search form), but it directly supports the stated fact."
+   },
+   {
+    "url": "https://www.rfc-editor.org/rfc/rfc1034",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Section 4.2: each group of connected name space is a zone, authoritative for all names in the connected region; Section 3.6: 'The order of RRs in a set is not significant'; Section 4.1: a name server may cache information about any part of the domain tree and marks responses as authoritative or not."
+   },
+   {
+    "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-115.pdf",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "PDF downloads (531 KB). Appendix D glossary defines ROE verbatim as 'Detailed guidelines and constraints regarding the execution of information security testing. The ROE is established before the start of a security test, and gives the test team authority to conduct defined activities without the need for additional permissions.' Appendix B is titled 'Rules of Engagement Template'."
+   },
+   {
+    "url": "https://www.servicenow.com/docs/r/zurich/servicenow-platform/configuration-management-database-cmdb/c_ITILConfigurationManagement.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Real Zurich-release overview page: CMDB builds logical representations of assets, services and the relationships between them, stored as configuration items (CIs), used to monitor infrastructure and ensure integrity, stability and continuous service operation. The 'external discovery results must be reconciled' clause is only indirectly supported (page lists CMDB Identification and Reconciliation as a feature and CMDB 360 tracking discovery sources); the course should phrase that part as its own guidance rather than a direct quote."
+   },
+   {
+    "url": "https://wstg.owasp.org/v4.2/4-Web_Application_Security_Testing/01-Information_Gathering/",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Section 4.1 lists exactly ten tests (4.1.1-4.1.10) including Search Engine Discovery Reconnaissance for Information Leakage, Fingerprint Web Server, Enumerate Applications on Webserver, Identify Application Entry Points, and Map Application Architecture."
+   }
+  ]
+ },
+ {
+  "course": "Agentic Configuration Reviewer",
+  "citations": [
+   {
+    "title": "JSON output format | Terraform | HashiCorp Developer",
+    "url": "https://developer.hashicorp.com/terraform/internals/json-format",
+    "publisher": "HashiCorp",
+    "supports": "Module 2: parsing Terraform plan JSON for review",
+    "key_fact": "The plan JSON from `terraform show -json` carries a format_version (\"1.0\" since Terraform 1.1.0) and a resource_changes array whose change.actions values are no-op, create, read, update, delete, or the two replacement orderings [\"delete\",\"create\"] / [\"create\",\"delete\"], so a reviewer can detect any destructive change by checking for \"delete\"."
+   },
+   {
+    "title": "Pod Security Standards | Kubernetes",
+    "url": "https://kubernetes.io/docs/concepts/security/pod-security-standards/",
+    "publisher": "Kubernetes (CNCF)",
+    "supports": "Module 3: Kubernetes YAML hardening checks against Pod Security Standards",
+    "key_fact": "The Restricted profile builds on Baseline and requires allowPrivilegeEscalation: false, runAsNonRoot: true, a non-zero runAsUser, seccompProfile.type of RuntimeDefault or Localhost, capabilities.drop containing ALL with only NET_BIND_SERVICE allowed to be added, and restricts volumes to types such as configMap, secret, emptyDir, projected, csi, ephemeral and persistentVolumeClaim."
+   },
+   {
+    "title": "Configure a Security Context for a Pod or Container | Kubernetes",
+    "url": "https://kubernetes.io/docs/tasks/configure-pod-container/security-context/",
+    "publisher": "Kubernetes (CNCF)",
+    "supports": "Module 3: reading securityContext fields in Pod manifests",
+    "key_fact": "A pod-level securityContext (runAsUser, runAsGroup, fsGroup, supplementalGroups) applies to every container in the Pod, while container-level fields such as allowPrivilegeEscalation apply only to that container; allowPrivilegeEscalation defaults to true when unset and cannot be false for privileged or CAP_SYS_ADMIN containers."
+   },
+   {
+    "title": "Terraform | Open Policy Agent",
+    "url": "https://www.openpolicyagent.org/docs/terraform",
+    "publisher": "Open Policy Agent (CNCF)",
+    "supports": "Module 4: policy-as-code evaluation of Terraform plans with OPA/Rego",
+    "key_fact": "OPA consumes the output of `terraform show -json` as `input`, and the tutorial policy walks resource_changes[].type and change.actions to compute a weighted blast-radius score, authorizing the plan only if the score is below 30 and no aws_iam resources change."
+   },
+   {
+    "title": "Conftest",
+    "url": "https://www.conftest.dev/",
+    "publisher": "Conftest (Open Policy Agent project)",
+    "supports": "Module 4: running Rego policies against Kubernetes/Terraform config files with Conftest",
+    "key_fact": "Conftest evaluates Rego rules named deny, violation, and warn (optionally suffixed like deny_myrule) in the main namespace by default, against many structured formats including YAML, JSON, HCL/HCL2, Dockerfile, TOML, INI and XML."
+   },
+   {
+    "title": "Misconfiguration Scanning - Trivy",
+    "url": "https://trivy.dev/latest/docs/scanner/misconfiguration/",
+    "publisher": "Aqua Security / Trivy",
+    "supports": "Module 4: scanner-based misconfiguration checks with Trivy",
+    "key_fact": "`trivy config <dir>` auto-detects Terraform, Kubernetes, Dockerfile, CloudFormation, Azure ARM and Helm files and reports pass/fail counts per file by severity; with `trivy image` or `trivy fs` the misconfiguration scanner must be enabled explicitly via `--scanners misconfig`, and the checks bundle is downloaded from the internet unless an offline setup is used."
+   },
+   {
+    "title": "What is Checkov? - checkov",
+    "url": "https://www.checkov.io/1.Welcome/What%20is%20Checkov.html",
+    "publisher": "Prisma Cloud / Checkov",
+    "supports": "Module 4: static IaC analysis with Checkov",
+    "key_fact": "Checkov statically analyzes Terraform, CloudFormation/SAM, ARM, Serverless, Helm, Kubernetes and Docker files with more than 750 predefined policies, supports custom policies, and maps results to benchmarks such as CIS and the AWS Foundations Benchmark."
+   },
+   {
+    "title": "REST API endpoints for pull request review comments - GitHub Docs",
+    "url": "https://docs.github.com/en/rest/pulls/comments",
+    "publisher": "GitHub",
+    "supports": "Module 5: posting inline review findings via the GitHub pull request review comments API",
+    "key_fact": "`POST /repos/{owner}/{repo}/pulls/{pull_number}/comments` requires body, commit_id, path and line (line is optional only when subject_type is file); `position` is being phased out in favor of line, multi-line comments use start_line/start_side, and the endpoint can trigger secondary rate limits when called rapidly."
+   },
+   {
+    "title": "REST API endpoints for check runs - GitHub Docs",
+    "url": "https://docs.github.com/en/rest/checks/runs",
+    "publisher": "GitHub",
+    "supports": "Module 5: reporting read-only check results and annotations via the Checks API",
+    "key_fact": "Creating a check run (`POST /repos/{owner}/{repo}/check-runs`) requires a GitHub App, needs name and head_sha, supports conclusions such as success, failure, neutral and action_required, and limits annotations to 50 per request, with each annotation needing path, start_line, end_line, annotation_level and message."
+   }
+  ],
+  "verified": [
+   {
+    "url": "https://developer.hashicorp.com/terraform/internals/json-format",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page states format_version is \"1.0\" as of Terraform 1.1.0, documents the resource_changes array, and lists valid actions exactly as claimed: [\"no-op\"], [\"create\"], [\"read\"], [\"update\"], [\"delete\",\"create\"], [\"create\",\"delete\"], [\"delete\"]. Checking for \"delete\" in actions catches all destructive changes."
+   },
+   {
+    "url": "https://kubernetes.io/docs/concepts/security/pod-security-standards/",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Restricted section begins with 'Everything from the Baseline policy' and requires allowPrivilegeEscalation false, runAsNonRoot true, runAsUser non-zero (or undefined), seccompProfile RuntimeDefault/Localhost, capabilities drop ALL with only NET_BIND_SERVICE addable, and volume types limited to configMap, csi, downwardAPI, emptyDir, ephemeral, persistentVolumeClaim, projected, secret. Minor gap: key_fact's 'such as' list omits downwardAPI, which is also permitted."
+   },
+   {
+    "url": "https://kubernetes.io/docs/tasks/configure-pod-container/security-context/",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page says pod-level securityContext applies to all containers (example uses runAsUser, runAsGroup, fsGroup, supplementalGroups), container-level settings 'apply only to the individual Container, and they override settings made at the Pod level', allowPrivilegeEscalation defaults to true when undefined, and 'allowPrivilegeEscalation: false ... cannot be set in combination with a container that is run as privileged, or has the capability CAP_SYS_ADMIN'."
+   },
+   {
+    "url": "https://www.openpolicyagent.org/docs/terraform",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Tutorial uses terraform show -json output as OPA input, walks resource_changes[].change.actions grouped by resource type with per-type weights to compute a score, sets blast_radius := 30 as the authorization threshold, and additionally requires no aws_iam resource changes."
+   },
+   {
+    "url": "https://www.conftest.dev/",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page states Conftest looks for deny, violation and warn rules (suffixes like deny_myrule allowed), by default in the main namespace, and lists supported formats including YAML, JSON, HCL, HCL2, Dockerfile, TOML, INI and XML."
+   },
+   {
+    "url": "https://trivy.dev/latest/docs/scanner/misconfiguration/",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page confirms auto-detection of config types (Terraform, CloudFormation, Azure ARM, Helm, Dockerfile, Kubernetes), shows per-file SUCCESSES/FAILURES output with severity counts, says misconfig detection is not enabled by default for image/fs/repo (use --scanners misconfig), and that Trivy downloads the checks bundle from the internet (air-gapped setup documented separately). Page carries a 'not the latest version' banner but content is present."
+   },
+   {
+    "url": "https://www.checkov.io/1.Welcome/What%20is%20Checkov.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page lists Terraform, CloudFormation (incl. SAM), ARM, Serverless, Helm, Kubernetes and Docker; states 'more than 750 predefined policies'; supports custom policies in Python/YAML; and 'scans for compliance with' CIS and AWS Foundations Benchmark. 'Maps results to benchmarks' is a slight paraphrase of 'scans for compliance with'."
+   },
+   {
+    "url": "https://docs.github.com/en/rest/pulls/comments",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Create review comment endpoint marks body, commit_id, path as required; line is 'Required unless using subject_type:file'; position 'is closing down. Use line instead'; start_line/start_side are for multi-line comments; and 'Creating content too quickly using this endpoint may result in secondary rate limiting.'"
+   },
+   {
+    "url": "https://docs.github.com/en/rest/checks/runs",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Create check run docs state 'you must use a GitHub App', require name and head_sha, list conclusions action_required, cancelled, failure, neutral, success, skipped, stale, timed_out, limit annotations to 50 per request, and require path, start_line, end_line, annotation_level, message per annotation."
+   }
+  ]
+ },
+ {
+  "course": "Agentic Architecture Reviewer",
+  "citations": [
+   {
+    "title": "Threats - Microsoft Threat Modeling Tool - Azure | Microsoft Learn",
+    "url": "https://learn.microsoft.com/en-us/azure/security/develop/threat-modeling-tool-threats",
+    "publisher": "Microsoft Learn",
+    "supports": "Module 1: STRIDE threat categories",
+    "key_fact": "Microsoft's Threat Modeling Tool, part of the SDL, uses the STRIDE model of six threat categories (Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege) to turn vague security worries into pointed questions such as how an attacker could alter authentication data."
+   },
+   {
+    "title": "Threat Modeling - OWASP Cheat Sheet Series",
+    "url": "https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html",
+    "publisher": "OWASP",
+    "supports": "Module 2: four-phase threat modeling workflow",
+    "key_fact": "OWASP structures threat modeling around the Manifesto's four questions as phases: model the system (typically with data flow diagrams showing trust boundaries), identify and rank threats (STRIDE as the example technique), choose a response per threat (mitigate, eliminate, transfer, or accept), then validate that the model matches the real system and mitigations are testable."
+   },
+   {
+    "title": "Threat Modeling Manifesto",
+    "url": "https://www.threatmodelingmanifesto.org/",
+    "publisher": "Threat Modeling Manifesto working group",
+    "supports": "Module 2: values and principles for agentic reviews",
+    "key_fact": "The Manifesto defines threat modeling as analyzing representations of a system to highlight security and privacy concerns, and values finding and fixing design issues over checkbox compliance, people and collaboration over process and tools, and continuous refinement over a single delivery."
+   },
+   {
+    "title": "Home | C4 model",
+    "url": "https://c4model.com/",
+    "publisher": "C4 model (Simon Brown)",
+    "supports": "Module 3: C4 architecture abstractions",
+    "key_fact": "The C4 model describes software at four hierarchical levels of abstraction, each with a matching diagram type: system context, containers, components, and code."
+   },
+   {
+    "title": "C4 Diagrams | Mermaid",
+    "url": "https://mermaid.js.org/syntax/c4.html",
+    "publisher": "Mermaid",
+    "supports": "Module 3: rendering C4 diagrams as Mermaid text",
+    "key_fact": "Mermaid's C4 support is explicitly experimental and covers five diagram kinds (C4Context, C4Container, C4Component, C4Dynamic, C4Deployment) using syntax compatible with C4-PlantUML."
+   },
+   {
+    "title": "Creating diagrams",
+    "url": "https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-diagrams",
+    "publisher": "GitHub Docs",
+    "supports": "Module 3: embedding Mermaid diagrams in review output",
+    "key_fact": "GitHub renders Mermaid diagrams written inside a fenced code block tagged with the mermaid language identifier, and a code block containing just 'info' reveals which Mermaid version GitHub is running."
+   },
+   {
+    "title": "Architectural Decision Records (ADRs) | Architectural Decision Records",
+    "url": "https://adr.github.io/",
+    "publisher": "adr.github.io (ADR GitHub organization)",
+    "supports": "Module 4: documenting decisions with ADRs",
+    "key_fact": "An Architectural Decision Record captures a single architectural decision together with its rationale, so readers can later understand the trade-offs and consequences behind the choice."
+   },
+   {
+    "title": "terraform plan command reference | Terraform | HashiCorp Developer",
+    "url": "https://developer.hashicorp.com/terraform/cli/commands/plan",
+    "publisher": "HashiCorp Developer",
+    "supports": "Module 5: Terraform plan output as review evidence",
+    "key_fact": "terraform plan previews changes without applying them; the -out flag saves a plan file (which contains configuration and planned values in cleartext and must be treated as sensitive) and the -json flag emits machine-readable JSON UI output, which also implies -input=false."
+   },
+   {
+    "title": "Pod Security Standards | Kubernetes",
+    "url": "https://kubernetes.io/docs/concepts/security/pod-security-standards/",
+    "publisher": "Kubernetes",
+    "supports": "Module 5: Kubernetes evidence for findings",
+    "key_fact": "Kubernetes defines three cumulative Pod Security Standards: Privileged (unrestricted, for trusted infrastructure workloads), Baseline (blocks known privilege escalations such as host namespaces, privileged containers, and hostPath volumes) and Restricted (follows current pod hardening best practices)."
+   }
+  ],
+  "verified": [
+   {
+    "url": "https://learn.microsoft.com/en-us/azure/security/develop/threat-modeling-tool-threats",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page states the tool is a core element of the SDL, lists the question 'How can an attacker change the authentication data?', and presents the STRIDE table with all six categories."
+   },
+   {
+    "url": "https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page says the Manifesto's four questions are the foundation for four phases (application decomposition, threat identification/ranking, mitigations, review/validation); DFDs with trust boundaries, STRIDE 'for illustration purposes', responses mitigate/eliminate/transfer/accept, and validation questions on DFD accuracy and testable mitigations are all present."
+   },
+   {
+    "url": "https://www.threatmodelingmanifesto.org/",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Definition quoted verbatim ('analyzing representations of a system to highlight concerns about security and privacy characteristics') and the three values appear as stated."
+   },
+   {
+    "url": "https://c4model.com/",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Landing page, but it explicitly states 'A set of hierarchical abstractions - software systems, containers, components, and code' and 'A set of hierarchical diagrams - system context, containers, components, and code'. It does not use the literal phrase 'four levels'."
+   },
+   {
+    "url": "https://mermaid.js.org/syntax/c4.html",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page says 'This is an experimental diagram for now', lists the 5 supported types (C4Context, C4Container, C4Component, C4Dynamic, C4Deployment), and states syntax is compatible with plantUML (C4-PlantUML)."
+   },
+   {
+    "url": "https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-diagrams",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page instructs adding Mermaid syntax inside a fenced code block with the mermaid language identifier, and has a 'Checking your version of Mermaid' section with a mermaid block containing 'info'. Minor caveat: the fetched text implies rather than spells out that the block prints the version."
+   },
+   {
+    "url": "https://adr.github.io/",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page states 'An Architectural Decision Record (ADR) captures a single AD and its rationale' and references understanding decisions along with their trade-offs and consequences."
+   },
+   {
+    "url": "https://developer.hashicorp.com/terraform/cli/commands/plan",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page confirms plan does not carry out changes, -out saved file contains full configuration and planned values with sensitive data in cleartext (treat as sensitive), and -json enables machine-readable JSON UI output and implies -input=false."
+   },
+   {
+    "url": "https://kubernetes.io/docs/concepts/security/pod-security-standards/",
+    "reachable": true,
+    "matches_claim": true,
+    "note": "Page defines the three policies as cumulative; Privileged is 'entirely unrestricted' for system/infrastructure workloads by trusted users; Baseline prevents known privilege escalations including host namespaces, privileged containers, and HostPath volumes; Restricted is 'following current Pod hardening best practices'."
+   }
+  ]
+ }
+]

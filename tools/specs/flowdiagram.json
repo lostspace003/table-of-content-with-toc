@@ -1,0 +1,398 @@
+{
+ "title": "Traffic and Flow Diagram Automation with Claude",
+ "tagline": "From ping and traceroute evidence to an approved, versioned flow diagram",
+ "days": 3,
+ "level": "Intermediate",
+ "audience": "Network operations, NOC, load balancer, data centre and cloud network teams, and automation leads in enterprise IT in India and worldwide",
+ "prerequisites": [
+  "TCP/IP fundamentals and routing basics",
+  "Hands-on familiarity with ping and traceroute",
+  "Introductory Python and Git",
+  "Exposure to at least one load balancer or ACI fabric is helpful, not required"
+ ],
+ "outcomes": [
+  "Explain what ping and traceroute can and cannot prove about a traffic path, and encode those limits in the diagram",
+  "Set up Claude Code, the Claude Agent SDK and an MCP server that exposes read-only probe tools for this workflow",
+  "Build deterministic Python probe runners that return typed path records Claude consumes through tool use and structured JSON outputs",
+  "Enrich hops with F5, Citrix NetScaler, Radware Alteon, other load balancers (Anaya LB) and Cisco APIC context, and render evidence-linked Mermaid diagrams",
+  "Publish diagrams to ServiceNow and GitHub behind scope limits, named approvals and an audit log, and detect path drift on a schedule"
+ ],
+ "tools": [
+  [
+   "claude",
+   "Claude Code and Agent SDK"
+  ],
+  [
+   "anthropic",
+   "Model Context Protocol (MCP)"
+  ],
+  [
+   "python",
+   "Python"
+  ],
+  [
+   "pydantic",
+   "Pydantic"
+  ],
+  [
+   "mermaid",
+   "Mermaid"
+  ],
+  [
+   "f5",
+   "F5 iControl REST and tmsh"
+  ],
+  [
+   "citrix",
+   "Citrix NetScaler NITRO API"
+  ],
+  [
+   "generic:radware",
+   "Radware Alteon / Cyber Controller"
+  ],
+  [
+   "cisco",
+   "Cisco APIC REST API"
+  ],
+  [
+   "generic:servicenow",
+   "ServiceNow Table API"
+  ],
+  [
+   "github",
+   "GitHub pull requests"
+  ],
+  [
+   "githubactions",
+   "GitHub Actions"
+  ]
+ ],
+ "modules": [
+  {
+   "day": 1,
+   "title": "What a flow diagram must prove, and what probes can tell you",
+   "icon": "generic:book",
+   "topics": [
+    "Why hand-drawn traffic diagrams go stale: the request-to-diagram cycle in real NOC and change work",
+    "What ping and traceroute actually show: ICMP and UDP probes, TTL expiry, RTT, per-hop loss, asymmetric return paths",
+    "Where evidence goes dark: firewalls that drop ICMP, load balancers that hide pool members, ECMP and MPLS hops",
+    "The teaching pattern for the course: Claude plans and explains, deterministic code probes, a person approves, everything is logged"
+   ],
+   "lab": "Trace the path from a lab client to a lab VIP by hand, record every hop and every gap, and write the brief for the pipeline you will build.",
+   "deliverable": "Manual path record and pipeline brief."
+  },
+  {
+   "day": 1,
+   "title": "Setting up Claude Code, the Agent SDK and MCP for this workflow",
+   "icon": "claude",
+   "topics": [
+    "Claude Code project layout for the diagram pipeline: CLAUDE.md, allowed tools, repository conventions",
+    "Claude Agent SDK in Python: sessions, custom tool definitions, structured JSON outputs and permission hooks",
+    "An MCP server exposing only read-only probe tools (ping, traceroute, DNS lookup) with scope lists and logging",
+    "Secrets and credentials outside the prompt: environment variables and a vault for device API tokens"
+   ],
+   "lab": "Stand up the MCP server, connect it to Claude Code and the Agent SDK, and prove Claude can call a probe tool but cannot run an arbitrary shell command.",
+   "deliverable": "Working Claude workbench with a read-only probe MCP server."
+  },
+  {
+   "day": 1,
+   "title": "Deterministic probe runners in Python",
+   "icon": "python",
+   "topics": [
+    "Wrapping ping and traceroute with subprocess: timeouts, retries, max hops, packet counts and exit-code handling",
+    "Parsers for Linux and Windows output into a typed path record, with unit tests against saved captures",
+    "Handling the ugly cases: stars, duplicate hops, rate-limited routers and partially answering paths",
+    "Claude requests probes through tool use; code runs them and returns structured results"
+   ],
+   "lab": "Implement and test the probe runners with Claude Code, inspect every diff, and run them against three lab targets with different failure modes.",
+   "deliverable": "Tested probe runner library."
+  },
+  {
+   "day": 1,
+   "title": "Path evidence model and structured outputs",
+   "icon": "pydantic",
+   "topics": [
+    "Pydantic schema for a path: source, target, hops, RTTs, loss, timestamps, probe ID and tool version",
+    "Marking unknown segments explicitly rather than filling gaps; confidence per hop",
+    "Prompting Claude to summarize a path record with mandatory citations to probe IDs",
+    "Evidence bundle layout: raw output, parsed record, Claude summary, all versioned together"
+   ],
+   "lab": "Define the schema, feed Claude a path with missing hops, and verify the summary cites probe IDs and refuses to invent the gap.",
+   "deliverable": "Path evidence schema and summarization agent."
+  },
+  {
+   "day": 2,
+   "title": "Enriching hops with load balancer context",
+   "icon": "f5",
+   "topics": [
+    "F5: virtual servers, pools and pool members through iControl REST and tmsh list ltm virtual",
+    "Citrix NetScaler lbvserver, servicegroup and binding objects through the NITRO API",
+    "Radware Alteon virtual services via Cyber Controller and Alteon REST; a common adapter for other load balancers (Anaya LB)",
+    "Matching a hop or VIP address to a device object so the diagram can show what sits behind it"
+   ],
+   "lab": "Build read-only adapters for the lab F5 and NetScaler, let Claude map a VIP to its pool members through tool use, and log every API call.",
+   "deliverable": "Load balancer enrichment adapters."
+  },
+  {
+   "day": 2,
+   "title": "Data centre fabric and cloud path context",
+   "icon": "cisco",
+   "topics": [
+    "Cisco APIC REST API: tenants, bridge domains, EPGs and L3Outs that a path crosses",
+    "Reading ACI endpoint and interface data to place a hop on a leaf or border leaf",
+    "Hybrid paths: on-premises to cloud VPC or VNet, where traceroute stops and cloud route tables begin",
+    "Deciding what to enrich and what to leave as a labelled unknown"
+   ],
+   "lab": "Query the lab APIC for the EPGs and L3Out a path traverses and attach fabric context to the evidence bundle.",
+   "deliverable": "Fabric-aware path record."
+  },
+  {
+   "day": 2,
+   "title": "Generating the traffic and flow diagram with Mermaid",
+   "icon": "mermaid",
+   "topics": [
+    "Mermaid flowchart and sequence syntax for hop-by-hop traffic and request-response flow",
+    "Claude drafts the diagram from the evidence bundle; a deterministic renderer validates the syntax",
+    "Every node carries the probe ID that placed it; unknown segments are styled as unknown",
+    "Diagram conventions: VIP, pool, firewall, fabric and cloud boundary shapes and a legend"
+   ],
+   "lab": "Generate Mermaid for the lab path, render it, break the evidence on purpose and watch the renderer reject an unsupported node.",
+   "deliverable": "Evidence-linked Mermaid diagram generator."
+  },
+  {
+   "day": 2,
+   "title": "Guardrails, approvals and audit for probing and publishing",
+   "icon": "generic:shield",
+   "topics": [
+    "Scope lists: which prefixes and hostnames may be probed, enforced in code not in the prompt",
+    "Rate limits and probe budgets so automated tracing never becomes a ping storm",
+    "Named approver required before a diagram is written to the CMDB or merged into a shared repository",
+    "Audit log of every tool call, device API query, model output and approval decision"
+   ],
+   "lab": "Add scope enforcement, rate limits and an approval gate, then attempt an out-of-scope probe and an unapproved publish and show both are refused and logged.",
+   "deliverable": "Guardrail and audit layer."
+  },
+  {
+   "day": 3,
+   "title": "Publishing to ServiceNow and GitHub",
+   "icon": "generic:servicenow",
+   "topics": [
+    "ServiceNow Table API to update the incident, change or CI record that requested the diagram, and the Attachment API to attach the diagram and evidence bundle to it",
+    "Flow Designer trigger: a request record starts the pipeline and receives the result",
+    "GitHub pull request with the Mermaid file, evidence bundle and Claude-written summary; a person reviews and merges",
+    "Repository layout for diagrams per application and per site"
+   ],
+   "lab": "Run the pipeline from a ServiceNow request to a GitHub pull request and complete the approval end to end.",
+   "deliverable": "Request-to-publication workflow."
+  },
+  {
+   "day": 3,
+   "title": "Drift detection and scheduled re-mapping",
+   "icon": "githubactions",
+   "topics": [
+    "GitHub Actions schedule that re-runs probes within scope and compares against the published path",
+    "Deterministic diff of path records; Claude explains the change in plain language",
+    "Opening a pull request only when a path changed, with the diff and evidence attached",
+    "Operator runbook: false drift from ECMP, maintenance windows and probe failures"
+   ],
+   "lab": "Schedule the re-mapping job, change the lab path, and review the drift pull request Claude explains.",
+   "deliverable": "Drift detection job and runbook."
+  },
+  {
+   "day": 3,
+   "title": "Capstone: request to approved flow diagram, end to end",
+   "icon": "generic:capstone",
+   "topics": [
+    "A ServiceNow request in, probes run, hops enriched across F5, NetScaler, Radware, other load balancers (Anaya LB) and ACI, Mermaid diagram out",
+    "No publication without a named approver; audit trail reviewed",
+    "Acceptance criteria, limitations statement and team demo"
+   ],
+   "lab": "Capstone build and demo.",
+   "deliverable": "End-to-end traffic and flow diagram pipeline."
+  }
+ ],
+ "capstone": "A repeatable pipeline that takes a flow diagram request from ServiceNow, runs ping and traceroute through deterministic code, enriches every hop from load balancer and ACI APIs, has Claude draft an evidence-linked Mermaid diagram, and publishes it to ServiceNow and GitHub only after a named approval, with drift detection on a schedule.",
+ "video": {
+  "hook_title": "The path changed.\nThe diagram did not.",
+  "hook_sub": "Hand-drawn traffic diagrams are out of date the moment they are finished.",
+  "hook_q": "What if Claude ran the\nprobes, read every hop,\nand drew it for you?",
+  "story_big": "One request.\nOne proven diagram.",
+  "story_num": "11",
+  "story_num_label": "build modules",
+  "story_sub": "From probe to published diagram, every hop in the picture traces back to evidence you can replay.",
+  "paths": [
+   {
+    "name": "Prove and probe",
+    "items": [
+     [
+      "Probe limits",
+      "what ping and traceroute can show"
+     ],
+     [
+      "Claude workbench",
+      "Claude Code, Agent SDK, MCP"
+     ],
+     [
+      "Probe runners",
+      "deterministic Python, typed records"
+     ]
+    ],
+    "panel": "terminal",
+    "panel_lines": [
+     "$ flowmap probe --from client-blr-01 --to pay-vip.example.corp",
+     "> scope check: 10.40.0.0/16 allowed  probe budget: 3/50 used",
+     "> traceroute 10.40.12.25  max-hops 30  timeout 2s",
+     ">  1  10.40.1.1     1.2 ms   2  10.40.2.1    3.4 ms   3  * * *",
+     ">  4  10.40.12.25  5.9 ms   ping: 10/10 received  rtt avg 5.7 ms",
+     "> record P-0218 saved  hop 3: UNKNOWN (no reply)  confidence: medium"
+    ]
+   },
+   {
+    "name": "Enrich and draw",
+    "items": [
+     [
+      "Device context",
+      "F5, NetScaler, Radware, ACI"
+     ],
+     [
+      "Mermaid generation",
+      "every node cites a probe"
+     ]
+    ],
+    "panel": "terminal",
+    "panel_lines": [
+     "> tool: f5.get_virtual  host=lb-f5-01  dest=10.40.12.25",
+     "> vs_pay_443 -> pool_pay_app  members: 10.40.30.11, 10.40.30.12",
+     "> tool: apic.get_epg  ip=10.40.30.11  -> tenant pay  epg app-web  leaf-103",
+     "> draft diagram: 6 nodes, 5 edges, 1 unknown segment (hop 3)",
+     "> mermaid render: OK  lint: OK  evidence refs: P-0218, F5-77, ACI-12",
+     "> summary: client-blr-01 -> fw (unknown) -> lb-f5-01 vs_pay_443 -> app-web"
+    ]
+   },
+   {
+    "name": "Guard and approve",
+    "items": [
+     [
+      "Scope and rate limits",
+      "enforced in code"
+     ],
+     [
+      "Approval gate",
+      "a named person publishes"
+     ]
+    ],
+    "panel": "diff",
+    "panel_lines": [
+     "  guardrail run #14  pipeline=flowmap",
+     "+ scope: 3/3 targets in allowed prefixes",
+     "+ budget: 9 probes used of 50 per hour",
+     "- probe 10.99.7.9 REFUSED: outside scope list",
+     "- publish to cmdb_ci_service REFUSED: no approver on record",
+     "  audit: 14 events written  approver requested: netops-lead"
+    ]
+   },
+   {
+    "name": "Publish and watch",
+    "items": [
+     [
+      "ServiceNow and GitHub",
+      "request in, pull request out"
+     ],
+     [
+      "Drift detection",
+      "scheduled re-mapping"
+     ],
+     [
+      "Capstone",
+      "end to end, approved"
+     ]
+    ],
+    "panel": "cards",
+    "panel_lines": [
+     "REQUEST RITM0041877  app: payments  site: BLR-DC1  requester: app-owner",
+     "diagram: diagrams/payments/blr-dc1.mmd  evidence: P-0218, F5-77, ACI-12",
+     "pull request #142  approver: netops-lead  decision: MERGED 2026-10-28 11:20",
+     "servicenow: attached to RITM0041877  cmdb_ci_service updated",
+     "drift job: nightly  last run: no change  next: 02:30 IST"
+    ]
+   }
+  ],
+  "stats": [
+   [
+    "11",
+    "build modules"
+   ],
+   [
+    "3",
+    "days, hands-on"
+   ],
+   [
+    "4",
+    "device families enriched"
+   ],
+   [
+    "0",
+    "hops drawn without evidence"
+   ]
+  ],
+  "cta": "Stop drawing paths by hand.",
+  "narration": [
+   [
+    "hook",
+    "A ticket asks for the traffic flow from the branch office to the payments V I P. Someone opens a terminal, runs traceroute, runs ping, and starts drawing boxes by hand. By the time the diagram is finished, the path has already changed."
+   ],
+   [
+    "hook",
+    "What if Claude ran the probes through code you trust, read every hop as evidence, and drew the diagram for you, with a person approving before anything is published? That is traffic and flow diagram automation, done with Claude, done safely."
+   ],
+   [
+    "intro",
+    "Gennoor Tech presents Traffic and Flow Diagram Automation with Claude."
+   ],
+   [
+    "story",
+    "One request in. One proven diagram out. Over three days you build a pipeline in eleven modules where Claude plans and explains, deterministic Python runs ping and traceroute, and every hop in the picture traces back to a probe you can replay. Claude never guesses a path. If a hop did not answer, the diagram says so."
+   ],
+   [
+    "path0",
+    "You begin with what traceroute and ping can actually prove, and what they cannot. Asymmetric return paths. Load balancers that hide pool members. Firewalls that drop I C M P. Then you set up the workbench. Claude Code on your machine, the Claude Agent S D K in Python, and an M C P server that exposes only read only probe tools, with every call logged and credentials kept out of the prompt."
+   ],
+   [
+    "path0",
+    "Next you build the probe runners. Deterministic Python wrappers around ping and traceroute, with timeouts, retries and parsers that turn raw output into a typed path record. Claude requests the probes through tool use and receives structured J S O N. It cannot run a shell command on its own. And when a hop returns stars, the record marks it unknown instead of filling the gap."
+   ],
+   [
+    "path1",
+    "Day two adds context. Hops are enriched from F5 through iControl REST and t m s h, from Citrix NetScaler through the NITRO A P I, from Radware Alteon and Cyber Controller, and from other load balancers, Anaya L B included, through a common adapter. The Cisco A P I C tells you where a path enters the A C I fabric. Then Claude writes Mermaid. A deterministic renderer validates the syntax, every node carries the probe I D that placed it, and unknown segments are drawn as unknown."
+   ],
+   [
+    "path2",
+    "Then the module most teams skip. Guardrails. Probe targets are restricted to an approved scope list, enforced in code and not in the prompt. Rate limits and probe budgets keep automated tracing from becoming a ping storm on production links. Any diagram going to the C M D B or into a shared repository needs a named approver, and every tool call, device query and decision lands in an audit log you can hand to a reviewer."
+   ],
+   [
+    "path3",
+    "Day three is publishing. The result is written to the ServiceNow incident, change or request record through the Table A P I, with the diagram and its evidence bundle attached through the Attachment A P I, and Flow Designer starting the pipeline. A GitHub pull request carries the Mermaid file, the evidence and a summary Claude wrote, and a person reviews and merges it."
+   ],
+   [
+    "path3",
+    "Then drift. A GitHub Actions schedule re-runs the probes within scope, compares the new path with the published one, and opens a pull request with a diff only when something changed. Claude explains the difference in plain language. You decide what to do with it. The capstone ties it all together, from request to approved diagram, with nothing published that a person did not sign off."
+   ],
+   [
+    "labs",
+    "Every lab runs in a contained environment with lab load balancers, a lab A P I C and fictional hostnames. You will watch a traceroute go dark behind a firewall, see Claude mark it unknown instead of inventing a hop, and reject a publish that has no approver."
+   ],
+   [
+    "stats",
+    "Eleven build modules. Three days, hands on. Four device families enriched. And zero hops drawn without evidence behind them."
+   ],
+   [
+    "who",
+    "This course is for network operations, N O C, load balancer, data centre and cloud network teams, and automation leads in India and worldwide. You need T C P I P basics, hands on familiarity with ping and traceroute, and introductory Python and Git."
+   ],
+   [
+    "cta",
+    "Stop drawing paths by hand. Traffic and Flow Diagram Automation with Claude. Enrol now at gennoor dot com."
+   ]
+  ]
+ }
+}
