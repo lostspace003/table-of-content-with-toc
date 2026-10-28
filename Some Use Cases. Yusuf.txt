@@ -1,0 +1,57 @@
+Some Use Cases
+-----------
+
+Below are some use case
+
+1. Certificate Update Automation
+
+Certificate update by automation for all kinds of load balancer devices: F5, NetScaler, Radware, Anaya LB.
+
+2. Device Upgrade Automation
+
+Devices upgraded along with space clear, firmware upload, post and pre checks along with scheduler option.
+
+3. HR Hiring Flow Automation
+
+HR hiring flow from filtering data from portal of their choice to downloading data, calling candidates, pitching to the candidate after judging their English proficiency, experience, location and salary ask, preferred working hours.
+
+4. Bill Creation Automation
+
+Creation of bill for vendor as we received mail from candidate. Check the amount and create with GST and without GST bill as per requirement of company.
+
+5. Troubleshooting Automation
+
+Troubleshooting page for issue moment issue landed on SNOW acknowledgement mail with the asking details for primary troubleshooting and working accordingly by suggesting troubleshooting steps using CLI command. And create template on basis of reason, action and next action.
+
+6. Device Health Monitoring Automation
+
+Monitoring health status of devices by checking VIP status, uptime status, HA status, sync status if in HA, version, last change performed on devices, updating or creating SNOW ticket accordingly.
+
+7. Credential and Access Management Automation
+
+Creating credentials access and raise ticket with respective channel on behalf of new joiner.
+
+8. Configuration Comparison Automation
+
+Planning automation and comparing configuration of 2 different platforms, may be cloud-cloud, physical to cloud or cloud to physical.
+
+9. Traffic and Flow Diagram Automation
+
+Creation for traffic and flow diagram with the help of traceroute and ping access.
+
+10. Cisco ACI Upgrade Automation
+
+Managing upgrade of ACI chassis as per process suggested by Cisco.
+
+11. Terraform and GitHub Automation
+
+Terraform scripting step by step and common mistakes.
+
+How to use GitHub repository.
+
+-------------------------------------------
+
+Our Aim is to do automation using Claude for all these content
+
+TOC on the same line we want basically Automation of <> using Claude, you can have a better name okay
+
