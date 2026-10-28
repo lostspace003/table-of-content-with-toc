@@ -1,0 +1,467 @@
+1
+00:00:01,200 --> 00:00:05,133
+Three hundred applications land in the job portal overnight.
+
+2
+00:00:05,133 --> 00:00:07,099
+Your recruiters have two days,
+
+3
+00:00:07,099 --> 00:00:10,114
+one phone each, and a hiring manager who wants
+
+4
+00:00:10,114 --> 00:00:13,129
+a shortlist by Friday. Every profile has to be
+
+5
+00:00:13,129 --> 00:00:16,340
+filtered, downloaded, called, judged and pitched,
+
+6
+00:00:16,340 --> 00:00:18,896
+and every one of those steps is done by
+
+7
+00:00:18,896 --> 00:00:19,224
+hand.
+
+8
+00:00:19,974 --> 00:00:22,440
+What if an agent filtered the portal,
+
+9
+00:00:22,440 --> 00:00:26,107
+downloaded the profiles, prepared every screening call,
+
+10
+00:00:26,107 --> 00:00:29,373
+scored English proficiency, experience, location,
+
+11
+00:00:29,373 --> 00:00:32,439
+salary ask and working hours against the role,
+
+12
+00:00:32,439 --> 00:00:35,639
+and drafted the pitch, while a person made every
+
+13
+00:00:35,639 --> 00:00:39,238
+decision that matters? That is hiring flow automation,
+
+14
+00:00:39,238 --> 00:00:41,238
+done with Claude, done safely.
+
+15
+00:00:41,988 --> 00:00:46,356
+Gennoor Tech presents HR Hiring Flow Automation with Claude.
+
+16
+00:00:47,106 --> 00:00:49,652
+One job requisition in. One approved,
+
+17
+00:00:49,652 --> 00:00:53,642
+documented shortlist out. You build the hiring pipeline in
+
+18
+00:00:53,642 --> 00:00:55,707
+ten modules across three days,
+
+19
+00:00:55,707 --> 00:00:58,665
+and every module is something you can test,
+
+20
+00:00:58,665 --> 00:01:01,211
+review and demonstrate. Claude plans,
+
+21
+00:01:01,211 --> 00:01:05,064
+drafts and explains. Deterministic Python code executes.
+
+22
+00:01:05,064 --> 00:01:08,642
+A recruiter approves every outreach and every pitch.
+
+23
+00:01:08,642 --> 00:01:10,362
+And everything is logged.
+
+24
+00:01:11,112 --> 00:01:13,823
+You begin by mapping the real hiring flow,
+
+25
+00:01:13,823 --> 00:01:16,470
+from the job portal of your choice to the
+
+26
+00:01:16,470 --> 00:01:19,956
+onboarding ticket, and by deciding which steps a model
+
+27
+00:01:19,956 --> 00:01:23,055
+may propose and which only a person may approve.
+
+28
+00:01:23,055 --> 00:01:25,767
+Then you set up Claude Code with a project
+
+29
+00:01:25,767 --> 00:01:27,832
+file that encodes hiring policy,
+
+30
+00:01:27,832 --> 00:01:29,963
+the Claude Agent S D K in Python,
+
+31
+00:01:29,963 --> 00:01:33,384
+and a Model Context Protocol server that exposes your
+
+32
+00:01:33,384 --> 00:01:36,935
+portal exports and candidate store as tools with strict
+
+33
+00:01:36,935 --> 00:01:37,968
+J S O N outputs.
+
+34
+00:01:38,718 --> 00:01:42,657
+Next comes sourcing. You filter and download candidate data
+
+35
+00:01:42,657 --> 00:01:45,795
+from portal exports and sanctioned portal A P I
+
+36
+00:01:45,795 --> 00:01:48,733
+endpoints, validate every row with Pydantic,
+
+37
+00:01:48,733 --> 00:01:52,873
+deduplicate across portals, and record where every record came
+
+38
+00:01:52,873 --> 00:01:56,344
+from. A typed candidate profile captures experience,
+
+39
+00:01:56,344 --> 00:01:59,616
+location, salary ask and preferred working hours,
+
+40
+00:01:59,616 --> 00:02:03,021
+extracted from resumes with a confidence per field.
+
+41
+00:02:03,021 --> 00:02:05,358
+Unknowns are marked, never guessed.
+
+42
+00:02:06,108 --> 00:02:08,261
+On day two you reach the candidate.
+
+43
+00:02:08,261 --> 00:02:11,030
+Claude drafts a call script from the role and
+
+44
+00:02:11,030 --> 00:02:14,414
+the profile, and a deterministic scheduler books a slot
+
+45
+00:02:14,414 --> 00:02:17,736
+in the candidate's preferred hours and places the call
+
+46
+00:02:17,736 --> 00:02:21,550
+through Twilio Programmable Voice, with recorded consent and a
+
+47
+00:02:21,550 --> 00:02:23,827
+transcript stored against the record.
+
+48
+00:02:23,827 --> 00:02:25,365
+The script is a proposal.
+
+49
+00:02:25,365 --> 00:02:27,088
+The recruiter runs the call,
+
+50
+00:02:27,088 --> 00:02:29,364
+and nothing dials until they say yes.
+
+51
+00:02:30,114 --> 00:02:34,631
+Then assessment. A rubric-driven agent scores English proficiency from
+
+52
+00:02:34,631 --> 00:02:37,213
+the transcript on C E F R aligned bands,
+
+53
+00:02:37,213 --> 00:02:41,407
+checks experience, location, working hours and salary ask against
+
+54
+00:02:41,407 --> 00:02:44,957
+the requisition, and cites the exact lines that justify
+
+55
+00:02:44,957 --> 00:02:47,861
+each score. Low confidence routes to a human.
+
+56
+00:02:47,861 --> 00:02:51,539
+A pitch generator then drafts a personalised pitch within
+
+57
+00:02:51,539 --> 00:02:54,959
+approved talking points and the approved salary band.
+
+58
+00:02:54,959 --> 00:02:57,734
+Ask it to promise a number outside the band
+
+59
+00:02:57,734 --> 00:03:00,638
+and it refuses. And nothing is sent until the
+
+60
+00:03:00,638 --> 00:03:02,058
+recruiter approves it.
+
+61
+00:03:02,808 --> 00:03:06,569
+Day three is control. You build the guardrails specific
+
+62
+00:03:06,569 --> 00:03:08,620
+to hiring: P I I minimisation,
+
+63
+00:03:08,620 --> 00:03:13,476
+consent and retention tracking, prompt injection defences for untrusted
+
+64
+00:03:13,476 --> 00:03:18,057
+resume and transcript text, fairness checks on score distributions,
+
+65
+00:03:18,057 --> 00:03:20,998
+and an append-only audit log in PostgreSQL.
+
+66
+00:03:20,998 --> 00:03:25,237
+Every shortlist, every outreach and every pitch passes through
+
+67
+00:03:25,237 --> 00:03:27,904
+an approval gate with a named approver,
+
+68
+00:03:27,904 --> 00:03:30,024
+and every override is recorded.
+
+69
+00:03:30,774 --> 00:03:34,933
+Finally orchestration. The pipeline runs as a FastAPI service
+
+70
+00:03:34,933 --> 00:03:37,320
+with pytest coverage. Every prompt,
+
+71
+00:03:37,320 --> 00:03:40,797
+rubric and schema change goes through a GitHub pull
+
+72
+00:03:40,797 --> 00:03:44,752
+request, and GitHub Actions runs the evaluation set before
+
+73
+00:03:44,752 --> 00:03:47,207
+it merges. When a candidate accepts,
+
+74
+00:03:47,207 --> 00:03:50,548
+a ServiceNow record is opened through the Table A
+
+75
+00:03:50,548 --> 00:03:53,752
+P I so onboarding and access requests start the
+
+76
+00:03:53,752 --> 00:03:54,366
+same day.
+
+77
+00:03:55,116 --> 00:03:57,411
+Every lab uses synthetic candidates,
+
+78
+00:03:57,411 --> 00:04:00,980
+synthetic portal exports and a sandbox telephony number.
+
+79
+00:04:00,980 --> 00:04:04,167
+You will watch a resume try to inject instructions
+
+80
+00:04:04,167 --> 00:04:05,760
+into the scorer and fail.
+
+81
+00:04:05,760 --> 00:04:08,309
+You will see the gate block a pitch that
+
+82
+00:04:08,309 --> 00:04:11,305
+quotes the wrong salary. And you will trace one
+
+83
+00:04:11,305 --> 00:04:14,301
+candidate from portal row to onboarding ticket,
+
+84
+00:04:14,301 --> 00:04:16,404
+event by event, in the audit log.
+
+85
+00:04:17,154 --> 00:04:19,701
+Here is the full table of contents,
+
+86
+00:04:19,701 --> 00:04:21,666
+10 modules over three days.
+
+87
+00:04:21,666 --> 00:04:25,524
+Day one: The hiring flow and the automation baseline;
+
+88
+00:04:25,524 --> 00:04:28,799
+Setting up Claude Code, the Agent SDK and MCP
+
+89
+00:04:28,799 --> 00:04:33,384
+for hiring; Sourcing: filtering and downloading from the portal
+
+90
+00:04:33,384 --> 00:04:37,896
+of choice; and Candidate profile schema and resume extraction.
+
+91
+00:04:37,896 --> 00:04:40,589
+Day two: Calling candidates: scripts,
+
+92
+00:04:40,589 --> 00:04:45,393
+scheduling and consented recording; Assessing English proficiency,
+
+93
+00:04:45,393 --> 00:04:48,522
+experience, location, salary ask and hours;
+
+94
+00:04:48,522 --> 00:04:52,962
+and Pitching the role: drafts within approved talking points.
+
+95
+00:04:52,962 --> 00:04:57,693
+Day three: Guardrails, approvals and audit for hiring automation;
+
+96
+00:04:57,693 --> 00:05:00,677
+Orchestration, ServiceNow handoff and CI;
+
+97
+00:05:00,677 --> 00:05:04,170
+and Capstone: requisition to approved shortlist.
+
+98
+00:05:04,920 --> 00:05:09,092
+Every build in this course follows six engineering principles.
+
+99
+00:05:09,092 --> 00:05:10,908
+Model output is a proposal,
+
+100
+00:05:10,908 --> 00:05:14,407
+never a fact. Authorization lives outside the model.
+
+101
+00:05:14,407 --> 00:05:17,367
+A human approves every consequential action.
+
+102
+00:05:17,367 --> 00:05:19,655
+Decisions and evidence are logged.
+
+103
+00:05:19,655 --> 00:05:23,625
+The stack stays provider-agnostic. And quality is measured,
+
+104
+00:05:23,625 --> 00:05:24,432
+not assumed.
+
+105
+00:05:25,182 --> 00:05:27,318
+Ten course modules. Three days,
+
+106
+00:05:27,318 --> 00:05:31,107
+hands-on. Five fit criteria scored with cited evidence.
+
+107
+00:05:31,107 --> 00:05:35,310
+And zero candidates contacted without a recruiter's approval.
+
+108
+00:05:36,060 --> 00:05:38,937
+This course is for H R operations and talent
+
+109
+00:05:38,937 --> 00:05:42,336
+acquisition teams, H R technology and enterprise I T
+
+110
+00:05:42,336 --> 00:05:46,390
+automation engineers, and the network and platform teams asked
+
+111
+00:05:46,390 --> 00:05:48,612
+to build and host these workflows,
+
+112
+00:05:48,612 --> 00:05:51,620
+in India and worldwide. You need basic Python,
+
+113
+00:05:51,620 --> 00:05:54,431
+a working knowledge of your hiring process,
+
+114
+00:05:54,431 --> 00:05:58,092
+and nothing more. No prior agent experience is required.
+
+115
+00:05:58,842 --> 00:06:02,505
+Hire faster without handing the decision to a machine.
+
+116
+00:06:02,505 --> 00:06:05,083
+HR Hiring Flow Automation with Claude.
+
+117
+00:06:05,083 --> 00:06:07,050
+Enrol now at gennoor dot com.

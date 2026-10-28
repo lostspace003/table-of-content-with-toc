@@ -207,7 +207,7 @@ function mGit(t,a,big){const cx=big?1430:1600,cy=big?470:580,S=big?1.3:0.7;ctx.s
   ctx.restore();}
 
 const MOTIFS={network:(t,a,b)=>mNetwork(t,a),shield:mShield,radar:mRadar,globe:mGlobe,code:mCode,blueprint:mBlueprint,lock:mLock,stack:mStack,docs:mDocs,invoice:mInvoice,pulse:mPulse,diff:mDiff,route:mRoute,fabric:mFabric,gitgraph:mGit};
-function drawBg(t,netAlpha,big){ctx.clearRect(0,0,1920,1080);drawStars(t);(MOTIFS[TH.motif]||mNetwork)(t,netAlpha,big);}
+function drawBg(t,netAlpha,big){ctx.clearRect(0,0,1920,1080);drawStars(t);ctx.save();if(TH.motif!=='network'){if(big)ctx.translate(80,0);else{ctx.translate(40,230);netAlpha*=0.6;}}(MOTIFS[TH.motif]||mNetwork)(t,netAlpha,big);ctx.restore();}
 // ---------- hub graph (hook visual) ----------
 function hubSvg(){const g=[];const cx=1430,cy=430;for(let i=0;i<10;i++){const a=i/10*6.283,r=200+(i%3)*45,x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r;const c=['#6D8CFF','#F59E0B','#38D9A9'][i%3];g.push(`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${c}" stroke-width="2.5" opacity=".8"/><circle cx="${x}" cy="${y}" r="13" fill="${c}"/>`);}
   return `<svg width="1920" height="1080" style="position:absolute;inset:0">${g.join('')}<circle cx="${cx}" cy="${cy}" r="62" fill="#1b2560" stroke="#8FA6FF" stroke-width="3"/><g transform="translate(${cx-22},${cy-22}) scale(1.85)">${DATA.icons.claude}</g></svg>`;}
@@ -222,7 +222,7 @@ const L=document.getElementById('layers');
 const scenes={};
 function layer(id){const d=el('div','layer');d.id='L_'+id;L.appendChild(d);scenes[id]=d;return d;}
 // hook
-{const d=layer('hook');d.innerHTML=TH.motif==='network'?hubSvg():'';const w=el('div');w.style.cssText='position:absolute;left:110px;top:150px;width:1150px';w.innerHTML=`<div class="badge" id="hk_b">New course</div><div class="h1" id="hk_t" style="margin-top:34px">${esc(DATA.hook_title)}</div><div class="h2" id="hk_s" style="margin-top:26px">${esc(DATA.hook_sub)}</div><div class="q" id="hk_q" style="margin-top:46px">${esc(DATA.hook_q)}</div>`;d.appendChild(w);}
+{const d=layer('hook');d.innerHTML=TH.motif==='network'?hubSvg():'';const w=el('div');w.style.cssText='position:absolute;left:110px;top:150px;width:1080px';w.innerHTML=`<div class="badge" id="hk_b">New course</div><div class="h1" id="hk_t" style="margin-top:34px">${esc(DATA.hook_title)}</div><div class="h2" id="hk_s" style="margin-top:26px">${esc(DATA.hook_sub)}</div><div class="q" id="hk_q" style="margin-top:46px">${esc(DATA.hook_q)}</div>`;d.appendChild(w);}
 // intro (title card)
 {const d=layer('intro');d.innerHTML=`<img id="in_l" src="logo-dark.png" style="position:absolute;left:610px;top:150px;height:170px"><div style="position:absolute;left:0;right:0;top:380px;text-align:center"><div class="badge" id="in_b" style="font-size:26px">${DATA.days}-day hands-on course</div><div class="h1" id="in_n" style="margin-top:34px;font-size:100px;padding:0 160px">${esc(DATA.title)}</div><div class="h2" id="in_t" style="margin-top:26px;font-size:42px;color:var(--ac);font-weight:600">${esc(DATA.tagline)}</div></div><div class="hex" id="in_h" style="left:830px;top:800px;transform-origin:center;width:200px;height:220px">${hexSvg(DATA.icons.claude,'#fff')}</div>`;}
 // story
