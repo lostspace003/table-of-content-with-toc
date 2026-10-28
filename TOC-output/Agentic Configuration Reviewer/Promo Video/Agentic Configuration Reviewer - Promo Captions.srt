@@ -1,0 +1,275 @@
+1
+00:00:01,200 --> 00:00:04,492
+The S three bucket was public for eleven days.
+
+2
+00:00:04,492 --> 00:00:06,997
+The pull request had two approvals.
+
+3
+00:00:06,997 --> 00:00:09,144
+Nobody read line two fourteen.
+
+4
+00:00:12,144 --> 00:00:15,521
+What if every configuration change got a reviewer that
+
+5
+00:00:15,521 --> 00:00:17,522
+never gets tired, never guesses,
+
+6
+00:00:17,522 --> 00:00:19,398
+and always shows its evidence?
+
+7
+00:00:19,398 --> 00:00:21,024
+In two days you build one.
+
+8
+00:00:24,024 --> 00:00:28,008
+Gennoor Tech presents the Agentic Configuration Reviewer.
+
+9
+00:00:31,008 --> 00:00:35,125
+Deterministic rules decide. The model explains and drafts the
+
+10
+00:00:35,125 --> 00:00:38,904
+fix. Native tooling validates. And the pull request gets
+
+11
+00:00:38,904 --> 00:00:40,591
+a comment, never a merge.
+
+12
+00:00:40,591 --> 00:00:43,561
+That division of labour is the whole design,
+
+13
+00:00:43,561 --> 00:00:46,328
+and it is why the reviewer can be trusted
+
+14
+00:00:46,328 --> 00:00:46,800
+in C I.
+
+15
+00:00:49,800 --> 00:00:53,594
+Day one starts with parsers for Terraform plan output
+
+16
+00:00:53,594 --> 00:00:56,743
+and Kubernetes YAML, using native libraries,
+
+17
+00:00:56,743 --> 00:00:59,034
+so every finding keeps its file,
+
+18
+00:00:59,034 --> 00:01:02,112
+line and resource provenance. Then a small,
+
+19
+00:01:02,112 --> 00:01:05,977
+honest ruleset: public exposure, privileged workloads,
+
+20
+00:01:05,977 --> 00:01:09,556
+overly broad permissions. Each rule has a stable I
+
+21
+00:01:09,556 --> 00:01:14,209
+D, severity, rationale, references, exceptions and test fixtures,
+
+22
+00:01:14,209 --> 00:01:18,432
+including secure configurations to measure false positives.
+
+23
+00:01:21,432 --> 00:01:24,877
+Then the agent. It receives the parsed resource and
+
+24
+00:01:24,877 --> 00:01:28,389
+the rule evidence and returns a concise explanation,
+
+25
+00:01:28,389 --> 00:01:31,360
+its uncertainty and a remediation rationale,
+
+26
+00:01:31,360 --> 00:01:34,467
+in a strict schema. You verify that nothing it
+
+27
+00:01:34,467 --> 00:01:36,696
+says can change a policy outcome.
+
+28
+00:01:39,696 --> 00:01:42,981
+Day two is remediation. Minimal candidate diffs,
+
+29
+00:01:42,981 --> 00:01:46,882
+only for supported cases, never touching unrelated files.
+
+30
+00:01:46,882 --> 00:01:49,346
+Every patch runs through formatting,
+
+31
+00:01:49,346 --> 00:01:53,795
+syntax validation, native tooling, policy checks and tests before
+
+32
+00:01:53,795 --> 00:01:56,464
+it is allowed to call itself validated.
+
+33
+00:01:56,464 --> 00:01:59,544
+You will watch an invalid patch get rejected.
+
+34
+00:02:02,544 --> 00:02:05,853
+Then integration. A local review report first,
+
+35
+00:02:05,853 --> 00:02:10,025
+then pull request comments in a sandbox repository through
+
+36
+00:02:10,025 --> 00:02:13,406
+a C I workflow. The integration is read-only by
+
+37
+00:02:13,406 --> 00:02:17,218
+default, handles untrusted repository content safely,
+
+38
+00:02:17,218 --> 00:02:20,671
+and never merges. You finish with an evaluation:
+
+39
+00:02:20,671 --> 00:02:23,548
+precision and recall on the fixture set,
+
+40
+00:02:23,548 --> 00:02:27,576
+unsupported statements, patch validity and review noise.
+
+41
+00:02:30,576 --> 00:02:34,852
+Labs run on a sandbox repository with seeded misconfigurations,
+
+42
+00:02:34,852 --> 00:02:38,178
+so you can see real pull request comments appear,
+
+43
+00:02:38,178 --> 00:02:41,232
+with evidence and a validated patch attached.
+
+44
+00:02:44,232 --> 00:02:46,838
+Here is the full table of contents,
+
+45
+00:02:46,838 --> 00:02:48,626
+6 modules over two days.
+
+46
+00:02:48,626 --> 00:02:52,423
+Day one: Supported formats, parsers and provenance;
+
+47
+00:02:52,423 --> 00:02:56,817
+Deterministic policy rules; and AI explanations in a strict
+
+48
+00:02:56,817 --> 00:03:00,913
+schema. Day two: Candidate diffs and native validation;
+
+49
+00:03:00,913 --> 00:03:04,413
+Pull-request integration, read-only by default;
+
+50
+00:03:04,413 --> 00:03:08,136
+and Evaluation, developer experience and capstone.
+
+51
+00:03:11,136 --> 00:03:15,308
+Every build in this course follows six engineering principles.
+
+52
+00:03:15,308 --> 00:03:17,124
+Model output is a proposal,
+
+53
+00:03:17,124 --> 00:03:20,623
+never a fact. Authorization lives outside the model.
+
+54
+00:03:20,623 --> 00:03:23,583
+A human approves every consequential action.
+
+55
+00:03:23,583 --> 00:03:25,871
+Decisions and evidence are logged.
+
+56
+00:03:25,871 --> 00:03:29,841
+The stack stays provider-agnostic. And quality is measured,
+
+57
+00:03:29,841 --> 00:03:30,648
+not assumed.
+
+58
+00:03:33,648 --> 00:03:36,098
+Two days, hands-on. Two formats,
+
+59
+00:03:36,098 --> 00:03:39,391
+Terraform and Kubernetes. Zero auto-merges,
+
+60
+00:03:39,391 --> 00:03:42,913
+ever. One C I integrated reviewer you can take
+
+61
+00:03:42,913 --> 00:03:43,296
+home.
+
+62
+00:03:46,296 --> 00:03:48,353
+This course is for DevSecOps,
+
+63
+00:03:48,353 --> 00:03:52,892
+platform and cloud engineers, infrastructure as code authors and
+
+64
+00:03:52,892 --> 00:03:56,013
+security champions inside engineering teams.
+
+65
+00:03:56,013 --> 00:03:58,850
+You need Terraform or Kubernetes basics,
+
+66
+00:03:58,850 --> 00:04:02,184
+Git and pull requests, and Python fundamentals.
+
+67
+00:04:05,184 --> 00:04:08,055
+Catch line two fourteen before it ships.
+
+68
+00:04:08,055 --> 00:04:12,361
+The Agentic Configuration Reviewer. Enrol now at gennoor dot
+
+69
+00:04:12,361 --> 00:04:12,648
+com.
