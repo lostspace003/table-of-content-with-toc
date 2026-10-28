@@ -1,0 +1,396 @@
+{
+ "title": "Credential and Access Management Automation with Claude",
+ "tagline": "From a new-joiner record to the right accounts, the right tickets and a full audit trail",
+ "days": 3,
+ "level": "Intermediate",
+ "audience": "Enterprise IT and network operations teams, identity and access administrators, ServiceNow process owners, load balancer and data centre network engineers, platform and DevOps engineers in India and worldwide",
+ "prerequisites": [
+  "Basic Python and REST API concepts",
+  "Working knowledge of at least one load balancer or network controller (F5, NetScaler, Radware or Cisco ACI)",
+  "Familiarity with ServiceNow request and ticket workflows",
+  "Git basics; familiarity with an AI coding assistant is helpful, not required"
+ ],
+ "outcomes": [
+  "Model a new-joiner access request as a typed record and a versioned role-to-entitlement matrix that Claude plans against",
+  "Set up Claude Code, the Claude Agent SDK and MCP servers so the agent can read ServiceNow and identity data as tools and return structured JSON access plans",
+  "Raise and route ServiceNow requests and requested items per system through the Table API and Flow Designer on behalf of the joiner",
+  "Provision least-privilege local accounts on F5 (iControl REST and tmsh), Citrix NetScaler (NITRO API), Radware Alteon / Cyber Controller, Cisco APIC and other load balancers (Anaya LB) through deterministic, dry-run-first adapters",
+  "Codify GitHub team and repository access as Terraform in a pull request, planned by GitHub Actions and applied only after review",
+  "Enforce guardrails, human approval, one-time credential delivery and a complete audit log, and run the same workflow in reverse for leavers"
+ ],
+ "tools": [
+  [
+   "claude",
+   "Claude Code and Agent SDK"
+  ],
+  [
+   "python",
+   "Python"
+  ],
+  [
+   "pydantic",
+   "Pydantic"
+  ],
+  [
+   "generic:servicenow",
+   "ServiceNow Table API and Flow Designer"
+  ],
+  [
+   "f5",
+   "F5 iControl REST and tmsh"
+  ],
+  [
+   "citrix",
+   "Citrix NetScaler NITRO API"
+  ],
+  [
+   "generic:radware",
+   "Radware Alteon / Cyber Controller"
+  ],
+  [
+   "cisco",
+   "Cisco APIC REST API"
+  ],
+  [
+   "github",
+   "GitHub"
+  ],
+  [
+   "githubactions",
+   "GitHub Actions"
+  ],
+  [
+   "terraform",
+   "Terraform"
+  ],
+  [
+   "generic:key",
+   "Secrets and one-time delivery"
+  ]
+ ],
+ "modules": [
+  {
+   "day": 1,
+   "title": "The new-joiner access workflow and the automation baseline",
+   "icon": "generic:people",
+   "topics": [
+    "Walking the real flow: HR trigger, manager request, per-system tickets, local device accounts, repository access, hand-over to the joiner",
+    "Which systems network operations teams actually touch: F5, NetScaler, Radware, Cisco ACI, ServiceNow, GitHub and Terraform, plus other load balancers (Anaya LB)",
+    "The teaching pattern used in every build: Claude plans, drafts and explains; deterministic code executes; a human approves; everything is logged",
+    "Mapping tribal knowledge into a role-to-entitlement matrix with owners, scopes and expiry"
+   ],
+   "lab": "Walk through a sample joiner record and the team's current runbook, then draft the entitlement matrix for three roles as a versioned YAML file.",
+   "deliverable": "Documented workflow and entitlement matrix v1."
+  },
+  {
+   "day": 1,
+   "title": "Setting up Claude Code, the Agent SDK and MCP for the access workflow",
+   "icon": "claude",
+   "topics": [
+    "Claude Code project layout, CLAUDE.md conventions and permission settings for a credential workflow",
+    "Claude Agent SDK orchestrator: tool definitions for read_joiner, lookup_entitlements, draft_ticket and plan_account",
+    "MCP servers that expose ServiceNow records and the HR or identity source as read-only tools",
+    "Structured JSON outputs validated with Pydantic so every access plan is an object, never free text"
+   ],
+   "lab": "Stand up the project, connect the ServiceNow MCP server to a developer instance, and have the agent return a validated access plan for one joiner.",
+   "deliverable": "Working agent skeleton with MCP tools and an access-plan schema."
+  },
+  {
+   "day": 1,
+   "title": "Joiner intake and entitlement resolution",
+   "icon": "pydantic",
+   "topics": [
+    "Typed joiner record: employee ID, team, role, location, start date, manager, requested systems and justification",
+    "Resolving role to entitlements per system: F5 partition and role, NetScaler command policy, APIC security domain and role, GitHub teams",
+    "Rejecting incomplete or out-of-matrix requests with an explicit reason instead of a guess",
+    "Diffing the proposed plan against what the joiner already has"
+   ],
+   "lab": "Implement the intake validator and entitlement resolver with Claude Code, then feed it a malformed record and an out-of-matrix request and inspect the rejections.",
+   "deliverable": "Validated joiner record and per-system entitlement plan."
+  },
+  {
+   "day": 2,
+   "title": "Raising tickets in the right channel with ServiceNow",
+   "icon": "generic:servicenow",
+   "topics": [
+    "ServiceNow Table API: creating sc_request and one sc_req_item per system, setting assignment_group, requested_for and short_description",
+    "Letting the agent draft the ticket description and justification from the plan while the Python client owns the call",
+    "Flow Designer for manager approval, state transitions and the callback that unblocks provisioning",
+    "Idempotency: never raise a duplicate ticket for the same joiner and system"
+   ],
+   "lab": "Raise the full set of tickets for one joiner against the developer instance, route each to its fulfilment group and watch Flow Designer approval gate the next step.",
+   "deliverable": "Ticket orchestrator with per-channel routing and approval callback."
+  },
+  {
+   "day": 2,
+   "title": "Device accounts on F5 and Citrix NetScaler",
+   "icon": "f5",
+   "topics": [
+    "F5 iControl REST: POST /mgmt/tm/auth/user with partition access and role, and the equivalent tmsh create auth user command for review",
+    "Citrix NetScaler NITRO API: /nitro/v1/config/systemuser and binding a systemcmdpolicy for least privilege",
+    "Dry run first: the adapter prints the exact request body and tmsh line, then applies only after approval",
+    "Verifying the account with a read-back and a test login, and recording the result"
+   ],
+   "lab": "Build the F5 and NetScaler adapters, run them in dry-run mode against lb-f5-01 and lb-ns-01 in the lab, then apply with approval and verify the accounts.",
+   "deliverable": "F5 and NetScaler provisioning adapters with dry-run and verification."
+  },
+  {
+   "day": 2,
+   "title": "Radware, Cisco ACI and other load balancers (Anaya LB)",
+   "icon": "cisco",
+   "topics": [
+    "Radware Alteon and Cyber Controller: local user and role creation, and where the API stops and a ticketed manual step begins",
+    "Cisco APIC REST API: creating aaaUser objects with aaaUserDomain and aaaUserRole for the right security domain",
+    "An adapter interface so other load balancers (Anaya LB) plug in without changing the orchestrator",
+    "Falling back to a ticket with exact instructions when a platform has no supported API path"
+   ],
+   "lab": "Implement the APIC adapter against the ACI sandbox and the Radware adapter against the lab controller, and prove the orchestrator raises a manual ticket for an unsupported platform.",
+   "deliverable": "Multi-platform adapter set with graceful manual fallback."
+  },
+  {
+   "day": 2,
+   "title": "Repository and infrastructure access as code with GitHub and Terraform",
+   "icon": "terraform",
+   "topics": [
+    "GitHub REST API for organisation invitations and team membership, and why access should live in Terraform instead",
+    "Terraform github provider: github_team_membership and github_repository_collaborator, with terraform plan, apply and state as the record",
+    "Claude Code opens the pull request with the plan output in the description; GitHub Actions runs plan on the PR and apply on merge",
+    "Protecting the Terraform state and the GitHub token used by Actions"
+   ],
+   "lab": "Have Claude Code draft the Terraform change for the joiner, open the pull request, review the Actions plan output and merge to apply.",
+   "deliverable": "Access-as-code pipeline from PR to applied state."
+  },
+  {
+   "day": 3,
+   "title": "Guardrails, approvals and audit for credential workflows",
+   "icon": "generic:shield",
+   "topics": [
+    "Credentials are generated by code and delivered through a one-time channel; the model never sees a password",
+    "Least privilege enforced by the matrix: the agent cannot request a role the matrix does not grant",
+    "Human approval gates on every create, modify and delete, with the approver and decision recorded",
+    "Append-only audit log of plan, approval, API call, response and verification, kept with the ticket"
+   ],
+   "lab": "Attempt to make the agent grant an administrator role outside the matrix, watch the guardrail refuse, and trace one complete joiner through the audit log.",
+   "deliverable": "Guardrail policy, approval gate and audit log."
+  },
+  {
+   "day": 3,
+   "title": "Verification, hand-over and reversal for leavers and movers",
+   "icon": "generic:check",
+   "topics": [
+    "Post-provisioning verification: read-back on every platform, test authentication, ticket closure in ServiceNow",
+    "Hand-over message to the joiner and manager drafted by Claude from the verified results",
+    "Running the workflow in reverse: disable and remove accounts, revoke GitHub teams, record the leaver",
+    "Periodic access review that compares live accounts with the matrix and raises tickets for drift"
+   ],
+   "lab": "Verify the joiner end to end, send the hand-over, then run the leaver workflow and prove every account and team membership is gone.",
+   "deliverable": "Verification, hand-over and offboarding workflow."
+  },
+  {
+   "day": 3,
+   "title": "Capstone: one joiner, every system, fully audited",
+   "icon": "generic:capstone",
+   "topics": [
+    "Joiner record in, tickets raised, accounts provisioned, repository access applied, hand-over sent, with no credential created without approval",
+    "Run the leaver reversal on the same joiner and show the audit log closes every entry",
+    "Operating the workflow after the course: matrix ownership, adapter versioning and periodic access review",
+    "Acceptance criteria review, limitations statement, demo to the group"
+   ],
+   "lab": "Capstone build and demo.",
+   "deliverable": "End-to-end access automation workflow and runbook."
+  }
+ ],
+ "capstone": "A repeatable workflow that takes a new-joiner record, resolves entitlements from a versioned matrix, raises the right ServiceNow tickets in the right channels, provisions least-privilege accounts on F5, NetScaler, Radware, Cisco ACI and other load balancers (Anaya LB), applies GitHub and Terraform access through a reviewed pull request, and leaves a complete audit log, with the same workflow running in reverse for leavers.",
+ "video": {
+  "hook_title": "New joiner Monday.\nStill no access Thursday.",
+  "hook_sub": "Seven systems, five queues, five different people who have to remember the right role.",
+  "hook_q": "What if one agent read the\njoiner record, drafted every\nticket and waited for your yes?",
+  "story_big": "One joiner in.\nEvery account out.",
+  "story_num": "7",
+  "story_num_label": "systems, one record",
+  "story_sub": "ServiceNow, F5, NetScaler, Radware, Cisco ACI, GitHub and Terraform, provisioned from a single validated plan.",
+  "paths": [
+   {
+    "name": "Understand and set up",
+    "items": [
+     [
+      "Entitlement matrix",
+      "roles to access, versioned"
+     ],
+     [
+      "Claude Code, Agent SDK, MCP",
+      "tools, not free text"
+     ],
+     [
+      "Joiner intake",
+      "typed, validated, rejected when wrong"
+     ]
+    ],
+    "panel": "terminal",
+    "panel_lines": [
+     "$ access-agent plan --joiner fixtures/joiner_E10422.json",
+     "> joiner E10422  team=netops-lb  role=lb-operator  start=2026-11-03  mgr=E08811",
+     "> matrix v1.4: lb-operator -> f5:Common/operator ns:operator apic:netops/ops",
+     "> plan: 7 items  servicenow=1 f5=2 netscaler=1 radware=1 apic=1 github=1",
+     "> rejected: 'f5:admin' not granted to lb-operator (matrix rule R-12)",
+     "> output: access_plan.json  schema=AccessPlan v2  valid=true"
+    ]
+   },
+   {
+    "name": "Raise tickets",
+    "items": [
+     [
+      "ServiceNow Table API",
+      "one requested item per system"
+     ],
+     [
+      "Flow Designer approval",
+      "manager says yes first"
+     ]
+    ],
+    "panel": "terminal",
+    "panel_lines": [
+     "$ access-agent tickets --plan access_plan.json --dry-run",
+     "> POST /api/now/table/sc_request  requested_for=E10422  (drafted by agent)",
+     "> RITM 1/5  F5 operator account        -> group: lb-fulfilment",
+     "> RITM 2/5  NetScaler system user      -> group: lb-fulfilment",
+     "> RITM 3/5  Radware Alteon local user  -> group: lb-fulfilment",
+     "> RITM 4/5  APIC user netops/ops       -> group: dc-network",
+     "> RITM 5/5  GitHub team netops-lb      -> group: platform-eng",
+     "> approval: flow 'joiner-access-v3' waiting on manager E08811"
+    ]
+   },
+   {
+    "name": "Provision devices",
+    "items": [
+     [
+      "F5 and NetScaler",
+      "iControl REST, tmsh, NITRO"
+     ],
+     [
+      "Radware and Cisco ACI",
+      "Alteon, Cyber Controller, APIC"
+     ],
+     [
+      "Other load balancers",
+      "adapter or manual ticket"
+     ]
+    ],
+    "panel": "diff",
+    "panel_lines": [
+     "  apply plan E10422  approval: RITM0012345 approved by E08811",
+     "+ lb-f5-01.example.corp   POST /mgmt/tm/auth/user  a.sharma  role=operator",
+     "+ lb-f5-02.example.corp   tmsh create auth user a.sharma partition-access ...",
+     "+ lb-ns-01.example.corp   POST /nitro/v1/config/systemuser  policy=operator",
+     "+ lb-rdw-01.example.corp  Alteon REST: create local user a.sharma  role=operator",
+     "+ apic-01.example.corp    POST /api/node/mo/uni/userext/user-a.sharma.json",
+     "  anaya-lb-01             no API adapter -> manual RITM raised to lb-fulfilment",
+     "  verify: 5/5 read-back ok  test-login 5/5 ok  credentials sent via one-time link"
+    ]
+   },
+   {
+    "name": "Code, guard and audit",
+    "items": [
+     [
+      "GitHub and Terraform",
+      "PR, plan, apply, state"
+     ],
+     [
+      "Guardrails and approval",
+      "no credential without a yes"
+     ],
+     [
+      "Verify and reverse",
+      "hand-over and leaver flow"
+     ]
+    ],
+    "panel": "cards",
+    "panel_lines": [
+     "PR #418  access: add a.sharma to netops-lb  (drafted by Claude Code)",
+     "actions: terraform plan  +1 github_team_membership  0 to change  0 to destroy",
+     "review: platform-lead APPROVED  merged 2026-11-03 10:12  apply: ok  state: v87",
+     "AUDIT  E10422  plan -> approval -> 5 device calls -> 5 verified  0 failures",
+     "guardrail: 1 refused (f5:admin)   secrets seen by model: 0",
+     "leaver drill: 5/5 accounts removed  1 team revoked  RITM closed"
+    ]
+   }
+  ],
+  "stats": [
+   [
+    "10",
+    "build steps"
+   ],
+   [
+    "3",
+    "days, hands-on"
+   ],
+   [
+    "7",
+    "systems from one joiner record"
+   ],
+   [
+    "0",
+    "credentials created without approval"
+   ]
+  ],
+  "cta": "Give every new joiner the right access on day one.",
+  "narration": [
+   [
+    "hook",
+    "A new network engineer joins on Monday. By Thursday they still cannot log in to a single load balancer, and five tickets are sitting in five different queues, each waiting for someone to remember the right role."
+   ],
+   [
+    "hook",
+    "What if one agent read the joiner record, drafted every ticket, proposed every account with exactly the right privilege, and then waited for your approval before touching a device? That is credential and access management, done with Claude, done safely."
+   ],
+   [
+    "intro",
+    "Gennoor Tech presents Credential and Access Management Automation with Claude."
+   ],
+   [
+    "story",
+    "One joiner in. Every account and every ticket out. You build the workflow in ten increments across three days, and every increment is something you can run, review and demonstrate. Claude plans the access, drafts the tickets and explains each step. Deterministic Python code makes the A P I calls. A person approves anything that creates a credential. And everything is logged."
+   ],
+   [
+    "path0",
+    "You start with the real workflow. Who the joiner is, which team they belong to, and what that team is entitled to on F5, NetScaler, Radware, Cisco A C I, ServiceNow, GitHub and Terraform, plus other load balancers, Anaya L B included. You turn that tribal knowledge into a role-to-entitlement matrix that is versioned, owned and reviewable."
+   ],
+   [
+    "path0",
+    "Then you set up the tooling. Claude Code on your workstation, the Claude Agent S D K for the orchestrator, and M C P servers that expose ServiceNow and your identity source as read-only tools. You define structured J S O N outputs validated with Pydantic, so every access plan is an object with a schema, never free text. Feed it a malformed record, or a request for a role the matrix does not grant, and it rejects with a reason instead of guessing."
+   ],
+   [
+    "path1",
+    "Day two begins with ticketing. Using the ServiceNow Table A P I you raise the request and one requested item per system, route each to the right fulfilment group, and let Flow Designer carry the manager approval. The agent writes the description and the justification. Your code owns the call, and it never raises the same ticket twice."
+   ],
+   [
+    "path2",
+    "Then the devices. Local accounts on F5 through iControl REST and t m s h, with partition access and role. System users on NetScaler through the NITRO A P I, bound to a command policy for least privilege. Users on Radware Alteon and Cyber Controller. Local users and security domains on Cisco A P I C. And an adapter interface so other load balancers, Anaya L B among them, plug in without changing the orchestrator, or fall back to a ticket with exact manual instructions. Every account is a dry run first, with the exact request body on screen, then a gated apply, then a read-back and a test login."
+   ],
+   [
+    "path3",
+    "Repository access is code. Team membership in GitHub is expressed in Terraform, opened as a pull request by Claude Code, planned by GitHub Actions and applied only after a reviewer merges. The joiner gets the right teams and the right repositories, and the Terraform state file is the record."
+   ],
+   [
+    "path3",
+    "Day three is guardrails. Passwords are generated by code and delivered through a one-time channel the model never sees. Least privilege is enforced by the matrix, not by the prompt. Every approval, every A P I call, every response and every verification is written to an append-only audit log kept with the ticket. Then you verify the joiner end to end, send the hand-over, and run the same workflow in reverse for a leaver until every account and every team membership is gone."
+   ],
+   [
+    "labs",
+    "Every lab runs against a sandbox: a ServiceNow developer instance, virtual F5 and NetScaler appliances, a lab Radware controller, the Cisco A C I simulator and a throwaway GitHub organisation. You will watch the agent refuse to grant an administrator role outside the matrix, trace one joiner through the audit log, and revoke access end to end."
+   ],
+   [
+    "stats",
+    "Ten build steps. Three days, hands-on. Seven systems provisioned from one joiner record. And zero credentials created without approval."
+   ],
+   [
+    "who",
+    "This course is for enterprise I T and network operations teams, identity and access administrators, ServiceNow process owners, load balancer and data centre network engineers, and platform engineers, in India and worldwide. You need basic Python, REST A P I concepts and working knowledge of at least one load balancer or network controller."
+   ],
+   [
+    "cta",
+    "Give every new joiner the right access on day one. Credential and Access Management Automation with Claude. Enrol now at gennoor dot com."
+   ]
+  ]
+ }
+}

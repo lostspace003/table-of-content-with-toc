@@ -1,0 +1,373 @@
+{
+ "title": "Bill Creation Automation with Claude",
+ "tagline": "From a placed candidate's confirmation mail to an approved GST or non-GST vendor bill",
+ "days": 3,
+ "level": "Intermediate",
+ "audience": "Enterprise IT and network operations teams, finance operations and shared-services engineers, automation and platform teams in India and worldwide",
+ "prerequisites": [
+  "Basic Python and JSON",
+  "Working knowledge of GST invoicing: GSTIN, CGST, SGST, IGST, HSN and SAC codes",
+  "Familiarity with a corporate mailbox (Microsoft 365 or IMAP) and a vendor master",
+  "Familiarity with an AI coding assistant is helpful, not required"
+ ],
+ "outcomes": [
+  "Describe the vendor bill workflow end to end and separate what Claude drafts from what deterministic code computes",
+  "Set up Claude Code, the Claude Agent SDK and an MCP server that exposes mailbox and vendor-master tools with read-only defaults",
+  "Extract candidate, vendor, amount and GSTIN fields from mail into strictly validated structured JSON outputs",
+  "Reconcile claimed amounts against a vendor rate card and compute CGST, SGST and IGST in tested Python, never in the model",
+  "Draft paired with-GST and without-GST previews, issue only the document that applies, gate issuance behind human approval, and keep a complete audit trail"
+ ],
+ "tools": [
+  [
+   "claude",
+   "Claude"
+  ],
+  [
+   "anthropic",
+   "Claude Agent SDK"
+  ],
+  [
+   "python",
+   "Python"
+  ],
+  [
+   "pydantic",
+   "Pydantic"
+  ],
+  [
+   "sqlite",
+   "SQLite"
+  ],
+  [
+   "fastapi",
+   "FastAPI"
+  ],
+  [
+   "pytest",
+   "pytest"
+  ],
+  [
+   "github",
+   "GitHub"
+  ],
+  [
+   "githubactions",
+   "GitHub Actions"
+  ],
+  [
+   "generic:servicenow",
+   "ServiceNow"
+  ],
+  [
+   "generic:invoice",
+   "GST bill templates"
+  ],
+  [
+   "json",
+   "Structured JSON outputs"
+  ]
+ ],
+ "modules": [
+  {
+   "day": 1,
+   "title": "The vendor bill workflow and the agentic baseline",
+   "icon": "generic:invoice",
+   "topics": [
+    "How a placed candidate's confirmation mail becomes a vendor bill today: intake, amount check, GST decision, numbering, dispatch",
+    "What a compliant tax invoice must carry: GSTIN of supplier and recipient, place of supply, HSN or SAC, rate split, invoice number and date",
+    "When the company issues a tax invoice with GST and when a bill of supply without it: exempt or nil-rated supplies, or when the issuing entity is not registered or under composition",
+    "The teaching pattern: Claude plans, drafts and explains; deterministic code computes and issues; a person approves; everything is logged"
+   ],
+   "lab": "Walk a sample mail thread from the synthetic mailbox through the manual process and record every decision point and failure mode.",
+   "deliverable": "Annotated workflow map and bill field checklist."
+  },
+  {
+   "day": 1,
+   "title": "Setting up Claude Code, the Agent SDK and MCP for billing",
+   "icon": "claude",
+   "topics": [
+    "Installing Claude Code and scaffolding the billing repository with CLAUDE.md conventions for this workflow",
+    "A Python agent on the Claude Agent SDK with tool use and a JSON schema for every response",
+    "An MCP server exposing read-only mailbox search, vendor-master lookup and rate-card fetch as tools; no send or write tools yet",
+    "Secrets handling: API keys and mailbox credentials in environment variables, never in prompts or the repository"
+   ],
+   "lab": "Build and run the MCP server, connect it to Claude Code, and have the agent list the last ten candidate mails without altering anything.",
+   "deliverable": "Working Claude Code and Agent SDK environment with a read-only billing MCP server."
+  },
+  {
+   "day": 1,
+   "title": "Mail intake and structured extraction",
+   "icon": "pydantic",
+   "topics": [
+    "Reading mail through the Microsoft Graph API or IMAP, including PDF and image attachments passed to Claude for extraction",
+    "A typed BillRequest record: candidate, vendor, amount, currency, GSTIN, service period, source message id, confidence per field",
+    "Structured JSON outputs validated by Pydantic; unknown or conflicting fields are marked, never guessed",
+    "Rejected-mail reporting and a queue for human clarification"
+   ],
+   "lab": "Run twenty synthetic mails through the extractor, including two with missing GSTINs and one with two amounts, and inspect what is flagged.",
+   "deliverable": "Validated intake pipeline with a rejection report."
+  },
+  {
+   "day": 2,
+   "title": "Vendor master, amount verification and reconciliation",
+   "icon": "sqlite",
+   "topics": [
+    "Vendor master and rate card in SQLite: GSTIN, state code, registration status, agreed rates and payment terms",
+    "GSTIN format and check-digit validation, state code derivation and vendor-status lookup in deterministic Python",
+    "Reconciling the claimed amount against the rate card with a configurable tolerance and explicit mismatch reasons",
+    "Claude explains each mismatch in plain language for the reviewer; it does not change the number"
+   ],
+   "lab": "Load the fictional vendor master, reconcile the extracted amounts, and trace one over-claim to its rate-card line.",
+   "deliverable": "Reconciliation module with mismatch reasons and tests."
+  },
+  {
+   "day": 2,
+   "title": "The GST computation engine",
+   "icon": "python",
+   "topics": [
+    "Intra-state versus inter-state supply: CGST plus SGST, or IGST, derived from supplier and place-of-supply state codes",
+    "Rate slabs, HSN and SAC mapping, rounding rules and reverse-charge handling as pure functions",
+    "The without-GST path: bill of supply for exempt or nil-rated supplies, or when the issuing entity is not registered or under composition, with the reason recorded",
+    "Property-based and table-driven pytest coverage across every rate and state pair"
+   ],
+   "lab": "Implement the engine with Claude Code, review every diff, and make the test suite prove intra-state, inter-state and exempt cases.",
+   "deliverable": "Tested GST engine with a full tax breakdown object."
+  },
+  {
+   "day": 2,
+   "title": "Bill generation, numbering and templates",
+   "icon": "fastapi",
+   "topics": [
+    "Two versioned templates, tax invoice and bill of supply, rendered to PDF by deterministic code from the same BillRequest",
+    "A FastAPI billing service with endpoints to draft, preview and (after approval) issue the one bill that applies",
+    "Sequential, gap-free invoice numbering held in SQLite and advanced only on the approved path",
+    "Claude drafts the covering mail and a one-paragraph reviewer summary; the numbers come from the engine"
+   ],
+   "lab": "Generate the with-GST and without-GST previews for the same request and diff them field by field.",
+   "deliverable": "Billing service producing paired draft previews and reviewer summaries."
+  },
+  {
+   "day": 3,
+   "title": "Guardrails, approvals and audit for bill issuance",
+   "icon": "generic:shield",
+   "topics": [
+    "Approval package: source mail, extracted fields, reconciliation result, tax breakdown, both previews, side by side",
+    "Human approval through a ServiceNow requested item created with the Service Catalog API, or a review CLI for teams without ServiceNow",
+    "Hard limits: amount thresholds, duplicate-bill detection, no issuance without an approver identity",
+    "Append-only audit log of prompts, tool calls, approvals and issued documents; retention and reviewer access"
+   ],
+   "lab": "Submit a bill above threshold, see it blocked, approve it as a reviewer, and read the full audit trail for that bill.",
+   "deliverable": "Gated issuance workflow with audit log."
+  },
+  {
+   "day": 3,
+   "title": "Testing, CI and accounting hand-off",
+   "icon": "githubactions",
+   "topics": [
+    "pytest suites for extraction fixtures, reconciliation and the GST engine; golden PDFs for template regression",
+    "GitHub pull requests with Claude Code drafting changes and GitHub Actions running the suite on every pull request and push",
+    "Exporting approved bills as CSV or Tally XML for posting, and dispatching the mail through the Graph API only after approval",
+    "Operator runbook: re-running a mail, voiding a bill, rotating credentials"
+   ],
+   "lab": "Open a pull request that changes a rate slab, watch Actions fail the golden tests, fix it and merge.",
+   "deliverable": "CI pipeline, accounting export and operator runbook."
+  },
+  {
+   "day": 3,
+   "title": "Capstone: end-to-end bill creation pipeline",
+   "icon": "generic:capstone",
+   "topics": [
+    "Wire intake, reconciliation, GST engine, templates and approval gate into one runnable pipeline on the synthetic mailbox",
+    "Mail in, both previews drafted, the one bill that applies issued, with no issuance without approval",
+    "Audit trail walk-through: every prompt, tool call and approval for one issued bill",
+    "Acceptance criteria review, limitations statement, team demo"
+   ],
+   "lab": "Capstone build and demo.",
+   "deliverable": "End-to-end pipeline and runbook."
+  }
+ ],
+ "capstone": "A repeatable pipeline that reads a placed candidate's confirmation mail, extracts and validates the bill request, reconciles the amount against the vendor master, computes GST in tested code, drafts both a with-GST and a without-GST preview, and issues only the one document that applies, only after a person approves, with every step logged.",
+ "video": {
+  "hook_title": "A candidate's mail.\nThe right bill by noon.",
+  "hook_sub": "A placed candidate's confirmation triggers a vendor bill, with GST or without, and the amount had better be right.",
+  "hook_q": "What if Claude read the mail,\nchecked the amount, and drafted\nboth versions for your approval?",
+  "story_big": "One mail in.\nThe right bill out.",
+  "story_num": "9",
+  "story_num_label": "build steps",
+  "story_sub": "From mailbox to approved bill, every step is an increment you can run, test and demo.",
+  "paths": [
+   {
+    "name": "Set up and ingest",
+    "items": [
+     [
+      "Workflow and bill fields",
+      "what a compliant invoice carries"
+     ],
+     [
+      "Claude Code, Agent SDK, MCP",
+      "read-only billing tools"
+     ],
+     [
+      "Mail extraction",
+      "strict JSON, unknowns marked"
+     ]
+    ],
+    "panel": "terminal",
+    "panel_lines": [
+     "$ billagent ingest --mailbox billing@example.corp --since 2026-10-27",
+     "> 20 mails read, 17 bill requests parsed, 3 sent to clarification queue",
+     "> BR-0931  A. Sharma  Nimbus Staffing  INR 84,000.00  gstin 27AAACN1234F1ZX  high",
+     "> BR-0932  amount: INR 42,500.00  gstin: MISSING  -> clarification",
+     "> BR-0935  two amounts found (36,000 / 38,000)  -> clarification"
+    ]
+   },
+   {
+    "name": "Verify and compute",
+    "items": [
+     [
+      "Vendor master reconciliation",
+      "rate card, tolerance, reasons"
+     ],
+     [
+      "GST engine",
+      "CGST, SGST, IGST in tested Python"
+     ]
+    ],
+    "panel": "terminal",
+    "panel_lines": [
+     "> reconcile BR-0931: rate card NS-2026-03  agreed 84,000.00  claimed 84,000.00  OK",
+     "> supplier state 27 (MH)  place of supply 27 (MH)  -> intra-state",
+     "> SAC 998519  rate 18%  CGST 7,560.00  SGST 7,560.00  IGST 0.00",
+     "> total with GST 99,120.00   total without GST 84,000.00",
+     "> reconcile BR-0933: claimed 61,000.00  agreed 58,000.00  +5.2%  MISMATCH",
+     "> explain: candidate joined 3 Oct, rate card line 4 applies, overage flagged"
+    ]
+   },
+   {
+    "name": "Generate and gate",
+    "items": [
+     [
+      "Paired bill templates",
+      "tax invoice and bill of supply"
+     ],
+     [
+      "Approval queue",
+      "nothing numbered without a person"
+     ]
+    ],
+    "panel": "diff",
+    "panel_lines": [
+     "  preview BR-0931  template tax-invoice v3 vs bill-of-supply v2",
+     "+ GSTIN recipient   27AABCE5678G1ZF",
+     "+ CGST 9%           7,560.00",
+     "+ SGST 9%           7,560.00",
+     "- reason            GST not charged: exempt supply (no tax lines)",
+     "  invoice number    (reserved on approval only)",
+     "  status            AWAITING APPROVAL  approver: finops-lead"
+    ]
+   },
+   {
+    "name": "Approve, test and hand off",
+    "items": [
+     [
+      "Guardrails and audit",
+      "thresholds, duplicates, log"
+     ],
+     [
+      "pytest and GitHub Actions",
+      "every rate and state pair"
+     ],
+     [
+      "Accounting export",
+      "CSV or Tally XML, after approval"
+     ]
+    ],
+    "panel": "cards",
+    "panel_lines": [
+     "APPROVAL  BR-0931  Nimbus Staffing  INR 99,120.00 incl GST  threshold: under",
+     "approver: finops-lead   decision: APPROVED 2026-10-28 11:42   SNOW RITM0048211",
+     "issued: INV/26-27/00418 (tax invoice)  without-GST preview retained, not numbered",
+     "ci: gst-engine 146/146 passed   templates golden 12/12   PR #57 merged",
+     "export: tally_2026-10-28.xml  mail sent via Graph API  audit entries: 23"
+    ]
+   }
+  ],
+  "stats": [
+   [
+    "9",
+    "build steps"
+   ],
+   [
+    "3",
+    "days, hands-on"
+   ],
+   [
+    "2",
+    "drafts from one source of truth, one issued"
+   ],
+   [
+    "0",
+    "bills issued without approval"
+   ]
+  ],
+  "cta": "Turn every candidate mail into a correct bill, with a person in the loop.",
+  "narration": [
+   [
+    "hook",
+    "A placed candidate's confirmation mail lands at ten in the morning. The staffing vendor needs the bill today, with G S T or without, and the amount had better be right. Someone opens a spreadsheet, retypes the figure, picks a tax rate from memory, and hopes."
+   ],
+   [
+    "hook",
+    "What if Claude read the mail, extracted the amount, checked it against the vendor master, drafted both versions, and then waited for a person to say yes before the right one was numbered or sent? That is bill creation automation, done with agents, done safely."
+   ],
+   [
+    "intro",
+    "Gennoor Tech presents Bill Creation Automation with Claude."
+   ],
+   [
+    "story",
+    "One mail in. The right bill out. You build the pipeline in nine increments, and every increment is something you can run, test and demonstrate. Claude reads, extracts and explains. Deterministic Python computes the tax. A person approves. Every step is logged, from the first prompt to the issued document."
+   ],
+   [
+    "path0",
+    "You begin with the workflow as it really happens. Who sends the mail, what a compliant tax invoice must carry, and when the company issues with G S T and when it issues a bill of supply without it. Then you set up the toolchain. Claude Code on your workstation. The Claude Agent S D K in Python. And an M C P server that exposes your mailbox and vendor master as read-only tools the agent can call but never bypass."
+   ],
+   [
+    "path0",
+    "Then intake. The agent reads each mail through the Microsoft Graph A P I or I M A P, including the P D F attachments, and returns a strict J S O N record: candidate, vendor, amount, currency, G S T I N, service period, and a confidence score for every field. Pydantic validates the record. Anything missing or contradictory is flagged for a person, never guessed."
+   ],
+   [
+    "path1",
+    "On day two the numbers meet the rules. You load the vendor master into S Q Lite and reconcile the claimed amount against the rate card, with a tolerance you control and a reason for every mismatch. Then you write the G S T engine as plain Python. C G S T and S G S T for intra-state supply. I G S T across states. H S N and S A C codes, rounding, and reverse charge where it applies. Claude explains the computation to the reviewer. It never performs it."
+   ],
+   [
+    "path2",
+    "Then generation. Two versioned templates, a tax invoice and a bill of supply, rendered to P D F by the same deterministic code every time, from the same validated request. Both previews are drafted; only the one that applies is ever issued. Invoice numbers live in a sequence that only the approved path can advance. Claude drafts the covering mail and the one-paragraph summary a finance reviewer actually reads."
+   ],
+   [
+    "path3",
+    "Day three is guardrails. Every bill enters an approval queue with the source mail, the extracted fields, the reconciliation result, the tax breakdown and both previews side by side. A person approves in ServiceNow or in the review C L I. Until then nothing is numbered, nothing is sent, and the audit log records who saw what, who decided, and when."
+   ],
+   [
+    "path3",
+    "You then harden the pipeline. Pytest covers the G S T engine across every rate slab and every state pair, with golden P D F files guarding the templates. GitHub Actions runs the suite on every pull request and push. And approved bills export to your accounting system as C S V or Tally X M L, ready for posting, with the mail dispatched only after the approver's decision is recorded."
+   ],
+   [
+    "labs",
+    "Every lab runs on a synthetic mailbox and a fictional vendor master. You will feed the agent a mail with a missing G S T I N and watch it refuse to proceed. You will trace an over-claim to its rate-card line, break a rate slab in a pull request and see the build fail, then approve a bill and read its complete audit trail."
+   ],
+   [
+    "stats",
+    "Nine build steps. Three days, hands-on. Two drafts from one source of truth, one bill issued. And zero bills issued without approval."
+   ],
+   [
+    "who",
+    "This course is for enterprise I T and network operations teams, finance operations and shared-services engineers, and automation and platform teams in India and worldwide who want to automate billing without surrendering control. You need basic Python, comfort with J S O N, and a working knowledge of G S T invoicing."
+   ],
+   [
+    "cta",
+    "Turn every candidate mail into a correct bill, with a person in the loop. Bill Creation Automation with Claude. Enrol now at gennoor dot com."
+   ]
+  ]
+ }
+}

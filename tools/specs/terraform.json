@@ -1,0 +1,396 @@
+{
+ "title": "Terraform and GitHub Automation with Claude",
+ "tagline": "Terraform step by step, the mistakes that burn teams, and a GitHub workflow where Claude reviews and a human approves",
+ "days": 3,
+ "level": "Beginner to intermediate",
+ "audience": "Enterprise IT and network operations teams, load balancer and data center engineers, platform and DevOps teams adopting infrastructure as code",
+ "prerequisites": [
+  "Basic Linux command line and text editing",
+  "Basic networking and load balancer concepts (VIP, pool, certificate)",
+  "Git basics are helpful, not required",
+  "No prior Terraform or Python experience required"
+ ],
+ "outcomes": [
+  "Write, plan and apply Terraform configurations step by step with providers, variables, modules, remote state and locking",
+  "Recognise and fix the common Terraform mistakes: unpinned providers, secrets in code, state in Git, count versus for_each, targeted applies and drift",
+  "Run a GitHub repository for infrastructure code with branches, pull requests, CODEOWNERS, branch protection and GitHub Actions plan-on-PR and apply-on-merge",
+  "Set up Claude Code, the Claude Agent SDK and an MCP server so Claude can draft, plan and review Terraform without ever running apply itself",
+  "Build a plan-review agent that reads terraform show -json output and posts a structured risk verdict to the pull request",
+  "Enforce guardrails, environment approvals and an audit trail for every plan and apply across F5, NetScaler, Cisco ACI and other load balancers (Anaya LB)"
+ ],
+ "tools": [
+  [
+   "terraform",
+   "Terraform CLI"
+  ],
+  [
+   "hashicorp",
+   "HashiCorp providers"
+  ],
+  [
+   "github",
+   "GitHub"
+  ],
+  [
+   "githubactions",
+   "GitHub Actions"
+  ],
+  [
+   "claude",
+   "Claude Code and Agent SDK"
+  ],
+  [
+   "anthropic",
+   "Model Context Protocol (MCP)"
+  ],
+  [
+   "python",
+   "Python"
+  ],
+  [
+   "f5",
+   "F5 BIG-IP provider"
+  ],
+  [
+   "citrix",
+   "Citrix ADC provider"
+  ],
+  [
+   "cisco",
+   "Cisco ACI provider"
+  ],
+  [
+   "generic:radware",
+   "Radware Alteon REST"
+  ],
+  [
+   "linux",
+   "Linux"
+  ]
+ ],
+ "modules": [
+  {
+   "day": 1,
+   "title": "Infrastructure as code for network and load balancer teams",
+   "icon": "terraform",
+   "topics": [
+    "Why Terraform for F5, NetScaler, Cisco ACI and cloud: declarative config versus click-ops and ad hoc scripts",
+    "HCL building blocks: providers, resources, data sources, variables, outputs and the state file",
+    "The course pattern: Claude plans and explains, Terraform and pipelines execute, a human approves, everything is logged",
+    "Lab environment tour: GitHub organization, lab F5 and NetScaler, Cisco ACI simulator, Terraform CLI on Linux"
+   ],
+   "lab": "Install Terraform, clone the course repository and run terraform init and plan against a sample F5 BIG-IP pool configuration.",
+   "deliverable": "Working Terraform workstation and first successful plan."
+  },
+  {
+   "day": 1,
+   "title": "Setting up Claude Code, the Agent SDK and MCP for Terraform work",
+   "icon": "claude",
+   "topics": [
+    "Claude Code in the repository: CLAUDE.md conventions, allowed commands, and why apply is never on the allowed list",
+    "Claude Agent SDK basics in Python: a session, tool use, structured JSON output with a schema",
+    "An MCP server that exposes terraform fmt, validate, plan and show -json as read-only tools",
+    "Prompting Claude to explain a plan in plain English and cite the resource addresses it refers to"
+   ],
+   "lab": "Configure Claude Code for the repo, start the Terraform MCP server, and ask Claude to explain a plan without being able to apply it.",
+   "deliverable": "Claude Code plus MCP setup with a read-only Terraform tool set."
+  },
+  {
+   "day": 1,
+   "title": "Terraform scripting step by step: init, plan, apply, state",
+   "icon": "hashicorp",
+   "topics": [
+    "The lifecycle: init, fmt, validate, plan, apply, destroy; reading a plan symbol by symbol (+, -, ~, -/+)",
+    "Variables, tfvars files, locals, outputs and the first reusable module for an F5 virtual server and pool",
+    "terraform import for a virtual server that already exists; terraform state list, show, mv and rm",
+    "Remote state with locking, workspaces for dev and prod, and pinned provider versions in required_providers"
+   ],
+   "lab": "Build a module for an F5 virtual server with Claude drafting the HCL, import an existing pool, and move state to a locked remote backend.",
+   "deliverable": "Reusable virtual server module with remote, locked state."
+  },
+  {
+   "day": 2,
+   "title": "Common Terraform mistakes and how to catch them early",
+   "icon": "generic:compare",
+   "topics": [
+    "Unpinned provider versions, secrets hard coded in variables, and the .tfstate file committed to Git",
+    "count versus for_each, resource recreation from a renamed block, and the moved block as the fix",
+    "Drift left behind by terraform apply -target, manual changes on the device, and detecting drift with plan -detailed-exitcode",
+    "Wiring the catchers: terraform fmt -check, validate, tflint, a pre-commit hook and a Claude review that names the mistake and the line"
+   ],
+   "lab": "Reproduce five classic mistakes in the lab repo, watch each one surface in plan or review, and fix them one by one.",
+   "deliverable": "Mistake catalogue with reproduction and fix for each, plus pre-commit checks."
+  },
+  {
+   "day": 2,
+   "title": "GitHub repository fundamentals for infrastructure code",
+   "icon": "github",
+   "topics": [
+    "Repository layout for Terraform: environments, modules, .gitignore for state, plans and credentials",
+    "Branches, commits, pull requests, reviews and merge strategies for a network team",
+    "CODEOWNERS, branch protection rules, required reviewers and status checks",
+    "Secrets and variables in GitHub: repository secrets, environment secrets, OIDC to cloud and Vault, and short-lived device credentials fetched at run time"
+   ],
+   "lab": "Create the team repository, protect main, add CODEOWNERS for the F5 and ACI folders, and raise your first pull request from a feature branch.",
+   "deliverable": "Protected GitHub repository with pull request workflow."
+  },
+  {
+   "day": 2,
+   "title": "GitHub Actions pipelines: plan on pull request, apply on merge",
+   "icon": "githubactions",
+   "topics": [
+    "Workflow anatomy: triggers, jobs, hashicorp/setup-terraform, caching and concurrency groups to avoid parallel applies",
+    "Plan on every pull request with the plan output posted as a PR comment; fmt, validate and tflint as required checks",
+    "Apply only on merge to main, scoped to a GitHub environment with required reviewers",
+    "Saving the plan file as an artifact so the apply uses exactly the plan that was reviewed"
+   ],
+   "lab": "Write the plan and apply workflows with Claude Code, open a pull request, read the plan comment and merge to see the gated apply run.",
+   "deliverable": "Working plan-on-PR and apply-on-merge pipelines."
+  },
+  {
+   "day": 2,
+   "title": "Guardrails, approvals and audit for Terraform and GitHub automation",
+   "icon": "generic:shield",
+   "topics": [
+    "Policy checks before apply: allowed resource types, no destroy without a linked change ticket, no changes outside the PR scope",
+    "GitHub environment protection rules and required reviewers as the human approval gate for every apply",
+    "Audit record per change: who asked, what Claude recommended, plan hash, approver, apply result and run URL",
+    "Least privilege for pipelines and agents: read-only device accounts for plan, scoped tokens, no long-lived credentials in the pipeline"
+   ],
+   "lab": "Add a policy job that blocks a destroy without a ticket, require approval on the prod environment, and export the audit record for one change.",
+   "deliverable": "Guardrail policy, approval gate and audit record format."
+  },
+  {
+   "day": 3,
+   "title": "Claude as plan reviewer: Agent SDK, MCP and structured verdicts",
+   "icon": "anthropic",
+   "topics": [
+    "An Agent SDK application that reads terraform show -json and returns risk level, affected resources and a summary in a fixed JSON schema",
+    "Posting the verdict as a pull request comment and as a check run through the GitHub API; the agent never merges or applies",
+    "Prompt and schema tests: deletes, replacements, certificate changes and out-of-scope resources must be flagged correctly",
+    "Handling uncertainty: the agent marks unknowns and asks for a human when the plan touches resources it cannot classify"
+   ],
+   "lab": "Build and test the plan-review agent, run it inside the pull request workflow and watch it flag a hidden resource replacement.",
+   "deliverable": "Plan-review agent with schema tests wired into the PR pipeline."
+  },
+  {
+   "day": 3,
+   "title": "Terraform for F5, NetScaler, Cisco ACI and other load balancers",
+   "icon": "f5",
+   "topics": [
+    "F5 BIG-IP provider: bigip_ltm_node, bigip_ltm_pool, bigip_ltm_virtual_server and bigip_ssl_certificate backed by iControl REST",
+    "Citrix ADC provider for NetScaler: citrixadc_lbvserver, citrixadc_servicegroup and bindings over the NITRO API",
+    "Cisco ACI provider: aci_tenant, aci_application_profile, aci_bridge_domain against the APIC REST API",
+    "Where no provider exists: Python wrappers for Radware Alteon and other load balancers (Anaya LB) driven from the same pipeline with the same approval gate"
+   ],
+   "lab": "Add a NetScaler virtual server and an ACI bridge domain through the pull request workflow, and attach a Python-driven Radware change to the same gate.",
+   "deliverable": "Multi-platform Terraform modules behind one approval workflow."
+  },
+  {
+   "day": 3,
+   "title": "Capstone: end-to-end change through the Claude-reviewed pipeline",
+   "icon": "generic:capstone",
+   "topics": [
+    "A change request in, a reviewed pull request, a Claude verdict, a human approval, a gated apply and an audit record out",
+    "Runbook: how to raise, review, approve, apply and revert a change in this repository",
+    "Handover: CODEOWNERS, environment reviewers and audit export for the team",
+    "Acceptance review: mistakes caught, approvals enforced, rollback by reverting the pull request, demo to the group"
+   ],
+   "lab": "Capstone build and demo.",
+   "deliverable": "End-to-end Terraform and GitHub workflow with Claude review and runbook."
+  }
+ ],
+ "capstone": "A team GitHub repository where Terraform changes for F5, NetScaler, Cisco ACI and other load balancers (Anaya LB) go through a pull request, a Claude plan review, policy checks and a human approval before a gated apply, with an audit record for every change and rollback by revert.",
+ "video": {
+  "hook_title": "The plan said\nminus one.",
+  "hook_sub": "Nobody read it before the apply ran at two in the morning.",
+  "hook_q": "What if Claude read every plan,\nflagged every mistake, and a human\napproved before anything applied?",
+  "story_big": "One pull request.\nOne reviewed change.",
+  "story_num": "10",
+  "story_num_label": "modules, step by step",
+  "story_sub": "From your first terraform plan to a gated pipeline where Claude reviews and a person approves every apply.",
+  "paths": [
+   {
+    "name": "Learn Terraform step by step",
+    "items": [
+     [
+      "Infrastructure as code",
+      "providers, resources, state"
+     ],
+     [
+      "Claude Code and MCP setup",
+      "read-only Terraform tools"
+     ],
+     [
+      "Init, plan, apply, state",
+      "import, modules, remote state"
+     ]
+    ],
+    "panel": "terminal",
+    "panel_lines": [
+     "$ terraform init -backend-config=backend.prod.hcl",
+     "> Initializing provider F5Networks/bigip v1.22.2 ... locked in .terraform.lock.hcl",
+     "$ terraform plan -out=plan.tfplan",
+     "> Plan: 3 to add, 0 to change, 0 to destroy.",
+     "$ claude 'explain plan.tfplan'",
+     "> Adds node 10.20.1.15, pool web-pool and virtual server vs-web-443 on lb-f5-01.",
+     "> No existing resource is changed or destroyed. Apply is not available to me."
+    ]
+   },
+   {
+    "name": "Catch the common mistakes",
+    "items": [
+     [
+      "Five classic mistakes",
+      "reproduced, then fixed"
+     ],
+     [
+      "fmt, validate, tflint",
+      "pre-commit and CI checks"
+     ]
+    ],
+    "panel": "diff",
+    "panel_lines": [
+     "  review: PR #42  modules/f5-vserver",
+     "- resource \"bigip_ltm_pool_attachment\" \"m\" { count = length(var.members) }",
+     "+ resource \"bigip_ltm_pool_attachment\" \"m\" { for_each = var.members }",
+     "- password = \"Lab123!\"",
+     "+ password = var.bigip_password   # from GitHub environment secret",
+     "- terraform.tfstate",
+     "+ .gitignore: *.tfstate, *.tfplan, .terraform/",
+     "  verdict: 3 mistakes found, 0 remaining after fix"
+    ]
+   },
+   {
+    "name": "Run it through GitHub",
+    "items": [
+     [
+      "Repository and pull requests",
+      "CODEOWNERS, branch protection"
+     ],
+     [
+      "Actions pipelines",
+      "plan on PR, apply on merge"
+     ],
+     [
+      "Guardrails and audit",
+      "policy, approvals, records"
+     ]
+    ],
+    "panel": "terminal",
+    "panel_lines": [
+     "$ gh pr create --title 'Add vs-web-443 on lb-f5-01' --base main",
+     "> created pull request #42 in netops/lb-terraform",
+     "> check: terraform fmt ...... pass",
+     "> check: tflint ............. pass",
+     "> check: policy ............. pass (0 destroys, ticket CHG0041233 linked)",
+     "> plan comment posted: 3 to add, 0 to change, 0 to destroy",
+     "> environment prod: waiting for approval from netops-leads"
+    ]
+   },
+   {
+    "name": "Claude reviews, humans approve",
+    "items": [
+     [
+      "Plan-review agent",
+      "structured JSON verdict"
+     ],
+     [
+      "Multi-platform providers",
+      "F5, NetScaler, ACI, Radware"
+     ],
+     [
+      "Capstone",
+      "one gated change, end to end"
+     ]
+    ],
+    "panel": "cards",
+    "panel_lines": [
+     "PLAN REVIEW  PR #47  lb-terraform  risk: HIGH",
+     "finding: bigip_ltm_virtual_server.vs_api_443 will be REPLACED (name changed)",
+     "impact: brief outage on vs-api-443 during replace; no ticket linked",
+     "recommendation: split into add-then-cutover or link change ticket; hold apply",
+     "approver: netops-lead   decision: CHANGES REQUESTED 2026-10-28 11:52",
+     "audit: plan sha 8f3c1a, agent verdict stored, run 1193 logged"
+    ]
+   }
+  ],
+  "stats": [
+   [
+    "10",
+    "modules, step by step"
+   ],
+   [
+    "3",
+    "days, hands-on"
+   ],
+   [
+    "5",
+    "common mistakes reproduced and fixed"
+   ],
+   [
+    "0",
+    "applies without human approval"
+   ]
+  ],
+  "cta": "Ship every change through a pull request, not a prayer.",
+  "narration": [
+   [
+    "hook",
+    "Your Terraform apply just removed a production virtual server. The plan said minus one. Nobody read it. The change went through at two in the morning, and the incident bridge opened at six."
+   ],
+   [
+    "hook",
+    "What if Claude read every plan, explained every change in plain English, flagged the common mistakes before they reached a device, and the apply ran only after a person clicked approve? That is Terraform and GitHub automation, done with Claude, done safely."
+   ],
+   [
+    "intro",
+    "Gennoor Tech presents Terraform and GitHub Automation with Claude."
+   ],
+   [
+    "story",
+    "One repository. One pull request per change. You learn Terraform step by step, you learn the mistakes that burn real teams, and you put Claude to work as planner, explainer and reviewer. Claude drafts the code and reads the plan. Deterministic pipelines run the apply. A human approves anything that touches a device, and every step is logged. By the end you own a repository your whole team can work in."
+   ],
+   [
+    "path0",
+    "You start with infrastructure as code for network and load balancer teams. Providers, resources, variables, outputs and state, written in H C L. Then you set up Claude Code, the Claude Agent S D K and an M C P server that exposes the Terraform C L I as tools, so the agent can run init, validate and plan, but never apply on its own. You will see exactly which tools the agent holds and which it does not."
+   ],
+   [
+    "path0",
+    "Then Terraform, step by step. Init, plan, apply, and the state file that makes it all work. You read a plan line by line, you import a virtual server that already exists, and you move to remote state with locking, workspaces for dev and prod, and modules you can reuse for every site."
+   ],
+   [
+    "path1",
+    "Day two opens with the common mistakes. Unpinned provider versions. Secrets hard coded in variables. Count where for each belonged. A state file committed to Git. A targeted apply that left drift behind. Each mistake gets a name, a symptom and a fix. You reproduce each one in the lab, then wire in the checks that catch it: terraform format, validate, tflint and a Claude review that names the mistake and cites the line."
+   ],
+   [
+    "path2",
+    "Then GitHub. Branches, commits, a git ignore that keeps state and secrets out of the repository, pull requests with required reviewers, code owners and branch protection. GitHub Actions runs plan on every pull request and apply only on merge, with the plan output posted as a comment for the team to read before anyone clicks approve. Guardrails follow: an allow list of resource types, a block on destroy without a change ticket, approval gates in GitHub environments, and an audit record for every plan and apply."
+   ],
+   [
+    "path3",
+    "Day three brings the agent into the review loop. An Agent S D K application reads the plan as J S O N, returns a structured verdict with risk level, affected resources and a plain English summary, and posts it to the pull request. It never merges and it never applies. When it cannot classify a resource, it says so and asks for a human."
+   ],
+   [
+    "path3",
+    "Finally, the devices themselves. The F5 BIG-IP provider for virtual servers, pools and certificates. The Citrix A D C provider for NetScaler. The Cisco A C I provider for tenants and bridge domains. And Python wrappers for Radware Alteon and other load balancers (Anaya LB) where no provider exists, so one workflow covers the whole estate."
+   ],
+   [
+    "labs",
+    "Every lab runs against a shared GitHub organization and lab devices in a sandbox. Nothing you do in the lab can reach a production device. You will commit a state file on purpose, watch Claude catch it, break a plan with an unintended destroy, and see the approval gate hold until a person says yes."
+   ],
+   [
+    "stats",
+    "Ten modules. Three days, hands-on. Five common mistakes reproduced and fixed. And zero applies without a human approval."
+   ],
+   [
+    "who",
+    "This course is for enterprise I T and network operations teams, load balancer and data center engineers, and platform teams moving to infrastructure as code, in India and worldwide. You need basic Linux and networking knowledge. Git helps, and no prior Terraform is required."
+   ],
+   [
+    "cta",
+    "Ship every change through a pull request, not a prayer. Terraform and GitHub Automation with Claude. Enrol now at gennoor dot com."
+   ]
+  ]
+ }
+}

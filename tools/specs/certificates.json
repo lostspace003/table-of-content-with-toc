@@ -1,0 +1,370 @@
+{
+ "title": "Certificate Renewal Automation with Claude",
+ "tagline": "From expiring certificate to renewed, validated and audited binding on every load balancer",
+ "days": 3,
+ "level": "Intermediate",
+ "audience": "Enterprise IT and network operations teams, load balancer and ADC engineers, PKI and certificate owners, network automation leads, in India and worldwide",
+ "prerequisites": [
+  "Working knowledge of at least one load balancer platform (F5, NetScaler, Radware or similar)",
+  "TLS basics: keys, certificates, chains, SANs and expiry",
+  "Basic Python and Git",
+  "Familiarity with an AI coding assistant is helpful, not required"
+ ],
+ "outcomes": [
+  "Explain the certificate lifecycle as each load balancer platform implements it and where renewal outages really come from",
+  "Set up Claude Code, the Claude Agent SDK and an MCP server as a safe workbench for certificate operations",
+  "Build a typed certificate inventory from F5 iControl REST, NetScaler NITRO, Radware Alteon and other load balancers (Anaya LB)",
+  "Use a Claude planning agent to draft renewal plans as structured JSON and open ServiceNow change records with citations to inventory evidence",
+  "Write deterministic, pytest-covered executors that upload, install, bind and verify certificates per platform",
+  "Enforce guardrails, human approval, pre- and post-checks, automatic rollback and an audit trail reviewable through GitHub pull requests and Actions"
+ ],
+ "tools": [
+  [
+   "claude",
+   "Claude Code"
+  ],
+  [
+   "anthropic",
+   "Claude Agent SDK and MCP"
+  ],
+  [
+   "python",
+   "Python"
+  ],
+  [
+   "f5",
+   "F5 BIG-IP iControl REST / tmsh"
+  ],
+  [
+   "citrix",
+   "Citrix NetScaler NITRO API"
+  ],
+  [
+   "generic:radware",
+   "Radware Alteon"
+  ],
+  [
+   "generic:cert",
+   "ACME lab CA and TLS certificates"
+  ],
+  [
+   "generic:servicenow",
+   "ServiceNow Table API / Flow Designer"
+  ],
+  [
+   "pytest",
+   "pytest"
+  ],
+  [
+   "github",
+   "GitHub"
+  ],
+  [
+   "githubactions",
+   "GitHub Actions"
+  ]
+ ],
+ "modules": [
+  {
+   "day": 1,
+   "title": "Certificate lifecycle on load balancers and the automation baseline",
+   "icon": "generic:cert",
+   "topics": [
+    "How each platform stores and binds certificates: F5 client-ssl profiles and virtual servers, NetScaler sslcertkey and sslvserver bindings, Radware Alteon certificate repository and SSL policies, other load balancers (Anaya LB)",
+    "Where renewal outages come from: wrong chain, mismatched key, binding missed on a standby, HA sync skipped",
+    "The operating pattern for the whole course: Claude plans, drafts and explains; deterministic code executes; a human approves; everything is logged",
+    "Lab estate walkthrough: lb-f5-01, lb-ns-01, lb-rw-01, an ACME lab CA and a ServiceNow developer instance"
+   ],
+   "lab": "Renew one certificate by hand on the F5 and the NetScaler lab devices, record every step and every point where a mistake could cause an outage.",
+   "deliverable": "Manual renewal runbook and failure-point map."
+  },
+  {
+   "day": 1,
+   "title": "Setting up Claude Code, the Agent SDK and MCP for certificate work",
+   "icon": "claude",
+   "topics": [
+    "Claude Code project setup: CLAUDE.md with estate conventions, naming rules for certificate objects, and what the agent may never do",
+    "Claude Agent SDK in Python: defining tools with JSON schemas, forcing structured JSON outputs, handling tool-use loops",
+    "An MCP server exposing read-only inventory tools (list_certs, get_expiry, get_bindings) and no write tools",
+    "Secrets handling: device credentials in environment variables and a vault, never in prompts or repositories"
+   ],
+   "lab": "Build the read-only certificate MCP server, connect it to Claude Code and ask Claude to explain the bindings on lb-f5-01 without changing anything.",
+   "deliverable": "Working agent workbench with read-only MCP tools."
+  },
+  {
+   "day": 1,
+   "title": "Certificate inventory and expiry discovery across platforms",
+   "icon": "python",
+   "topics": [
+    "F5 iControl REST: /mgmt/tm/sys/file/ssl-cert, /mgmt/tm/ltm/profile/client-ssl and virtual server lookups; tmsh equivalents for verification",
+    "NetScaler NITRO: /nitro/v1/config/sslcertkey and sslvserver_sslcertkey_binding; Radware Alteon REST API certificate and SSL policy objects; an adapter interface for other load balancers (Anaya LB)",
+    "A typed inventory record: device, platform, certificate name, subject and SANs, chain, expiry, bound virtual servers, owner, confidence",
+    "Claude drafts the collectors; you review the diffs and run pytest against recorded API responses"
+   ],
+   "lab": "Build the multi-platform inventory collector and produce a single expiry report for the lab estate with unknowns marked explicitly.",
+   "deliverable": "Certificate inventory and expiry report."
+  },
+  {
+   "day": 2,
+   "title": "Renewal planning agent and ServiceNow change records",
+   "icon": "generic:servicenow",
+   "topics": [
+    "Planning agent: group certificates by expiry window, owner and platform; propose order, maintenance window and blast radius as structured JSON",
+    "Mandatory citations to inventory rows; unknowns (missing owner, unverified binding) block the plan instead of being guessed",
+    "Opening and updating change_request via the ServiceNow Table API; triggering an approval path in Flow Designer",
+    "Requesting the new certificate from the ACME lab CA or an internal CA request with CSR generated by code, not by the model"
+   ],
+   "lab": "Run the planning agent on the inventory, inspect the JSON plan, and watch it open a change record that cites the exact certificates it will touch.",
+   "deliverable": "Renewal planning agent and change-record integration."
+  },
+  {
+   "day": 2,
+   "title": "Deterministic executor: F5 BIG-IP with iControl REST and tmsh",
+   "icon": "f5",
+   "topics": [
+    "Upload key and certificate through /mgmt/shared/file-transfer/uploads, then create sys file ssl-key and ssl-cert objects",
+    "Update the client-ssl profile cert-key-chain and confirm virtual server bindings; verify with tmsh list ltm profile client-ssl",
+    "Idempotency, naming with date suffixes, and config sync across the HA pair before declaring success",
+    "pytest with recorded iControl responses; Claude drafts code, explains each call, and never holds the credentials"
+   ],
+   "lab": "Build and test the F5 executor against a mock iControl endpoint, then run it against lb-f5-01 in dry-run and live modes.",
+   "deliverable": "Tested F5 certificate executor."
+  },
+  {
+   "day": 2,
+   "title": "Deterministic executors: NetScaler NITRO, Radware Alteon and other load balancers (Anaya LB)",
+   "icon": "citrix",
+   "topics": [
+    "NITRO API: upload with systemfile, add or update sslcertkey, bind to sslvserver, save config; handling HA primary-only writes",
+    "Radware Alteon: certificate import and SSL policy update through the Alteon REST API, with apply and save as explicit steps",
+    "Adapter pattern for other load balancers (Anaya LB): one interface, one contract test suite, platform-specific implementation",
+    "A common executor contract: plan in, result and evidence out, every call logged with request and response IDs"
+   ],
+   "lab": "Implement the NetScaler and Radware executors, prove all three platforms pass the same contract tests, and stub the adapter for other load balancers (Anaya LB).",
+   "deliverable": "Multi-platform executor library with contract tests."
+  },
+  {
+   "day": 3,
+   "title": "Guardrails, approvals and audit for certificate changes",
+   "icon": "generic:shield",
+   "topics": [
+    "Policy checks before any write: approved change in ServiceNow, maintenance window open, device on allow list, HA healthy and in sync",
+    "Human approval gate: the approver sees the plan, the diff of bindings and the rollback command; the agent cannot self-approve",
+    "Scope limits: the model proposes, executors refuse anything outside the plan, and credentials never pass through Claude",
+    "Audit log of prompts, tool calls, device responses, approver and timestamps; evidence attached back to the change record"
+   ],
+   "lab": "Attempt a renewal without an approved change and outside the window, and watch each guardrail block it with a logged reason.",
+   "deliverable": "Guardrail policy module and audit trail."
+  },
+  {
+   "day": 3,
+   "title": "Pre- and post-checks, rollback and the GitHub pipeline",
+   "icon": "githubactions",
+   "topics": [
+    "Pre-checks: current TLS handshake per virtual server, chain validation, key-certificate match, HA sync status",
+    "Post-checks: new serial served on every virtual server, OCSP and chain valid, no handshake errors; automatic rollback to the previous object on failure",
+    "GitHub pull request per renewal plan with Claude-written summary; GitHub Actions runs pytest, the dry run and the post-check report",
+    "Scheduling renewals ahead of expiry and reporting to the certificate owner"
+   ],
+   "lab": "Break the chain on purpose, watch the post-check fail and the rollback restore service, then ship a clean renewal through the pull request pipeline.",
+   "deliverable": "Validation, rollback and CI pipeline."
+  },
+  {
+   "day": 3,
+   "title": "Capstone: end-to-end certificate renewal across the lab estate",
+   "icon": "generic:capstone",
+   "topics": [
+    "Inventory in, approved and validated renewals out on F5, NetScaler, Radware and other load balancers (Anaya LB)",
+    "No install without an approved change and a named approver; every step in the audit log",
+    "Acceptance review, limitations statement and team demo"
+   ],
+   "lab": "Capstone build and demo.",
+   "deliverable": "End-to-end renewal pipeline and operator runbook."
+  }
+ ],
+ "capstone": "A repeatable pipeline that discovers expiring certificates across F5, NetScaler, Radware and other load balancers (Anaya LB), has Claude draft a cited renewal plan and ServiceNow change, installs through deterministic tested executors only after human approval, validates every binding, rolls back on failure and leaves a complete audit trail.",
+ "video": {
+  "hook_title": "The certificate expired\nat midnight.",
+  "hook_sub": "Nobody knew it was bound to the payments virtual server.",
+  "hook_q": "What if an agent found it,\nplanned the renewal and\nwaited for your approval?",
+  "story_big": "Every platform.\nOne renewal pipeline.",
+  "story_num": "4",
+  "story_num_label": "load balancer platforms",
+  "story_sub": "F5, NetScaler, Radware and other load balancers (Anaya LB), handled by one plan, one approval and one audit trail.",
+  "paths": [
+   {
+    "name": "Understand and discover",
+    "items": [
+     [
+      "Certificate lifecycle",
+      "profiles, bindings, HA sync"
+     ],
+     [
+      "Claude Code, Agent SDK, MCP",
+      "read-only workbench first"
+     ],
+     [
+      "Multi-platform inventory",
+      "iControl, NITRO, Alteon"
+     ]
+    ],
+    "panel": "terminal",
+    "panel_lines": [
+     "$ certops inventory --devices lb-f5-01,lb-ns-01,lb-rw-01",
+     "> lb-f5-01  iControl REST  41 certs  3 expiring < 30d",
+     "> lb-ns-01  NITRO          27 certs  1 expiring < 30d",
+     "> lb-rw-01  Alteon REST    12 certs  0 expiring < 30d",
+     "> pay.example.corp  expires 2026-11-19  bound: vs_payments_443 (lb-f5-01)",
+     "> owner: UNKNOWN (no CMDB match)  -> plan blocked until owner set"
+    ]
+   },
+   {
+    "name": "Plan and request",
+    "items": [
+     [
+      "Renewal planning agent",
+      "structured JSON, cited rows"
+     ],
+     [
+      "ServiceNow change",
+      "Table API and Flow Designer"
+     ]
+    ],
+    "panel": "terminal",
+    "panel_lines": [
+     "> plan: 4 certificates, 2 windows, order by expiry then blast radius",
+     "> step 1  pay.example.corp   lb-f5-01  vs_payments_443   window: Sat 02:00",
+     "> step 2  portal.example.corp lb-ns-01  vs_portal_443    window: Sat 02:30",
+     "> evidence: inventory#f5-0031, inventory#ns-0007, cmdb#9921",
+     "> change_request CHG0041218 created via Table API  state: assess",
+     "> CSR generated by executor  key never shown to the model"
+    ]
+   },
+   {
+    "name": "Execute and gate",
+    "items": [
+     [
+      "Deterministic executors",
+      "F5, NetScaler, Radware, adapter"
+     ],
+     [
+      "Guardrails and approval",
+      "no change, no install"
+     ]
+    ],
+    "panel": "diff",
+    "panel_lines": [
+     "  guardrail check  CHG0041218  lb-f5-01",
+     "+ change approved      approver: netops-lead",
+     "+ maintenance window   open until 04:00",
+     "+ HA status            in sync (lb-f5-01 active, lb-f5-02 standby)",
+     "- allow list           lb-rw-01 not in scope for this change",
+     "  verdict: PROCEED for lb-f5-01, BLOCKED for lb-rw-01 (logged)"
+    ]
+   },
+   {
+    "name": "Validate and operate",
+    "items": [
+     [
+      "Pre and post checks",
+      "handshake, chain, serial"
+     ],
+     [
+      "Rollback",
+      "previous object, tested"
+     ],
+     [
+      "GitHub pipeline",
+      "pull request and Actions"
+     ]
+    ],
+    "panel": "cards",
+    "panel_lines": [
+     "RENEWAL  pay.example.corp  lb-f5-01  CHG0041218  approver: netops-lead",
+     "pre-check: handshake ok  chain ok  key match ok  HA in sync",
+     "install: ssl-cert pay.example.corp_20261028  profile clientssl_payments",
+     "post-check: new serial served 2/2 nodes  OCSP good  errors: 0",
+     "rollback: certops rollback CHG0041218 --to=previous   tested: yes",
+     "PR #184 merged  Actions: pytest 96 passed  audit entries: 23"
+    ]
+   }
+  ],
+  "stats": [
+   [
+    "4",
+    "load balancer platforms"
+   ],
+   [
+    "3",
+    "days, hands-on"
+   ],
+   [
+    "9",
+    "build steps"
+   ],
+   [
+    "0",
+    "installs without approval"
+   ]
+  ],
+  "cta": "Never get paged for an expired certificate again.",
+  "narration": [
+   [
+    "hook",
+    "The certificate expired at midnight. Nobody knew it was bound to the payments virtual server. By the time the first alert fired, the queue was already full."
+   ],
+   [
+    "hook",
+    "What if an agent had found it weeks earlier, planned the renewal across every load balancer you own, opened the change ticket, then waited for your approval before touching a single device? That is certificate renewal, done with Claude, done safely."
+   ],
+   [
+    "intro",
+    "Gennoor Tech presents Certificate Renewal Automation with Claude."
+   ],
+   [
+    "story",
+    "Every platform. One renewal pipeline. F5, NetScaler, Radware and other load balancers, handled by one plan, one approval and one audit trail. You build it in nine increments across three days, each one something you can run, review and demonstrate. Claude plans, drafts and explains. Deterministic Python executes. A person approves. Everything is logged."
+   ],
+   [
+    "path0",
+    "You start with the certificate lifecycle as a load balancer actually sees it. Client S S L profiles and virtual servers on F5. Cert-key objects and bindings on NetScaler. Certificate repositories and S S L policies on Radware Alteon. You renew one certificate by hand, write down every step, and mark every point where a wrong chain, a mismatched key or a skipped H A sync would have caused an outage."
+   ],
+   [
+    "path0",
+    "Then you set up your workbench. Claude Code with a project file that knows your naming rules and red lines. The Claude Agent S D K running Python tools with structured J S O N outputs. An M C P server that exposes read-only inventory calls and nothing else. After that, a discovery agent pulls every certificate, expiry date and binding from F5 iControl REST, the NetScaler NITRO A P I, the Radware Alteon REST A P I and an adapter for other load balancers, into one typed inventory."
+   ],
+   [
+    "path1",
+    "On day two the planning agent arrives. It reads the inventory, groups certificates by expiry window, owner and blast radius, and drafts a renewal plan as structured J S O N. It must cite the inventory rows it used; a missing owner or an unverified binding blocks the plan rather than being guessed. Then it opens the change record through the ServiceNow Table A P I and hands it to a Flow Designer approval path. The C S R is generated by code, and the private key is never shown to the model."
+   ],
+   [
+    "path2",
+    "Then the executors. Deterministic, tested Python that uploads, installs and binds the certificate on each platform. On F5 that is iControl REST and t m s h. On NetScaler, the NITRO A P I with primary-only writes and a saved config. On Radware, the Alteon REST A P I with apply and save as explicit steps. For other load balancers you build an adapter against the same contract. Claude writes the first draft and explains every call. Then pytest proves it against recorded device responses before it touches hardware. On day three the guardrails close in: an approved change, an open maintenance window, a device on the allow list, H A in sync. Miss any one and the install is refused with a logged reason."
+   ],
+   [
+    "path3",
+    "Validation comes next. A T L S handshake test on every virtual server before and after. Chain, key match and serial checks. If the post-check fails, the executor rolls back to the previous certificate object automatically, and you will watch it do exactly that."
+   ],
+   [
+    "path3",
+    "Finally you wire the whole thing into a GitHub pull request and a GitHub Actions run, so every renewal plan is reviewed like code, with tests, dry run and post-check report attached. Renewals are scheduled ahead of expiry and the certificate owner gets the report."
+   ],
+   [
+    "labs",
+    "Every lab runs against lab devices, a lab certificate authority and recorded A P I responses, so you can break things safely. You will watch a renewal get blocked for a missing approval, break a chain on purpose, and roll back against the clock."
+   ],
+   [
+    "stats",
+    "Four load balancer platforms. Three days, hands-on. Nine build steps. And zero certificate installs without approval."
+   ],
+   [
+    "who",
+    "This course is for enterprise I T and network operations teams, load balancer and A D C engineers, P K I and certificate owners, and network automation leads, in India and worldwide. You need working knowledge of at least one load balancer platform, T L S basics and some Python. Experience with an A I coding assistant helps but is not required."
+   ],
+   [
+    "cta",
+    "Never get paged for an expired certificate again. Certificate Renewal Automation with Claude. Enrol now at gennoor dot com."
+   ]
+  ]
+ }
+}

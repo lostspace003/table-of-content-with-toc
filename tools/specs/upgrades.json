@@ -1,0 +1,405 @@
+{
+ "title": "Device Upgrade Automation with Claude",
+ "tagline": "Space clear, firmware upload, pre and post checks and a scheduler, with a human on every reboot",
+ "days": 3,
+ "level": "Intermediate",
+ "audience": "Enterprise IT and network operations teams, load balancer and data centre engineers, NOC automation leads, change and release managers in India and worldwide",
+ "prerequisites": [
+  "Basic TCP/IP and load balancer administration (F5, NetScaler or Radware)",
+  "Comfort with a Linux shell, REST APIs and JSON",
+  "Basic Python",
+  "Familiarity with an AI coding assistant is helpful, not required"
+ ],
+ "outcomes": [
+  "Model a vendor-neutral device upgrade lifecycle: inventory, pre-checks, space clear, firmware upload, install, post-checks, rollback",
+  "Set up Claude Code, the Claude Agent SDK and MCP servers that expose F5 iControl REST, NetScaler NITRO, Radware Alteon / Cyber Controller and Cisco APIC APIs with explicit scopes",
+  "Build deterministic Python adapters that clear disk space, upload and verify firmware and install to the inactive boot location, HA-aware",
+  "Diff pre and post snapshots and let Claude produce a structured verdict with rollback guidance",
+  "Gate every consequential action behind ServiceNow change approval, schedule runs inside approved windows and keep a complete audit trail"
+ ],
+ "tools": [
+  [
+   "claude",
+   "Claude Code and Agent SDK"
+  ],
+  [
+   "anthropic",
+   "Model Context Protocol"
+  ],
+  [
+   "python",
+   "Python"
+  ],
+  [
+   "pydantic",
+   "Pydantic"
+  ],
+  [
+   "f5",
+   "F5 iControl REST and tmsh"
+  ],
+  [
+   "citrix",
+   "Citrix NetScaler NITRO"
+  ],
+  [
+   "generic:radware",
+   "Radware Alteon / Cyber Controller"
+  ],
+  [
+   "cisco",
+   "Cisco APIC REST API"
+  ],
+  [
+   "generic:servicenow",
+   "ServiceNow"
+  ],
+  [
+   "githubactions",
+   "GitHub Actions"
+  ],
+  [
+   "pytest",
+   "pytest"
+  ],
+  [
+   "json",
+   "Structured JSON outputs"
+  ]
+ ],
+ "modules": [
+  {
+   "day": 1,
+   "title": "The device upgrade lifecycle and why upgrades fail",
+   "icon": "generic:book",
+   "topics": [
+    "Vendor upgrade mechanics side by side: F5 boot locations and UCS archives, NetScaler /var/nsinstall and build files, Radware Alteon image banks, Cisco ACI firmware groups",
+    "The classic failure modes: full /shared or /var, corrupt image, HA pair upgraded in the wrong order, missing backup, change window overrun",
+    "A vendor-neutral lifecycle: inventory, pre-check, space clear, upload, install, post-check, rollback, report",
+    "The teaching pattern for the whole course: Claude plans and explains, deterministic code executes, a human approves, everything is logged"
+   ],
+   "lab": "Walk a real F5 and NetScaler upgrade runbook by hand in the lab, record every step and decision, and map each to the lifecycle stages.",
+   "deliverable": "Annotated upgrade lifecycle map."
+  },
+  {
+   "day": 1,
+   "title": "Claude Code, Agent SDK and MCP for upgrade workflows",
+   "icon": "claude",
+   "topics": [
+    "Installing Claude Code, project CLAUDE.md conventions and a Python Agent SDK scaffold for the upgrade runner",
+    "Writing an MCP server that wraps F5 iControl REST (/mgmt/tm/sys/version, /mgmt/tm/sys/software), NetScaler NITRO (/nitro/v1/config) and Radware Alteon REST, or Cyber Controller for centrally managed Alteons, as read-only tools",
+    "Tool use with strict JSON schemas: every tool returns typed, validated output, never free text",
+    "Separating what the model may propose from what the code may do"
+   ],
+   "lab": "Build the read-only MCP server, connect it to Claude Code and ask Claude to describe the fleet using only tool results.",
+   "deliverable": "Working MCP server and agent scaffold."
+  },
+  {
+   "day": 1,
+   "title": "Inventory and pre-flight discovery",
+   "icon": "generic:servicenow",
+   "topics": [
+    "Pulling the device inventory and owners from the ServiceNow CMDB with the Table API (cmdb_ci_lb_* tables) and reconciling it with live device facts",
+    "Collecting version, licence, platform, HA role, sync state and disk usage per vendor into one Pydantic inventory model",
+    "Target version matrix and upgrade path rules (for example multi-hop F5 paths) as data, not prompt text",
+    "Claude summarises readiness per device and flags inconsistencies between CMDB and reality"
+   ],
+   "lab": "Generate the readiness report for a mixed lab fleet and have Claude explain every device marked not ready.",
+   "deliverable": "Fleet readiness report."
+  },
+  {
+   "day": 1,
+   "title": "Pre-checks and the golden snapshot",
+   "icon": "generic:check",
+   "topics": [
+    "Virtual server, pool member and monitor status, HA failover and config-sync state, certificate expiry, licence validity",
+    "Configuration backups before any change: F5 UCS via tmsh save sys ucs, NetScaler system backup via NITRO, Alteon configuration export",
+    "A versioned JSON snapshot schema that the post-check module will diff against",
+    "Hard stop rules: an upgrade does not proceed when any pre-check is red or a backup is missing"
+   ],
+   "lab": "Implement the pre-check and snapshot module with pytest coverage, then break a backup on purpose and watch the run stop.",
+   "deliverable": "Pre-check gate and golden snapshot."
+  },
+  {
+   "day": 2,
+   "title": "Disk space clearing and firmware staging",
+   "icon": "f5",
+   "topics": [
+    "Safe space reclamation per vendor: old F5 software images and UCS archives, NetScaler /var/nsinstall, /var/core and /var/crash, stale Alteon images",
+    "Allowlists of deletable paths and a dry-run mode that reports what would be removed and how much space it frees",
+    "Firmware upload with iControl REST software-image uploads and NITRO systemfile, with SHA256 verification against the vendor checksum",
+    "Claude drafts the space-clear plan from disk facts; the adapter executes only allowlisted deletions after approval"
+   ],
+   "lab": "Fill a lab device disk, run the dry-run plan, approve it and stage the firmware image with checksum verification.",
+   "deliverable": "Space-clear and staging adapter."
+  },
+  {
+   "day": 2,
+   "title": "Upgrade execution adapters, HA-aware",
+   "icon": "citrix",
+   "topics": [
+    "F5: install to the inactive boot volume via iControl REST or tmsh install sys software image, then reboot into it; NetScaler: NITRO install and reboot; Alteon: image bank update and reload",
+    "HA ordering: upgrade standby, verify, fail over, upgrade the former active, confirm sync",
+    "Idempotent, resumable steps with state recorded after every action so a failed run can continue or roll back",
+    "Claude proposes the ordered plan and the exact API calls as structured JSON; the runner executes the approved plan only"
+   ],
+   "lab": "Upgrade an HA pair of lab load balancers end to end through the runner, with a mocked failure halfway to test resumption.",
+   "deliverable": "HA-aware upgrade runner."
+  },
+  {
+   "day": 2,
+   "title": "Post-checks, verification and rollback",
+   "icon": "generic:compare",
+   "topics": [
+    "Capturing the post-upgrade snapshot and diffing it against the golden snapshot: version, virtual server status, pool members, HA sync, certificates",
+    "Claude reads the diff and returns a structured verdict (pass, warn, fail) with a plain-English explanation for the change ticket",
+    "Rollback paths: boot the previous F5 volume, NetScaler previous build, Alteon previous image bank, restore from backup",
+    "Evidence pack generation for the change record"
+   ],
+   "lab": "Run the post-check diff on a successful and an intentionally broken upgrade, then execute the rollback path for the broken one.",
+   "deliverable": "Verification diff and rollback module."
+  },
+  {
+   "day": 2,
+   "title": "Guardrails, approvals and audit for upgrades",
+   "icon": "generic:shield",
+   "topics": [
+    "Allowlisted tools and devices per run, read-only by default, destructive actions behind explicit approval",
+    "ServiceNow change requests created through the Table API and approved through Flow Designer before space clear, install and reboot",
+    "An append-only audit log of every prompt, plan, approval and API call, with secrets kept out of prompts and logs",
+    "Testing the guardrails with pytest: prompt the agent to skip a check and prove the runner refuses"
+   ],
+   "lab": "Wire the approval gate to a lab ServiceNow instance and attempt an unapproved reboot; inspect the audit trail afterwards.",
+   "deliverable": "Approval gate and audit log."
+  },
+  {
+   "day": 3,
+   "title": "Scheduler and change windows",
+   "icon": "generic:clock",
+   "topics": [
+    "Reading approved change windows from ServiceNow and refusing to start outside them",
+    "Scheduling runs with GitHub Actions schedule and workflow_dispatch, or an in-house APScheduler service, with a persistent job state store",
+    "Pre-window reminders, in-window progress and post-window summaries to the operations channel",
+    "Handling overruns: pause at the next safe step, request a window extension, never leave a device mid-upgrade"
+   ],
+   "lab": "Schedule a batch upgrade in the lab, let it start automatically inside the window and watch it pause when the window is about to close.",
+   "deliverable": "Scheduled upgrade pipeline."
+  },
+  {
+   "day": 3,
+   "title": "Cisco ACI and fleet-scale, multi-vendor runs",
+   "icon": "cisco",
+   "topics": [
+    "Cisco ACI upgrades as Cisco prescribes: the ACI pre-upgrade validator, APIC firmware repository and firmware groups via the APIC REST API, APIC cluster first then switches in groups",
+    "Batch strategies for large fleets: blast radius limits, canary devices and stop-on-first-failure",
+    "Extending the adapter pattern to other load balancers (Anaya LB) with the same lifecycle contract",
+    "Reporting in GitHub pull requests: plan, evidence pack and audit summary reviewed before the next batch"
+   ],
+   "lab": "Run the ACI pre-upgrade validator and build an APIC firmware group plan, then execute a canary-first batch across the mixed lab fleet.",
+   "deliverable": "Fleet batch runner and ACI plan."
+  },
+  {
+   "day": 3,
+   "title": "Capstone: scheduled, approved, HA-aware upgrade end to end",
+   "icon": "generic:capstone",
+   "topics": [
+    "Inventory in, verified upgrade out: pre-checks, space clear, upload, install, post-checks and rollback readiness on a mixed fleet",
+    "Wire the scheduler, approval gate, HA-aware runner and post-check diff into one pipeline driven by a device list and target version matrix",
+    "Evidence pack and audit summary delivered as a GitHub pull request for review",
+    "Acceptance criteria review, limitations statement and live demonstration to the group"
+   ],
+   "lab": "Take a mixed lab fleet from device list to evidence pack through the full pipeline, then demo the run, the approvals and the audit trail to the group.",
+   "deliverable": "End-to-end upgrade automation and runbook."
+  }
+ ],
+ "capstone": "A repeatable upgrade workflow that takes a device list and target versions, runs pre-checks, clears space, stages verified firmware, upgrades HA pairs in the right order inside an approved change window, verifies the result against a golden snapshot and ships an evidence pack, with no reboot ever executed without a human approval.",
+ "video": {
+  "hook_title": "Two a.m. change window.\nDisk full. Again.",
+  "hook_sub": "The image is uploaded, the pair is waiting, and the box has no space to install.",
+  "hook_q": "What if an agent had cleared\nthe space, run every check,\nand asked you before the reboot?",
+  "story_big": "Every device.\nSame safe path.",
+  "story_num": "11",
+  "story_num_label": "build modules",
+  "story_sub": "From inventory to evidence pack, every module is a piece of the runner you can test, review and demo.",
+  "paths": [
+   {
+    "name": "Discover and pre-check",
+    "items": [
+     [
+      "Upgrade lifecycle",
+      "how vendors really upgrade"
+     ],
+     [
+      "Claude Code and MCP",
+      "read-only device tools first"
+     ],
+     [
+      "Pre-checks and snapshot",
+      "no backup, no upgrade"
+     ]
+    ],
+    "panel": "terminal",
+    "panel_lines": [
+     "$ upgrader discover --source servicenow --filter 'env=prod,class=lb'",
+     "> 14 devices from CMDB, 14 reachable, 1 CMDB mismatch (lb-ns-03 role)",
+     "> lb-f5-01  BIG-IP 16.1.4  HA: active   sync: in-sync   /shared: 91% used",
+     "> lb-f5-02  BIG-IP 16.1.4  HA: standby  sync: in-sync   /shared: 88% used",
+     "$ upgrader precheck lb-f5-01 lb-f5-02",
+     "> VS 42/42 up  pools 38/38 healthy  certs ok  UCS backup saved  snapshot #117",
+     "> gate: READY (disk warning carried to space-clear plan)"
+    ]
+   },
+   {
+    "name": "Clear, stage, install",
+    "items": [
+     [
+      "Space clear",
+      "allowlisted paths, dry-run first"
+     ],
+     [
+      "Firmware staging",
+      "SHA256 verified upload"
+     ],
+     [
+      "HA-aware runner",
+      "standby, failover, active"
+     ]
+    ],
+    "panel": "terminal",
+    "panel_lines": [
+     "> plan: delete BIGIP-15.1.8.iso, 2 old UCS, 3 core files -> frees 4.2 GB",
+     "> approval required: CHG0041877 (space clear) ... APPROVED by lb-ops-lead",
+     "$ upgrader stage lb-f5-02 BIGIP-17.1.1.iso",
+     "> upload 100%  sha256 match  image installed to HD1.2 (inactive)",
+     "> approval required: CHG0041877 (reboot lb-f5-02) ... APPROVED",
+     "> lb-f5-02 booted 17.1.1  HA standby  sync in-sync  next: failover"
+    ]
+   },
+   {
+    "name": "Verify and gate",
+    "items": [
+     [
+      "Post-check diff",
+      "golden snapshot vs now"
+     ],
+     [
+      "Guardrails and audit",
+      "every call logged"
+     ]
+    ],
+    "panel": "diff",
+    "panel_lines": [
+     "  postcheck lb-f5-02  snapshot #117 -> #118",
+     "- version   16.1.4",
+     "+ version   17.1.1",
+     "+ virtual servers  42/42 up      pools 38/38 healthy",
+     "- HA sync   in-sync",
+     "+ HA sync   CHANGES PENDING",
+     "  verdict: WARN - sync deferred until peer upgraded; rollback not required"
+    ]
+   },
+   {
+    "name": "Schedule and scale",
+    "items": [
+     [
+      "Scheduler",
+      "approved windows only"
+     ],
+     [
+      "Cisco ACI and fleet",
+      "validator, groups, canaries"
+     ],
+     [
+      "Capstone",
+      "end to end with evidence"
+     ]
+    ],
+    "panel": "cards",
+    "panel_lines": [
+     "SCHEDULED  batch-07  window: Sat 01:00-05:00 IST  CHG0041902  12 devices",
+     "canary: lb-f5-05  stop-on-failure: yes  blast radius: 2 pairs at a time",
+     "ACI: pre-upgrade validator PASS  firmware group pod1-leafs  apic-01 first",
+     "progress 04:12  9/12 done  lb-rw-02 post-check WARN  paused at safe step",
+     "evidence pack: PR #214  audit events: 1,318  reboots without approval: 0"
+    ]
+   }
+  ],
+  "stats": [
+   [
+    "11",
+    "build modules"
+   ],
+   [
+    "3",
+    "days, hands-on"
+   ],
+   [
+    "4",
+    "vendor families"
+   ],
+   [
+    "0",
+    "reboots without approval"
+   ]
+  ],
+  "cta": "Upgrade every device the same safe way.",
+  "narration": [
+   [
+    "hook",
+    "It is two in the morning. The change window is open, the firmware is uploaded, the H A pair is waiting, and the box says disk full. Again. The window closes, the ticket slips a week, and nobody slept."
+   ],
+   [
+    "hook",
+    "What if an agent had already cleared the space, staged the image with a verified checksum, run every pre-check, and asked you for one approval before the reboot? That is device upgrade automation, done with Claude, done safely."
+   ],
+   [
+    "intro",
+    "Gennoor Tech presents Device Upgrade Automation with Claude."
+   ],
+   [
+    "story",
+    "One device list in. One verified upgrade out, with evidence. You build the workflow in eleven modules, across F five, NetScaler, Radware and Cisco A C I. Claude plans, drafts and explains. Deterministic Python code executes. A person approves every space clear, install and reboot. And every call is logged."
+   ],
+   [
+    "path0",
+    "You start with how vendors actually upgrade: F five boot volumes and U C S archives, NetScaler build files, Alteon image banks, A C I firmware groups, and the ways upgrades fail in production. Then you set up Claude Code, the Claude Agent S D K and M C P servers that wrap the F five iControl REST A P I, the NetScaler NITRO A P I and the Radware Alteon A P I, read only to begin with, with strict J S O N outputs for every tool."
+   ],
+   [
+    "path0",
+    "Then discovery and pre-checks. You pull the inventory from the ServiceNow C M D B with the Table A P I, collect version, licence, H A role, sync state and disk usage from every device, and freeze a golden snapshot of virtual servers, pools, certificates and configuration backups. Claude reads the snapshot and explains anything that looks wrong before you touch a thing. No backup, no upgrade."
+   ],
+   [
+    "path1",
+    "Day two is the work itself. Deterministic adapters clear old images, core files and stale backups from allowlisted paths, dry-run first, to make room. They upload the firmware with S H A two five six verification and install it to the inactive boot volume. Upgrades run H A aware: standby first, verify, fail over, then the former active. The agent proposes the order and the exact A P I calls as structured J S O N. The code runs the approved plan and records state after every step. Nothing is improvised."
+   ],
+   [
+    "path2",
+    "Then verification. The post-check snapshot is diffed against the golden snapshot: version, virtual server status, pool members, H A sync, certificate expiry. Claude turns the diff into a structured verdict with a rollback recommendation, and the guardrail module enforces it. Allowlisted tools and devices, read only by default, a ServiceNow change request for every window, a human gate before every space clear, install and reboot, and an append-only audit log of every prompt, plan and call. You will try to talk the agent into skipping a check, and watch the runner refuse."
+   ],
+   [
+    "path3",
+    "Day three adds the scheduler. Approved change windows come from ServiceNow, runs are triggered through GitHub Actions, and the runner refuses to start outside the window. Reminders go out before, progress during, and a summary after. When a window is about to overrun, the run pauses at the next safe step and asks for an extension instead of leaving a device half upgraded."
+   ],
+   [
+    "path3",
+    "Then you scale to the fleet. Cisco A C I upgrades follow the process Cisco prescribes, with the pre-upgrade validator and A P I C firmware groups, controllers first, then switches in groups. Batches get canary devices, blast radius limits and stop on first failure, and the same adapter contract extends to other load balancers, Anaya L B included. The capstone runs a scheduled, approved, H A aware upgrade across a mixed fleet, end to end, and ships the evidence pack as a GitHub pull request."
+   ],
+   [
+    "labs",
+    "Every lab runs against simulated and lab devices with fictional hostnames. You will fill a disk on purpose, watch the pre-check gate stop an upgrade, fail a post-check deliberately, and roll back to the previous boot volume under time pressure."
+   ],
+   [
+    "stats",
+    "Eleven build modules. Three days, hands-on. Four vendor families. And zero reboots without approval."
+   ],
+   [
+    "who",
+    "This course is for enterprise I T and network operations teams, load balancer and data centre engineers, N O C automation leads and change managers in India and worldwide. You need basic networking, load balancer administration, a Linux shell and some Python. Experience with an A I coding assistant helps but is not required."
+   ],
+   [
+    "cta",
+    "Upgrade every device the same safe way. Device Upgrade Automation with Claude. Enrol now at gennoor dot com."
+   ]
+  ]
+ }
+}
