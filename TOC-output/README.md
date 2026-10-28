@@ -88,3 +88,11 @@ one) and the research document. The upload script is optional and sends the fold
 Narration is a neural English voice (edge-tts, en-US-AndrewNeural). To re-voice with a cloned voice, generate one audio
 file per line of the narration script and drop the files into the course's work folder with the same names (a hash of the
 line text) before rendering.
+
+## Editing a video later
+
+Each course's `Promo Video/Source/` folder holds the editable pieces: `scene.html` (every scene's text, layout, theme
+animation, caption timings and the timeline; open it in a browser and run `seek(seconds)` in the console to view any
+frame), `logo-dark.png` it references, and `narration/` with one MP3 per narration line (named by a hash of the line
+text). To produce a new video after editing the course spec in `tools/specs/`, run `python tools/build_video.py "<part of
+the title>"`; unchanged narration lines are reused from these MP3s, changed lines are regenerated.
