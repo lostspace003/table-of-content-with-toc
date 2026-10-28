@@ -147,7 +147,7 @@ def make_audio(wdir, seg_files, seg_start, total, out_path, bed_freq=110):
            f"sine=frequency={f0*2.004:.1f}:sample_rate=48000:duration={total:.2f}[s3];"
            f"[s1][s2][s3]amix=inputs=3:normalize=0,tremolo=f=0.11:d=0.5,lowpass=f=600,volume=0.035,"
            f"aformat=channel_layouts=stereo,afade=t=in:d=3,afade=t=out:st={total-5:.2f}:d=5[bed]")
-    fc = ";".join(filters) + ";" + bed + ";" + "".join(labels) + f"[bed]amix=inputs={n+1}:normalize=0:duration=longest,alimiter=limit=0.95[out]"
+    fc = ";".join(filters) + ";" + bed + ";" + "".join(labels) + f"[bed]amix=inputs={n+1}:normalize=0:duration=longest,loudnorm=I=-16:TP=-1.5:LRA=11,alimiter=limit=0.95[out]"
     cmd = ["ffmpeg", "-y", "-v", "error"] + inputs + ["-filter_complex", fc, "-map", "[out]", "-t", f"{total:.2f}",
            "-c:a", "aac", "-b:a", "192k", str(out_path)]
     run(cmd)
