@@ -45,7 +45,7 @@ h1{{margin-top:22px;color:#fff;font-weight:800;font-size:{fit_size(x['title'])}p
 .tile{{width:76px;height:76px;border-radius:18px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 22px rgba(0,0,0,.4)}}
 .chip span{{color:#dbe3f0;font-size:13px;font-weight:600;text-align:center;line-height:1.15}}
 </style><div class=bg></div><div class=shade></div>
-<div class=wrap><img class=logo src="{logo}"><div class=tag>{domain}</div><h1>{t}</h1><div class=meta>3 days &middot; 24 hours &middot; live trainer</div><div class=chips>{chips}</div></div>"""
+<div class=wrap><img class=logo src="{logo}"><div class=tag>{domain}</div><h1>{t}</h1><div class=meta>3 days &middot; 24 hours &middot; instructor-led training</div><div class=chips>{chips}</div></div>"""
 
 
 def main():
