@@ -1,6 +1,6 @@
 # Device Health Monitoring Automation with Claude - promo narration
 
-Voice: neural TTS (en-US-AndrewNeural). Duration: 6.0 min.
+Voice: the presenter's own cloned voice. Duration: 6.3 min.
 
 **[hook]** Forty devices. One morning check. And someone still logs in to every box to ask if it is healthy.
 

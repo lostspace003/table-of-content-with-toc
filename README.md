@@ -1,28 +1,18 @@
-# Table of Content with TOC
+# Gennoor course outlines and promos
 
-A project for generating a table of contents (TOC) for documents.
+16 course outlines in two domains. Each course folder in `TOC-output/` has `TOC/` (HTML view, PDF for learners, DOCX for editing) and `Promo Video/` (captions, narration script).
 
-## Overview
+- **Automation with Claude** (11): Bill Creation, Certificate Renewal, Cisco ACI Upgrade, Configuration Comparison, Credential and Access Management, Device Health Monitoring, Device Upgrade, HR Hiring Flow, Terraform and GitHub, Traffic and Flow Diagram, Troubleshooting.
+- **Agentic Cybersecurity** (5): Vulnerability Management, Architecture Reviewer, Attack Surface Management, Configuration Reviewer, Virtual Patching Platform.
 
-This repository contains tooling to build and maintain a table of contents
-for long-form content such as Markdown documents and web pages.
+`courses.json` indexes every course (domain, days, hours, modules, file paths).
 
-## Getting Started
+## Promo videos
+The promo videos are served from Azure Blob Storage, not from git. The `.mp4` files kept in this repo are the earlier versions; the current ones (presenter's own voice) are in the blob container `toc-and-promotional-videos`, same paths as in `courses.json`.
 
-1. Clone the repository:
+## Layout
+- `TOC-output/` outlines, captions, narration scripts (and `Research/`)
+- `tools/` build code (`build_toc.py`, `build_docx.py`, `build_video.py`, `content.py`, `specs/`)
+- `assets/` logo photo and watermark process, `notes/` source notes and prototypes
 
-   ```bash
-   git clone https://github.com/lostspace003/table-of-content-with-toc.git
-   ```
-
-2. Open the project folder and follow the setup instructions for your
-   environment once source files are added.
-
-## Contributing
-
-Pull requests are welcome. Please open an issue first to discuss any
-significant changes.
-
-## License
-
-To be determined.
+Duration rule: 1 day = 8 hours.

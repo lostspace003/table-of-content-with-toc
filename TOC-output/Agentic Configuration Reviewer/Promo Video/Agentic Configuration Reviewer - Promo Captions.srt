@@ -1,275 +1,275 @@
 1
-00:00:01,200 --> 00:00:04,492
+00:00:01,200 --> 00:00:04,494
 The S three bucket was public for eleven days.
 
 2
-00:00:04,492 --> 00:00:06,997
+00:00:04,494 --> 00:00:07,000
 The pull request had two approvals.
 
 3
-00:00:06,997 --> 00:00:09,144
+00:00:07,000 --> 00:00:09,148
 Nobody read line two fourteen.
 
 4
-00:00:12,144 --> 00:00:15,521
+00:00:12,148 --> 00:00:15,866
 What if every configuration change got a reviewer that
 
 5
-00:00:15,521 --> 00:00:17,522
+00:00:15,866 --> 00:00:18,070
 never gets tired, never guesses,
 
 6
-00:00:17,522 --> 00:00:19,398
+00:00:18,070 --> 00:00:20,136
 and always shows its evidence?
 
 7
-00:00:19,398 --> 00:00:21,024
+00:00:20,136 --> 00:00:21,926
 In two days you build one.
 
 8
-00:00:24,024 --> 00:00:28,008
+00:00:24,926 --> 00:00:28,626
 Gennoor Tech presents the Agentic Configuration Reviewer.
 
 9
-00:00:31,008 --> 00:00:35,125
+00:00:31,626 --> 00:00:35,938
 Deterministic rules decide. The model explains and drafts the
 
 10
-00:00:35,125 --> 00:00:38,904
+00:00:35,938 --> 00:00:39,896
 fix. Native tooling validates. And the pull request gets
 
 11
-00:00:38,904 --> 00:00:40,591
+00:00:39,896 --> 00:00:41,663
 a comment, never a merge.
 
 12
-00:00:40,591 --> 00:00:43,561
+00:00:41,663 --> 00:00:44,773
 That division of labour is the whole design,
 
 13
-00:00:43,561 --> 00:00:46,328
+00:00:44,773 --> 00:00:47,671
 and it is why the reviewer can be trusted
 
 14
-00:00:46,328 --> 00:00:46,800
+00:00:47,671 --> 00:00:48,166
 in C I.
 
 15
-00:00:49,800 --> 00:00:53,594
+00:00:51,166 --> 00:00:55,030
 Day one starts with parsers for Terraform plan output
 
 16
-00:00:53,594 --> 00:00:56,743
+00:00:55,030 --> 00:00:58,237
 and Kubernetes YAML, using native libraries,
 
 17
-00:00:56,743 --> 00:00:59,034
+00:00:58,237 --> 00:01:00,570
 so every finding keeps its file,
 
 18
-00:00:59,034 --> 00:01:02,112
+00:01:00,570 --> 00:01:03,705
 line and resource provenance. Then a small,
 
 19
-00:01:02,112 --> 00:01:05,977
+00:01:03,705 --> 00:01:07,642
 honest ruleset: public exposure, privileged workloads,
 
 20
-00:01:05,977 --> 00:01:09,556
+00:01:07,642 --> 00:01:11,287
 overly broad permissions. Each rule has a stable I
 
 21
-00:01:09,556 --> 00:01:14,209
+00:01:11,287 --> 00:01:16,025
 D, severity, rationale, references, exceptions and test fixtures,
 
 22
-00:01:14,209 --> 00:01:18,432
+00:01:16,025 --> 00:01:20,326
 including secure configurations to measure false positives.
 
 23
-00:01:21,432 --> 00:01:24,877
+00:01:23,326 --> 00:01:26,424
 Then the agent. It receives the parsed resource and
 
 24
-00:01:24,877 --> 00:01:28,389
+00:01:26,424 --> 00:01:29,583
 the rule evidence and returns a concise explanation,
 
 25
-00:01:28,389 --> 00:01:31,360
+00:01:29,583 --> 00:01:32,256
 its uncertainty and a remediation rationale,
 
 26
-00:01:31,360 --> 00:01:34,467
+00:01:32,256 --> 00:01:35,050
 in a strict schema. You verify that nothing it
 
 27
-00:01:34,467 --> 00:01:36,696
+00:01:35,050 --> 00:01:37,054
 says can change a policy outcome.
 
 28
-00:01:39,696 --> 00:01:42,981
+00:01:40,054 --> 00:01:43,777
 Day two is remediation. Minimal candidate diffs,
 
 29
-00:01:42,981 --> 00:01:46,882
+00:01:43,777 --> 00:01:48,197
 only for supported cases, never touching unrelated files.
 
 30
-00:01:46,882 --> 00:01:49,346
+00:01:48,197 --> 00:01:50,989
 Every patch runs through formatting,
 
 31
-00:01:49,346 --> 00:01:53,795
+00:01:50,989 --> 00:01:56,029
 syntax validation, native tooling, policy checks and tests before
 
 32
-00:01:53,795 --> 00:01:56,464
+00:01:56,029 --> 00:01:59,054
 it is allowed to call itself validated.
 
 33
-00:01:56,464 --> 00:01:59,544
+00:01:59,054 --> 00:02:02,543
 You will watch an invalid patch get rejected.
 
 34
-00:02:02,544 --> 00:02:05,853
+00:02:05,543 --> 00:02:08,860
 Then integration. A local review report first,
 
 35
-00:02:05,853 --> 00:02:10,025
+00:02:08,860 --> 00:02:13,041
 then pull request comments in a sandbox repository through
 
 36
-00:02:10,025 --> 00:02:13,406
+00:02:13,041 --> 00:02:16,430
 a C I workflow. The integration is read-only by
 
 37
-00:02:13,406 --> 00:02:17,218
+00:02:16,430 --> 00:02:20,251
 default, handles untrusted repository content safely,
 
 38
-00:02:17,218 --> 00:02:20,671
+00:02:20,251 --> 00:02:23,711
 and never merges. You finish with an evaluation:
 
 39
-00:02:20,671 --> 00:02:23,548
+00:02:23,711 --> 00:02:26,595
 precision and recall on the fixture set,
 
 40
-00:02:23,548 --> 00:02:27,576
+00:02:26,595 --> 00:02:30,632
 unsupported statements, patch validity and review noise.
 
 41
-00:02:30,576 --> 00:02:34,852
+00:02:33,632 --> 00:02:37,802
 Labs run on a sandbox repository with seeded misconfigurations,
 
 42
-00:02:34,852 --> 00:02:38,178
+00:02:37,802 --> 00:02:41,044
 so you can see real pull request comments appear,
 
 43
-00:02:38,178 --> 00:02:41,232
+00:02:41,044 --> 00:02:44,022
 with evidence and a validated patch attached.
 
 44
-00:02:44,232 --> 00:02:46,838
+00:02:47,022 --> 00:02:49,554
 Here is the full table of contents,
 
 45
-00:02:46,838 --> 00:02:48,626
+00:02:49,554 --> 00:02:51,289
 6 modules over two days.
 
 46
-00:02:48,626 --> 00:02:52,423
+00:02:51,289 --> 00:02:54,978
 Day one: Supported formats, parsers and provenance;
 
 47
-00:02:52,423 --> 00:02:56,817
+00:02:54,978 --> 00:02:59,245
 Deterministic policy rules; and AI explanations in a strict
 
 48
-00:02:56,817 --> 00:03:00,913
+00:02:59,245 --> 00:03:03,223
 schema. Day two: Candidate diffs and native validation;
 
 49
-00:03:00,913 --> 00:03:04,413
+00:03:03,223 --> 00:03:06,622
 Pull-request integration, read-only by default;
 
 50
-00:03:04,413 --> 00:03:08,136
+00:03:06,622 --> 00:03:10,238
 and Evaluation, developer experience and capstone.
 
 51
-00:03:11,136 --> 00:03:15,308
+00:03:13,238 --> 00:03:18,294
 Every build in this course follows six engineering principles.
 
 52
-00:03:15,308 --> 00:03:17,124
+00:03:18,294 --> 00:03:20,496
 Model output is a proposal,
 
 53
-00:03:17,124 --> 00:03:20,623
+00:03:20,496 --> 00:03:24,736
 never a fact. Authorization lives outside the model.
 
 54
-00:03:20,623 --> 00:03:23,583
+00:03:24,736 --> 00:03:28,324
 A human approves every consequential action.
 
 55
-00:03:23,583 --> 00:03:25,871
+00:03:28,324 --> 00:03:31,097
 Decisions and evidence are logged.
 
 56
-00:03:25,871 --> 00:03:29,841
+00:03:31,097 --> 00:03:35,908
 The stack stays provider-agnostic. And quality is measured,
 
 57
-00:03:29,841 --> 00:03:30,648
+00:03:35,908 --> 00:03:36,886
 not assumed.
 
 58
-00:03:33,648 --> 00:03:36,098
+00:03:39,886 --> 00:03:42,397
 Two days, hands-on. Two formats,
 
 59
-00:03:36,098 --> 00:03:39,391
+00:03:42,397 --> 00:03:45,772
 Terraform and Kubernetes. Zero auto-merges,
 
 60
-00:03:39,391 --> 00:03:42,913
+00:03:45,772 --> 00:03:49,381
 ever. One C I integrated reviewer you can take
 
 61
-00:03:42,913 --> 00:03:43,296
+00:03:49,381 --> 00:03:49,773
 home.
 
 62
-00:03:46,296 --> 00:03:48,353
+00:03:52,773 --> 00:03:55,179
 This course is for DevSecOps,
 
 63
-00:03:48,353 --> 00:03:52,892
+00:03:55,179 --> 00:04:00,487
 platform and cloud engineers, infrastructure as code authors and
 
 64
-00:03:52,892 --> 00:03:56,013
+00:04:00,487 --> 00:04:04,137
 security champions inside engineering teams.
 
 65
-00:03:56,013 --> 00:03:58,850
+00:04:04,137 --> 00:04:07,455
 You need Terraform or Kubernetes basics,
 
 66
-00:03:58,850 --> 00:04:02,184
+00:04:07,455 --> 00:04:11,353
 Git and pull requests, and Python fundamentals.
 
 67
-00:04:05,184 --> 00:04:08,055
+00:04:14,353 --> 00:04:17,556
 Catch line two fourteen before it ships.
 
 68
-00:04:08,055 --> 00:04:12,361
+00:04:17,556 --> 00:04:22,360
 The Agentic Configuration Reviewer. Enrol now at gennoor dot
 
 69
-00:04:12,361 --> 00:04:12,648
+00:04:22,360 --> 00:04:22,681
 com.

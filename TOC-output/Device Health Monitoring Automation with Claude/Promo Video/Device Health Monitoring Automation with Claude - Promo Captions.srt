@@ -1,487 +1,487 @@
 1
-00:00:01,200 --> 00:00:03,351
+00:00:01,200 --> 00:00:03,565
 Forty devices. One morning check.
 
 2
-00:00:03,351 --> 00:00:06,023
+00:00:03,565 --> 00:00:06,502
 And someone still logs in to every box to
 
 3
-00:00:06,023 --> 00:00:07,392
+00:00:06,502 --> 00:00:08,007
 ask if it is healthy.
 
 4
-00:00:08,142 --> 00:00:10,605
+00:00:08,757 --> 00:00:11,048
 What if an agent checked every V I P,
 
 5
-00:00:10,605 --> 00:00:13,402
+00:00:11,048 --> 00:00:13,649
 every H A pair, every sync state and every
 
 6
-00:00:13,402 --> 00:00:15,599
+00:00:13,649 --> 00:00:15,692
 version, worked out what changed,
 
 7
-00:00:15,599 --> 00:00:19,327
+00:00:15,692 --> 00:00:19,160
 and raised the right ServiceNow ticket before your first
 
 8
-00:00:19,327 --> 00:00:22,057
+00:00:19,160 --> 00:00:21,698
 coffee? That is device health monitoring,
 
 9
-00:00:22,057 --> 00:00:24,054
+00:00:21,698 --> 00:00:23,556
 done with Claude, done safely.
 
 10
-00:00:24,804 --> 00:00:29,268
+00:00:24,306 --> 00:00:29,721
 Gennoor Tech presents Device Health Monitoring Automation with Claude.
 
 11
-00:00:30,018 --> 00:00:32,115
+00:00:30,471 --> 00:00:32,799
 Six signals in. One verdict out.
 
 12
-00:00:32,115 --> 00:00:34,998
+00:00:32,799 --> 00:00:36,000
 You build the platform in eleven increments,
 
 13
-00:00:34,998 --> 00:00:38,011
+00:00:36,000 --> 00:00:39,347
 and every increment is something you can test,
 
 14
-00:00:38,011 --> 00:00:41,812
+00:00:39,347 --> 00:00:43,567
 review and demonstrate. Claude plans the code and explains
 
 15
-00:00:41,812 --> 00:00:45,415
+00:00:43,567 --> 00:00:47,569
 the evidence. Deterministic Python does the collecting.
 
 16
-00:00:45,415 --> 00:00:48,036
+00:00:47,569 --> 00:00:50,480
 A person approves anything that matters.
 
 17
-00:00:48,036 --> 00:00:49,674
+00:00:50,480 --> 00:00:52,299
 And everything is logged.
 
 18
-00:00:50,424 --> 00:00:54,288
+00:00:53,049 --> 00:00:56,840
 You start by defining what healthy actually means.
 
 19
-00:00:54,288 --> 00:00:55,910
+00:00:56,840 --> 00:00:58,432
 V I P status, uptime,
 
 20
-00:00:55,910 --> 00:00:58,847
+00:00:58,432 --> 00:01:01,313
 H A status, sync status when a pair is
 
 21
-00:00:58,847 --> 00:01:00,779
+00:01:01,313 --> 00:01:03,209
 in H A, software version,
 
 22
-00:01:00,779 --> 00:01:04,179
+00:01:03,209 --> 00:01:06,545
 and the last change performed on the device.
 
 23
-00:01:04,179 --> 00:01:06,188
+00:01:06,545 --> 00:01:08,517
 You map each signal to F5,
 
 24
-00:01:06,188 --> 00:01:09,356
+00:01:08,517 --> 00:01:11,626
 NetScaler, Radware, other load balancers,
 
 25
-00:01:09,356 --> 00:01:10,593
+00:01:11,626 --> 00:01:12,839
 and Cisco A C I.
 
 26
-00:01:10,593 --> 00:01:12,756
+00:01:12,839 --> 00:01:14,962
 Then you set up Claude Code,
 
 27
-00:01:12,756 --> 00:01:14,765
+00:01:14,962 --> 00:01:16,933
 the Agent S D K and an M C
 
 28
-00:01:14,765 --> 00:01:18,243
+00:01:16,933 --> 00:01:20,345
 P server that exposes read-only device tools,
 
 29
-00:01:18,243 --> 00:01:21,720
+00:01:20,345 --> 00:01:23,758
 with credentials kept well outside the model.
 
 30
-00:01:22,470 --> 00:01:25,903
+00:01:24,508 --> 00:01:27,912
 Then the collectors. F5 iControl REST and t m
 
 31
-00:01:25,903 --> 00:01:28,115
+00:01:27,912 --> 00:01:30,107
 s h for virtual server stats,
 
 32
-00:01:28,115 --> 00:01:30,479
+00:01:30,107 --> 00:01:32,452
 failover state and sync status.
 
 33
-00:01:30,479 --> 00:01:33,836
+00:01:32,452 --> 00:01:35,781
 The NetScaler NITRO A P I for load balancing
 
 34
-00:01:33,836 --> 00:01:36,811
+00:01:35,781 --> 00:01:38,732
 virtual servers, H A nodes and version.
 
 35
-00:01:36,811 --> 00:01:39,862
+00:01:38,732 --> 00:01:41,758
 Radware Alteon through Cyber Controller,
 
 36
-00:01:39,862 --> 00:01:43,142
+00:01:41,758 --> 00:01:45,012
 a generic adapter for other load balancers,
 
 37
-00:01:43,142 --> 00:01:45,278
+00:01:45,012 --> 00:01:47,130
 and the Cisco A P I C REST A
 
 38
-00:01:45,278 --> 00:01:46,880
+00:01:47,130 --> 00:01:48,719
 P I for fabric nodes,
 
 39
-00:01:46,880 --> 00:01:50,999
+00:01:48,719 --> 00:01:52,805
 firmware and health. Every reading lands in one shared
 
 40
-00:01:50,999 --> 00:01:54,584
+00:01:52,805 --> 00:01:56,361
 schema, and a missing signal is marked unknown,
 
 41
-00:01:54,584 --> 00:01:56,262
+00:01:56,361 --> 00:01:58,026
 never assumed healthy.
 
 42
-00:01:57,012 --> 00:01:59,938
+00:01:58,776 --> 00:02:01,725
 On day two you answer the question every N
 
 43
-00:01:59,938 --> 00:02:01,958
+00:02:01,725 --> 00:02:03,762
 O C asks first. What changed?
 
 44
-00:02:01,958 --> 00:02:04,535
+00:02:03,762 --> 00:02:06,360
 You pull audit logs from the devices,
 
 45
-00:02:04,535 --> 00:02:09,411
+00:02:06,360 --> 00:02:11,276
 configuration snapshots from Git, and change requests from ServiceNow,
 
 46
-00:02:09,411 --> 00:02:12,058
+00:02:11,276 --> 00:02:13,945
 and build a timeline for every device.
 
 47
-00:02:12,058 --> 00:02:14,775
+00:02:13,945 --> 00:02:16,684
 Then Claude becomes the triage analyst.
 
 48
-00:02:14,775 --> 00:02:18,676
+00:02:16,684 --> 00:02:20,616
 It receives the evidence bundle and returns a structured
 
 49
-00:02:18,676 --> 00:02:22,298
+00:02:20,616 --> 00:02:24,268
 verdict: severity, affected signals, cited readings,
 
 50
-00:02:22,298 --> 00:02:24,806
+00:02:24,268 --> 00:02:26,796
 likely cause and recommended action.
 
 51
-00:02:24,806 --> 00:02:28,637
+00:02:26,796 --> 00:02:30,659
 No citation, no conclusion. And the severity rules live
 
 52
-00:02:28,637 --> 00:02:31,006
+00:02:30,659 --> 00:02:33,047
 in code, so a sync failure in an H
 
 53
-00:02:31,006 --> 00:02:33,444
+00:02:33,047 --> 00:02:35,505
 A pair is never quietly downgraded.
 
 54
-00:02:34,194 --> 00:02:37,625
+00:02:36,255 --> 00:02:39,655
 Next, the ticket. Through the ServiceNow Table A P
 
 55
-00:02:37,625 --> 00:02:40,644
+00:02:39,655 --> 00:02:42,648
 I the pipeline looks up the open incident by
 
 56
-00:02:40,644 --> 00:02:43,800
+00:02:42,648 --> 00:02:45,776
 correlation I D, decides whether to update it,
 
 57
-00:02:43,800 --> 00:02:45,858
+00:02:45,776 --> 00:02:47,817
 reopen it or create a new one,
 
 58
-00:02:45,858 --> 00:02:47,916
+00:02:47,817 --> 00:02:49,857
 and never creates a duplicate.
 
 59
-00:02:47,916 --> 00:02:51,347
+00:02:49,857 --> 00:02:53,258
 Flow Designer handles assignment and notification.
 
 60
-00:02:51,347 --> 00:02:54,160
+00:02:53,258 --> 00:02:56,046
 Then the guardrails. The M C P server has
 
 61
-00:02:54,160 --> 00:02:56,013
+00:02:56,046 --> 00:02:57,882
 no write tools for devices.
 
 62
-00:02:56,013 --> 00:02:59,306
+00:02:57,882 --> 00:03:01,147
 Priority one and priority two tickets wait for a
 
 63
-00:02:59,306 --> 00:03:01,913
+00:03:01,147 --> 00:03:03,731
 person. Every run writes its readings,
 
 64
-00:03:01,913 --> 00:03:05,687
+00:03:03,731 --> 00:03:07,472
 prompt, verdict, ticket action and approver to an audit
 
 65
-00:03:05,687 --> 00:03:09,186
+00:03:07,472 --> 00:03:10,941
 log, and a flapping device cannot flood your queue.
 
 66
-00:03:09,936 --> 00:03:13,242
+00:03:11,691 --> 00:03:15,061
 Day three is operations. The pipeline ships through a
 
 67
-00:03:13,242 --> 00:03:16,361
+00:03:15,061 --> 00:03:18,241
 GitHub pull request, runs from GitHub Actions on a
 
 68
-00:03:16,361 --> 00:03:19,543
+00:03:18,241 --> 00:03:21,485
 schedule using a runner that can reach the devices,
 
 69
-00:03:19,543 --> 00:03:23,410
+00:03:21,485 --> 00:03:25,428
 and respects declared maintenance windows so a planned upgrade
 
 70
-00:03:23,410 --> 00:03:25,344
+00:03:25,428 --> 00:03:27,400
 never becomes a false incident.
 
 71
-00:03:26,094 --> 00:03:28,650
+00:03:28,150 --> 00:03:30,822
 You add pytest suites for the collectors,
 
 72
-00:03:28,650 --> 00:03:31,143
+00:03:30,822 --> 00:03:33,428
 the severity rules and the ticket logic,
 
 73
-00:03:31,143 --> 00:03:34,510
+00:03:33,428 --> 00:03:36,947
 export readings to Prometheus, and put a Grafana fleet
 
 74
-00:03:34,510 --> 00:03:36,567
+00:03:36,947 --> 00:03:39,098
 dashboard beside the ticket flow.
 
 75
-00:03:36,567 --> 00:03:39,310
+00:03:39,098 --> 00:03:41,965
 Then you write the runbook for the days when
 
 76
-00:03:39,310 --> 00:03:41,679
+00:03:41,965 --> 00:03:44,442
 a collector fails, a verdict is wrong,
 
 77
-00:03:41,679 --> 00:03:43,487
+00:03:44,442 --> 00:03:46,332
 or ServiceNow itself is down.
 
 78
-00:03:43,487 --> 00:03:45,232
+00:03:46,332 --> 00:03:48,156
 And you measure the outcome:
 
 79
-00:03:45,232 --> 00:03:48,411
+00:03:48,156 --> 00:03:51,480
 time to ticket, duplicate rate and false positives,
 
 80
-00:03:48,411 --> 00:03:50,718
+00:03:51,480 --> 00:03:53,891
 so the platform proves its own value.
 
 81
-00:03:51,468 --> 00:03:54,217
+00:03:54,641 --> 00:03:57,470
 Every lab runs against a lab fleet of F5,
 
 82
-00:03:54,217 --> 00:03:57,636
+00:03:57,470 --> 00:04:00,988
 NetScaler, Radware and A C I devices with synthetic
 
 83
-00:03:57,636 --> 00:04:01,525
+00:04:00,988 --> 00:04:04,990
 faults. Nothing touches production. You will break sync on
 
 84
-00:04:01,525 --> 00:04:03,939
+00:04:04,990 --> 00:04:07,474
 purpose, upgrade one side of a pair,
 
 85
-00:04:03,939 --> 00:04:06,755
+00:04:07,474 --> 00:04:10,371
 pull a collector out from under the agent,
 
 86
-00:04:06,755 --> 00:04:10,308
+00:04:10,371 --> 00:04:14,028
 and watch the pipeline explain exactly what happened.
 
 87
-00:04:11,058 --> 00:04:13,506
+00:04:14,778 --> 00:04:17,418
 Here is the full table of contents,
 
 88
-00:04:13,506 --> 00:04:15,394
+00:04:17,418 --> 00:04:19,455
 11 modules over three days.
 
 89
-00:04:15,394 --> 00:04:18,961
+00:04:19,455 --> 00:04:23,302
 Day one: What device health means across the fleet;
 
 90
-00:04:18,961 --> 00:04:22,109
+00:04:23,302 --> 00:04:26,697
 Setting up Claude Code, the Agent SDK and MCP
 
 91
-00:04:22,109 --> 00:04:26,235
+00:04:26,697 --> 00:04:31,148
 for this workflow; Collecting health from F5 and NetScaler;
 
 92
-00:04:26,235 --> 00:04:28,683
+00:04:31,148 --> 00:04:33,788
 and Collecting health from Radware,
 
 93
-00:04:28,683 --> 00:04:31,900
+00:04:33,788 --> 00:04:37,258
 other load balancers (Anaya LB) and Cisco ACI.
 
 94
-00:04:31,900 --> 00:04:34,068
+00:04:37,258 --> 00:04:39,596
 Day two: Last change performed:
 
 95
-00:04:34,068 --> 00:04:37,285
+00:04:39,596 --> 00:04:43,066
 correlating config history and change records;
 
 96
-00:04:37,285 --> 00:04:39,314
+00:04:43,066 --> 00:04:45,254
 Claude as the triage analyst:
 
 97
-00:04:39,314 --> 00:04:44,070
+00:04:45,254 --> 00:04:50,384
 structured health verdicts; Creating or updating ServiceNow tickets;
 
 98
-00:04:44,070 --> 00:04:48,126
+00:04:50,384 --> 00:04:54,759
 and Guardrails, approvals and audit for health monitoring.
 
 99
-00:04:48,126 --> 00:04:52,183
+00:04:54,759 --> 00:04:59,134
 Day three: Scheduling and running the workflow with GitHub
 
 100
-00:04:52,183 --> 00:04:55,260
+00:04:59,134 --> 00:05:02,453
 Actions; Testing, dashboards and operations;
 
 101
-00:04:55,260 --> 00:04:59,526
+00:05:02,453 --> 00:05:07,055
 and Capstone: end-to-end device health monitoring for a mixed
 
 102
-00:04:59,526 --> 00:04:59,946
+00:05:07,055 --> 00:05:07,508
 fleet.
 
 103
-00:05:00,696 --> 00:05:04,868
+00:05:08,258 --> 00:05:13,313
 Every build in this course follows six engineering principles.
 
 104
-00:05:04,868 --> 00:05:06,684
+00:05:13,313 --> 00:05:15,515
 Model output is a proposal,
 
 105
-00:05:06,684 --> 00:05:10,183
+00:05:15,515 --> 00:05:19,755
 never a fact. Authorization lives outside the model.
 
 106
-00:05:10,183 --> 00:05:13,143
+00:05:19,755 --> 00:05:23,343
 A human approves every consequential action.
 
 107
-00:05:13,143 --> 00:05:15,431
+00:05:23,343 --> 00:05:26,116
 Decisions and evidence are logged.
 
 108
-00:05:15,431 --> 00:05:19,401
+00:05:26,116 --> 00:05:30,927
 The stack stays provider-agnostic. And quality is measured,
 
 109
-00:05:19,401 --> 00:05:20,208
+00:05:30,927 --> 00:05:31,906
 not assumed.
 
 110
-00:05:20,958 --> 00:05:23,274
+00:05:32,656 --> 00:05:35,166
 Eleven build steps. Three days,
 
 111
-00:05:23,274 --> 00:05:26,261
+00:05:35,166 --> 00:05:38,406
 hands-on. Five device platforms covered.
 
 112
-00:05:26,261 --> 00:05:28,278
+00:05:38,406 --> 00:05:40,593
 And zero duplicate tickets.
 
 113
-00:05:29,028 --> 00:05:32,901
+00:05:41,343 --> 00:05:45,849
 This course is for network operations and load balancer
 
 114
-00:05:32,901 --> 00:05:34,521
+00:05:45,849 --> 00:05:47,733
 engineers, N O C leads,
 
 115
-00:05:34,521 --> 00:05:36,915
+00:05:47,733 --> 00:05:50,519
 data centre teams, and I T S M and
 
 116
-00:05:36,915 --> 00:05:39,732
+00:05:50,519 --> 00:05:53,796
 automation teams in India and worldwide.
 
 117
-00:05:39,732 --> 00:05:42,901
+00:05:53,796 --> 00:05:57,483
 You need working knowledge of load balancers,
 
 118
-00:05:42,901 --> 00:05:46,140
+00:05:57,483 --> 00:06:01,252
 basic REST and JSON, and basic Python and Git.
 
 119
-00:05:46,890 --> 00:05:49,148
+00:06:02,002 --> 00:06:04,608
 Let the fleet report its own health,
 
 120
-00:05:49,148 --> 00:05:51,156
+00:06:04,608 --> 00:06:06,925
 and let the ticket write itself.
 
 121
-00:05:51,156 --> 00:05:54,167
+00:06:06,925 --> 00:06:10,401
 Device Health Monitoring Automation with Claude.
 
 122
-00:05:54,167 --> 00:05:55,986
+00:06:10,401 --> 00:06:12,501
 Enrol now at gennoor dot com.

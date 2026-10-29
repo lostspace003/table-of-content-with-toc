@@ -1,495 +1,495 @@
 1
-00:00:01,200 --> 00:00:02,963
+00:00:01,200 --> 00:00:03,092
 It is two in the morning.
 
 2
-00:00:02,963 --> 00:00:04,797
+00:00:03,092 --> 00:00:05,060
 The change window is open,
 
 3
-00:00:04,797 --> 00:00:07,688
+00:00:05,060 --> 00:00:08,163
 the firmware is uploaded, the H A pair is
 
 4
-00:00:07,688 --> 00:00:10,227
+00:00:08,163 --> 00:00:10,888
 waiting, and the box says disk full.
 
 5
-00:00:10,227 --> 00:00:13,753
+00:00:10,888 --> 00:00:14,672
 Again. The window closes, the ticket slips a week,
 
 6
-00:00:13,753 --> 00:00:14,952
+00:00:14,672 --> 00:00:15,959
 and nobody slept.
 
 7
-00:00:15,702 --> 00:00:18,747
+00:00:16,709 --> 00:00:19,504
 What if an agent had already cleared the space,
 
 8
-00:00:18,747 --> 00:00:21,468
+00:00:19,504 --> 00:00:22,001
 staged the image with a verified checksum,
 
 9
-00:00:21,468 --> 00:00:24,772
+00:00:22,001 --> 00:00:25,034
 run every pre-check, and asked you for one approval
 
 10
-00:00:24,772 --> 00:00:28,206
+00:00:25,034 --> 00:00:28,185
 before the reboot? That is device upgrade automation,
 
 11
-00:00:28,206 --> 00:00:30,150
+00:00:28,185 --> 00:00:29,969
 done with Claude, done safely.
 
 12
-00:00:30,900 --> 00:00:35,028
+00:00:30,719 --> 00:00:35,879
 Gennoor Tech presents Device Upgrade Automation with Claude.
 
 13
-00:00:35,778 --> 00:00:39,304
+00:00:36,629 --> 00:00:40,229
 One device list in. One verified upgrade out,
 
 14
-00:00:39,304 --> 00:00:43,692
+00:00:40,229 --> 00:00:44,708
 with evidence. You build the workflow in eleven modules,
 
 15
-00:00:43,692 --> 00:00:47,375
+00:00:44,708 --> 00:00:48,468
 across F five, NetScaler, Radware and Cisco A C
 
 16
-00:00:47,375 --> 00:00:50,274
+00:00:48,468 --> 00:00:51,428
 I. Claude plans, drafts and explains.
 
 17
-00:00:50,274 --> 00:00:55,367
+00:00:51,428 --> 00:00:56,628
 Deterministic Python code executes. A person approves every space
 
 18
-00:00:55,367 --> 00:00:59,442
+00:00:56,628 --> 00:01:00,787
 clear, install and reboot. And every call is logged.
 
 19
-00:01:00,192 --> 00:01:03,540
+00:01:01,537 --> 00:01:04,879
 You start with how vendors actually upgrade:
 
 20
-00:01:03,540 --> 00:01:06,507
+00:01:04,879 --> 00:01:07,841
 F five boot volumes and U C S archives,
 
 21
-00:01:06,507 --> 00:01:09,703
+00:01:07,841 --> 00:01:11,031
 NetScaler build files, Alteon image banks,
 
 22
-00:01:09,703 --> 00:01:11,377
+00:01:11,031 --> 00:01:12,701
 A C I firmware groups,
 
 23
-00:01:11,377 --> 00:01:14,496
+00:01:12,701 --> 00:01:15,815
 and the ways upgrades fail in production.
 
 24
-00:01:14,496 --> 00:01:16,627
+00:01:15,815 --> 00:01:17,942
 Then you set up Claude Code,
 
 25
-00:01:16,627 --> 00:01:18,909
+00:01:17,942 --> 00:01:20,220
 the Claude Agent S D K and M C
 
 26
-00:01:18,909 --> 00:01:22,257
+00:01:20,220 --> 00:01:23,562
 P servers that wrap the F five iControl REST
 
 27
-00:01:22,257 --> 00:01:24,692
+00:01:23,562 --> 00:01:25,992
 A P I, the NetScaler NITRO A P I
 
 28
-00:01:24,692 --> 00:01:26,898
+00:01:25,992 --> 00:01:28,195
 and the Radware Alteon A P I,
 
 29
-00:01:26,898 --> 00:01:28,724
+00:01:28,195 --> 00:01:30,017
 read only to begin with,
 
 30
-00:01:28,724 --> 00:01:31,540
+00:01:30,017 --> 00:01:32,828
 with strict J S O N outputs for every
 
 31
-00:01:31,540 --> 00:01:31,920
+00:01:32,828 --> 00:01:33,207
 tool.
 
 32
-00:01:32,670 --> 00:01:36,796
+00:01:33,957 --> 00:01:38,017
 Then discovery and pre-checks. You pull the inventory from
 
 33
-00:01:36,796 --> 00:01:39,427
+00:01:38,017 --> 00:01:40,607
 the ServiceNow C M D B with the Table
 
 34
-00:01:39,427 --> 00:01:41,063
+00:01:40,607 --> 00:01:42,217
 A P I, collect version,
 
 35
-00:01:41,063 --> 00:01:44,193
+00:01:42,217 --> 00:01:45,297
 licence, H A role, sync state and disk usage
 
 36
-00:01:44,193 --> 00:01:47,749
+00:01:45,297 --> 00:01:48,797
 from every device, and freeze a golden snapshot of
 
 37
-00:01:47,749 --> 00:01:52,231
+00:01:48,797 --> 00:01:53,207
 virtual servers, pools, certificates and configuration backups.
 
 38
-00:01:52,231 --> 00:01:56,356
+00:01:53,207 --> 00:01:57,266
 Claude reads the snapshot and explains anything that looks
 
 39
-00:01:56,356 --> 00:01:58,561
+00:01:57,266 --> 00:01:59,436
 wrong before you touch a thing.
 
 40
-00:01:58,561 --> 00:02:00,126
+00:01:59,436 --> 00:02:00,976
 No backup, no upgrade.
 
 41
-00:02:00,876 --> 00:02:02,917
+00:02:01,726 --> 00:02:03,739
 Day two is the work itself.
 
 42
-00:02:02,917 --> 00:02:05,940
+00:02:03,739 --> 00:02:06,722
 Deterministic adapters clear old images,
 
 43
-00:02:05,940 --> 00:02:09,871
+00:02:06,722 --> 00:02:10,599
 core files and stale backups from allowlisted paths,
 
 44
-00:02:09,871 --> 00:02:11,987
+00:02:10,599 --> 00:02:12,687
 dry-run first, to make room.
 
 45
-00:02:11,987 --> 00:02:14,935
+00:02:12,687 --> 00:02:15,595
 They upload the firmware with S H A two
 
 46
-00:02:14,935 --> 00:02:18,866
+00:02:15,595 --> 00:02:19,472
 five six verification and install it to the inactive
 
 47
-00:02:18,866 --> 00:02:21,587
+00:02:19,472 --> 00:02:22,156
 boot volume. Upgrades run H A aware:
 
 48
-00:02:21,587 --> 00:02:24,081
+00:02:22,156 --> 00:02:24,617
 standby first, verify, fail over,
 
 49
-00:02:24,081 --> 00:02:28,012
+00:02:24,617 --> 00:02:28,494
 then the former active. The agent proposes the order
 
 50
-00:02:28,012 --> 00:02:30,960
+00:02:28,494 --> 00:02:31,402
 and the exact A P I calls as structured
 
 51
-00:02:30,960 --> 00:02:33,606
+00:02:31,402 --> 00:02:34,012
 J S O N. The code runs the approved
 
 52
-00:02:33,606 --> 00:02:36,629
+00:02:34,012 --> 00:02:36,994
 plan and records state after every step.
 
 53
-00:02:36,629 --> 00:02:38,292
+00:02:36,994 --> 00:02:38,634
 Nothing is improvised.
 
 54
-00:02:39,042 --> 00:02:43,389
+00:02:39,384 --> 00:02:43,760
 Then verification. The post-check snapshot is diffed against the
 
 55
-00:02:43,389 --> 00:02:46,649
+00:02:43,760 --> 00:02:47,042
 golden snapshot: version, virtual server status,
 
 56
-00:02:46,649 --> 00:02:48,211
+00:02:47,042 --> 00:02:48,615
 pool members, H A sync,
 
 57
-00:02:48,211 --> 00:02:52,219
+00:02:48,615 --> 00:02:52,648
 certificate expiry. Claude turns the diff into a structured
 
 58
-00:02:52,219 --> 00:02:54,868
+00:02:52,648 --> 00:02:55,315
 verdict with a rollback recommendation,
 
 59
-00:02:54,868 --> 00:02:57,381
+00:02:55,315 --> 00:02:57,845
 and the guardrail module enforces it.
 
 60
-00:02:57,381 --> 00:03:00,913
+00:02:57,845 --> 00:03:01,400
 Allowlisted tools and devices, read only by default,
 
 61
-00:03:00,913 --> 00:03:03,969
+00:03:01,400 --> 00:03:04,477
 a ServiceNow change request for every window,
 
 62
-00:03:03,969 --> 00:03:06,550
+00:03:04,477 --> 00:03:07,075
 a human gate before every space clear,
 
 63
-00:03:06,550 --> 00:03:10,014
+00:03:07,075 --> 00:03:10,562
 install and reboot, and an append-only audit log of
 
 64
-00:03:10,014 --> 00:03:11,916
+00:03:10,562 --> 00:03:12,476
 every prompt, plan and call.
 
 65
-00:03:11,916 --> 00:03:14,905
+00:03:12,476 --> 00:03:15,485
 You will try to talk the agent into skipping
 
 66
-00:03:14,905 --> 00:03:17,418
+00:03:15,485 --> 00:03:18,014
 a check, and watch the runner refuse.
 
 67
-00:03:18,168 --> 00:03:20,018
+00:03:18,764 --> 00:03:20,763
 Day three adds the scheduler.
 
 68
-00:03:20,018 --> 00:03:22,889
+00:03:20,763 --> 00:03:23,863
 Approved change windows come from ServiceNow,
 
 69
-00:03:22,889 --> 00:03:25,569
+00:03:23,863 --> 00:03:26,757
 runs are triggered through GitHub Actions,
 
 70
-00:03:25,569 --> 00:03:28,823
+00:03:26,757 --> 00:03:30,271
 and the runner refuses to start outside the window.
 
 71
-00:03:28,823 --> 00:03:31,439
+00:03:30,271 --> 00:03:33,097
 Reminders go out before, progress during,
 
 72
-00:03:31,439 --> 00:03:34,183
+00:03:33,097 --> 00:03:36,059
 and a summary after. When a window is about
 
 73
-00:03:34,183 --> 00:03:36,926
+00:03:36,059 --> 00:03:39,022
 to overrun, the run pauses at the next safe
 
 74
-00:03:36,926 --> 00:03:40,053
+00:03:39,022 --> 00:03:42,399
 step and asks for an extension instead of leaving
 
 75
-00:03:40,053 --> 00:03:41,520
+00:03:42,399 --> 00:03:43,983
 a device half upgraded.
 
 76
-00:03:42,270 --> 00:03:44,264
+00:03:44,733 --> 00:03:46,666
 Then you scale to the fleet.
 
 77
-00:03:44,264 --> 00:03:47,468
+00:03:46,666 --> 00:03:49,771
 Cisco A C I upgrades follow the process Cisco
 
 78
-00:03:47,468 --> 00:03:51,171
+00:03:49,771 --> 00:03:53,359
 prescribes, with the pre-upgrade validator and A P I
 
 79
-00:03:51,171 --> 00:03:53,805
+00:03:53,359 --> 00:03:55,912
 C firmware groups, controllers first,
 
 80
-00:03:53,805 --> 00:03:57,508
+00:03:55,912 --> 00:03:59,500
 then switches in groups. Batches get canary devices,
 
 81
-00:03:57,508 --> 00:04:00,784
+00:03:59,500 --> 00:04:02,675
 blast radius limits and stop on first failure,
 
 82
-00:04:00,784 --> 00:04:04,415
+00:04:02,675 --> 00:04:06,194
 and the same adapter contract extends to other load
 
 83
-00:04:04,415 --> 00:04:06,551
+00:04:06,194 --> 00:04:08,264
 balancers, Anaya L B included.
 
 84
-00:04:06,551 --> 00:04:08,688
+00:04:08,264 --> 00:04:10,334
 The capstone runs a scheduled,
 
 85
-00:04:08,688 --> 00:04:12,177
+00:04:10,334 --> 00:04:13,715
 approved, H A aware upgrade across a mixed fleet,
 
 86
-00:04:12,177 --> 00:04:15,167
+00:04:13,715 --> 00:04:16,613
 end to end, and ships the evidence pack as
 
 87
-00:04:15,167 --> 00:04:16,734
+00:04:16,613 --> 00:04:18,132
 a GitHub pull request.
 
 88
-00:04:17,484 --> 00:04:20,839
+00:04:18,882 --> 00:04:22,496
 Every lab runs against simulated and lab devices with
 
 89
-00:04:20,839 --> 00:04:24,194
+00:04:22,496 --> 00:04:26,110
 fictional hostnames. You will fill a disk on purpose,
 
 90
-00:04:24,194 --> 00:04:26,789
+00:04:26,110 --> 00:04:28,906
 watch the pre-check gate stop an upgrade,
 
 91
-00:04:26,789 --> 00:04:30,081
+00:04:28,906 --> 00:04:32,453
 fail a post-check deliberately, and roll back to the
 
 92
-00:04:30,081 --> 00:04:32,676
+00:04:32,453 --> 00:04:35,249
 previous boot volume under time pressure.
 
 93
-00:04:33,426 --> 00:04:36,097
+00:04:35,999 --> 00:04:38,688
 Here is the full table of contents,
 
 94
-00:04:36,097 --> 00:04:38,158
+00:04:38,688 --> 00:04:40,762
 11 modules over three days.
 
 95
-00:04:38,158 --> 00:04:42,279
+00:04:40,762 --> 00:04:44,911
 Day one: The device upgrade lifecycle and why upgrades
 
 96
-00:04:42,279 --> 00:04:45,943
+00:04:44,911 --> 00:04:48,599
 fail; Claude Code, Agent SDK and MCP for upgrade
 
 97
-00:04:45,943 --> 00:04:49,454
+00:04:48,599 --> 00:04:52,133
 workflows; Inventory and pre-flight discovery;
 
 98
-00:04:49,454 --> 00:04:52,430
+00:04:52,133 --> 00:04:55,129
 and Pre-checks and the golden snapshot.
 
 99
-00:04:52,430 --> 00:04:56,246
+00:04:55,129 --> 00:04:58,971
 Day two: Disk space clearing and firmware staging;
 
 100
-00:04:56,246 --> 00:05:00,062
+00:04:58,971 --> 00:05:02,812
 Upgrade execution adapters, HA-aware; Post-checks,
 
 101
-00:05:00,062 --> 00:05:03,268
+00:05:02,812 --> 00:05:06,039
 verification and rollback; and Guardrails,
 
 102
-00:05:03,268 --> 00:05:05,786
+00:05:06,039 --> 00:05:08,575
 approvals and audit for upgrades.
 
 103
-00:05:05,786 --> 00:05:08,839
+00:05:08,575 --> 00:05:11,648
 Day three: Scheduler and change windows;
 
 104
-00:05:08,839 --> 00:05:12,274
+00:05:11,648 --> 00:05:15,105
 Cisco ACI and fleet-scale, multi-vendor runs;
 
 105
-00:05:12,274 --> 00:05:17,082
+00:05:15,105 --> 00:05:19,946
 and Capstone: scheduled, approved, HA-aware upgrade end to end.
 
 106
-00:05:17,832 --> 00:05:22,004
+00:05:20,696 --> 00:05:25,751
 Every build in this course follows six engineering principles.
 
 107
-00:05:22,004 --> 00:05:23,820
+00:05:25,751 --> 00:05:27,953
 Model output is a proposal,
 
 108
-00:05:23,820 --> 00:05:27,319
+00:05:27,953 --> 00:05:32,193
 never a fact. Authorization lives outside the model.
 
 109
-00:05:27,319 --> 00:05:30,279
+00:05:32,193 --> 00:05:35,781
 A human approves every consequential action.
 
 110
-00:05:30,279 --> 00:05:32,567
+00:05:35,781 --> 00:05:38,554
 Decisions and evidence are logged.
 
 111
-00:05:32,567 --> 00:05:36,537
+00:05:38,554 --> 00:05:43,365
 The stack stays provider-agnostic. And quality is measured,
 
 112
-00:05:36,537 --> 00:05:37,344
+00:05:43,365 --> 00:05:44,344
 not assumed.
 
 113
-00:05:38,094 --> 00:05:40,558
+00:05:45,094 --> 00:05:47,839
 Eleven build modules. Three days,
 
 114
-00:05:40,558 --> 00:05:45,486
+00:05:47,839 --> 00:05:53,331
 hands-on. Four vendor families. And zero reboots without approval.
 
 115
-00:05:46,236 --> 00:05:49,186
+00:05:54,081 --> 00:05:57,720
 This course is for enterprise I T and network
 
 116
-00:05:49,186 --> 00:05:52,988
+00:05:57,720 --> 00:06:02,410
 operations teams, load balancer and data centre engineers,
 
 117
-00:05:52,988 --> 00:05:55,937
+00:06:02,410 --> 00:06:06,050
 N O C automation leads and change managers in
 
 118
-00:05:55,937 --> 00:05:59,018
+00:06:06,050 --> 00:06:09,851
 India and worldwide. You need basic networking,
 
 119
-00:05:59,018 --> 00:06:02,951
+00:06:09,851 --> 00:06:14,703
 load balancer administration, a Linux shell and some Python.
 
 120
-00:06:02,951 --> 00:06:06,163
+00:06:14,703 --> 00:06:18,666
 Experience with an A I coding assistant helps but
 
 121
-00:06:06,163 --> 00:06:07,212
+00:06:18,666 --> 00:06:19,960
 is not required.
 
 122
-00:06:07,962 --> 00:06:10,770
+00:06:20,710 --> 00:06:23,711
 Upgrade every device the same safe way.
 
 123
-00:06:10,770 --> 00:06:13,506
+00:06:23,711 --> 00:06:26,636
 Device Upgrade Automation with Claude.
 
 124
-00:06:13,506 --> 00:06:15,594
+00:06:26,636 --> 00:06:28,868
 Enrol now at gennoor dot com.

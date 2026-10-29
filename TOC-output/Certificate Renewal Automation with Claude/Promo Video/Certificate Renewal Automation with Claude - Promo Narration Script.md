@@ -1,6 +1,6 @@
 # Certificate Renewal Automation with Claude - promo narration
 
-Voice: neural TTS (en-US-AndrewNeural). Duration: 6.3 min.
+Voice: the presenter's own cloned voice. Duration: 6.5 min.
 
 **[hook]** The certificate expired at midnight. Nobody knew it was bound to the payments virtual server. By the time the first alert fired, the queue was already full.
 

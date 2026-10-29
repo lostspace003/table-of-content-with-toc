@@ -1,451 +1,451 @@
 1
-00:00:01,200 --> 00:00:04,013
+00:00:01,200 --> 00:00:04,414
 A data centre load balancer is moving to the
 
 2
-00:00:04,013 --> 00:00:06,250
+00:00:04,414 --> 00:00:06,970
 cloud. The cut-over is on Saturday.
 
 3
-00:00:06,250 --> 00:00:09,574
+00:00:06,970 --> 00:00:10,768
 The configuration on the new platform was rebuilt by
 
 4
-00:00:09,574 --> 00:00:12,643
+00:00:10,768 --> 00:00:14,274
 hand from a spreadsheet, and nobody can say with
 
 5
-00:00:12,643 --> 00:00:14,880
+00:00:14,274 --> 00:00:16,830
 certainty that the two sides match.
 
 6
-00:00:15,630 --> 00:00:17,687
+00:00:17,580 --> 00:00:19,688
 What if Claude read both sides,
 
 7
-00:00:17,687 --> 00:00:20,872
+00:00:19,688 --> 00:00:22,952
 object by object, told you exactly what differs,
 
 8
-00:00:20,872 --> 00:00:23,659
+00:00:22,952 --> 00:00:25,808
 why it matters, and what to fix before the
 
 9
-00:00:23,659 --> 00:00:27,242
+00:00:25,808 --> 00:00:29,480
 change window opens? That is configuration comparison,
 
 10
-00:00:27,242 --> 00:00:30,294
+00:00:29,480 --> 00:00:32,608
 automated with Claude, and governed by people.
 
 11
-00:00:31,044 --> 00:00:35,724
+00:00:33,358 --> 00:00:37,958
 Gennoor Tech presents Configuration Comparison Automation with Claude.
 
 12
-00:00:36,474 --> 00:00:39,692
+00:00:38,708 --> 00:00:41,902
 Two platforms. One verified difference report.
 
 13
-00:00:39,692 --> 00:00:42,070
+00:00:41,902 --> 00:00:44,263
 Cloud to cloud, physical to cloud,
 
 14
-00:00:42,070 --> 00:00:43,889
+00:00:44,263 --> 00:00:46,068
 or cloud back to physical,
 
 15
-00:00:43,889 --> 00:00:46,057
+00:00:46,068 --> 00:00:48,221
 the problem is always the same:
 
 16
-00:00:46,057 --> 00:00:50,464
+00:00:48,221 --> 00:00:52,596
 two configurations written in different dialects that must mean
 
 17
-00:00:50,464 --> 00:00:53,612
+00:00:52,596 --> 00:00:55,720
 the same thing. You build the pipeline in ten
 
 18
-00:00:53,612 --> 00:00:56,620
+00:00:55,720 --> 00:00:58,706
 modules. Claude plans, drafts and explains.
 
 19
-00:00:56,620 --> 00:00:59,418
+00:00:58,706 --> 00:01:01,484
 Deterministic Python collects and diffs.
 
 20
-00:00:59,418 --> 00:01:02,565
+00:01:01,484 --> 00:01:04,608
 A person approves every consequential action.
 
 21
-00:01:02,565 --> 00:01:04,314
+00:01:04,608 --> 00:01:06,344
 And everything is logged.
 
 22
-00:01:05,064 --> 00:01:07,623
+00:01:07,094 --> 00:01:09,776
 You start with the planning discipline:
 
 23
-00:01:07,623 --> 00:01:10,183
+00:01:09,776 --> 00:01:12,458
 what a migration comparison must prove,
 
 24
-00:01:10,183 --> 00:01:13,135
+00:01:12,458 --> 00:01:15,552
 which objects matter, and why a raw text diff
 
 25
-00:01:13,135 --> 00:01:16,220
+00:01:15,552 --> 00:01:18,784
 between an F five and a NetScaler is worthless.
 
 26
-00:01:16,220 --> 00:01:18,188
+00:01:18,784 --> 00:01:20,847
 Then you set up the workbench.
 
 27
-00:01:18,188 --> 00:01:20,354
+00:01:20,847 --> 00:01:23,116
 Claude Code for interactive work,
 
 28
-00:01:20,354 --> 00:01:22,979
+00:01:23,116 --> 00:01:25,866
 the Claude Agent S D K for the pipeline,
 
 29
-00:01:22,979 --> 00:01:26,260
+00:01:25,866 --> 00:01:29,304
 and M C P servers that expose read-only collectors
 
 30
-00:01:26,260 --> 00:01:29,016
+00:01:29,304 --> 00:01:32,192
 as tools Claude can call but never bypass.
 
 31
-00:01:29,766 --> 00:01:33,336
+00:01:32,942 --> 00:01:36,283
 Day one ends with collection and normalisation.
 
 32
-00:01:33,336 --> 00:01:37,818
+00:01:36,283 --> 00:01:40,477
 You pull running configuration from F five through iControl
 
 33
-00:01:37,818 --> 00:01:39,338
+00:01:40,477 --> 00:01:41,899
 R E S T and t m s h,
 
 34
-00:01:39,338 --> 00:01:42,452
+00:01:41,899 --> 00:01:44,814
 from Citrix NetScaler through the N I T R
 
 35
-00:01:42,452 --> 00:01:44,655
+00:01:44,814 --> 00:01:46,875
 O A P I, from Radware Alteon,
 
 36
-00:01:44,655 --> 00:01:47,998
+00:01:46,875 --> 00:01:50,003
 from other load balancers such as Anaya L B,
 
 37
-00:01:47,998 --> 00:01:50,732
+00:01:50,003 --> 00:01:52,562
 and from Cisco A P I C and Terraform
 
 38
-00:01:50,732 --> 00:01:53,315
+00:01:52,562 --> 00:01:54,979
 state. Every virtual server, pool,
 
 39
-00:01:53,315 --> 00:01:58,101
+00:01:54,979 --> 00:01:59,458
 monitor, certificate and policy lands in one canonical Pydantic
 
 40
-00:01:58,101 --> 00:02:02,431
+00:01:59,458 --> 00:02:03,510
 model, with provenance on every field and unknowns marked
 
 41
-00:02:02,431 --> 00:02:04,710
+00:02:03,510 --> 00:02:05,642
 explicitly instead of guessed.
 
 42
-00:02:05,460 --> 00:02:07,103
+00:02:06,392 --> 00:02:08,078
 On day two Claude plans.
 
 43
-00:02:07,103 --> 00:02:10,593
+00:02:08,078 --> 00:02:11,660
 Given the source inventory and the target platform,
 
 44
-00:02:10,593 --> 00:02:13,742
+00:02:11,660 --> 00:02:14,890
 it drafts the migration plan as structured J S
 
 45
-00:02:13,742 --> 00:02:16,138
+00:02:14,890 --> 00:02:17,348
 O N: object mappings, feature gaps,
 
 46
-00:02:16,138 --> 00:02:19,834
+00:02:17,348 --> 00:02:21,141
 dependency order and risks. It must cite the inventory
 
 47
-00:02:19,834 --> 00:02:22,708
+00:02:21,141 --> 00:02:24,091
 it was given, and it must say plainly what
 
 48
-00:02:22,708 --> 00:02:26,336
+00:02:24,091 --> 00:02:27,813
 cannot be mapped. Each plan step carries a confidence
 
 49
-00:02:26,336 --> 00:02:29,622
+00:02:27,813 --> 00:02:31,184
 and an owner, so the review meeting argues about
 
 50
-00:02:29,622 --> 00:02:33,318
+00:02:31,184 --> 00:02:34,977
 facts, not formatting. You test it with incomplete and
 
 51
-00:02:33,318 --> 00:02:36,808
+00:02:34,977 --> 00:02:38,558
 contradictory input and watch it refuse to invent a
 
 52
-00:02:36,808 --> 00:02:37,356
+00:02:38,558 --> 00:02:39,120
 mapping.
 
 53
-00:02:38,106 --> 00:02:42,350
+00:02:39,870 --> 00:02:44,701
 Then the diff engine. Deterministic code compares canonical models
 
 54
-00:02:42,350 --> 00:02:45,886
+00:02:44,701 --> 00:02:48,726
 field by field, classifies each difference by severity,
 
 55
-00:02:45,886 --> 00:02:48,394
+00:02:48,726 --> 00:02:51,580
 and produces a machine-readable report.
 
 56
-00:02:48,394 --> 00:02:50,387
+00:02:51,580 --> 00:02:53,849
 Claude never computes the diff.
 
 57
-00:02:50,387 --> 00:02:53,280
+00:02:53,849 --> 00:02:57,142
 It reads the diff through tool use and writes
 
 58
-00:02:53,280 --> 00:02:57,138
+00:02:57,142 --> 00:03:01,533
 the explanation, the drift summary and the remediation steps
 
 59
-00:02:57,138 --> 00:02:58,617
+00:03:01,533 --> 00:03:03,217
 an engineer can act on,
 
 60
-00:02:58,617 --> 00:03:01,125
+00:03:03,217 --> 00:03:06,071
 with every claim tied to a report line.
 
 61
-00:03:01,125 --> 00:03:04,532
+00:03:06,071 --> 00:03:09,950
 You will seed a hidden persistence mismatch and watch
 
 62
-00:03:04,532 --> 00:03:05,754
+00:03:09,950 --> 00:03:11,340
 the engine find it.
 
 63
-00:03:06,504 --> 00:03:10,847
+00:03:12,090 --> 00:03:16,494
 Day three is governance. Collectors run with read-only credentials.
 
 64
-00:03:10,847 --> 00:03:14,153
+00:03:16,494 --> 00:03:19,845
 Every report becomes a GitHub pull request with the
 
 65
-00:03:14,153 --> 00:03:18,366
+00:03:19,845 --> 00:03:24,117
 evidence attached, and a ServiceNow change record created through
 
 66
-00:03:18,366 --> 00:03:20,894
+00:03:24,117 --> 00:03:26,680
 the Table A P I and routed for approval
 
 67
-00:03:20,894 --> 00:03:24,265
+00:03:26,680 --> 00:03:30,098
 in Flow Designer. Nothing is applied to any platform
 
 68
-00:03:24,265 --> 00:03:27,635
+00:03:30,098 --> 00:03:33,515
 without a named approver, and the approval itself is
 
 69
-00:03:27,635 --> 00:03:29,256
+00:03:33,515 --> 00:03:35,158
 part of the audit record.
 
 70
-00:03:30,006 --> 00:03:32,477
+00:03:35,908 --> 00:03:38,239
 You then wire it into GitHub Actions:
 
 71
-00:03:32,477 --> 00:03:36,685
+00:03:38,239 --> 00:03:42,206
 Terraform plan output compared against live state before apply,
 
 72
-00:03:36,685 --> 00:03:39,423
+00:03:42,206 --> 00:03:44,788
 scheduled drift checks between platforms,
 
 73
-00:03:39,423 --> 00:03:42,428
+00:03:44,788 --> 00:03:47,622
 and an audit trail that records every prompt,
 
 74
-00:03:42,428 --> 00:03:44,766
+00:03:47,622 --> 00:03:49,826
 every tool call and every decision,
 
 75
-00:03:44,766 --> 00:03:47,838
+00:03:49,826 --> 00:03:52,723
 so a reviewer can replay the run months later.
 
 76
-00:03:48,588 --> 00:03:51,654
+00:03:53,473 --> 00:03:56,801
 Every lab runs against lab devices and recorded A
 
 77
-00:03:51,654 --> 00:03:54,533
+00:03:56,801 --> 00:03:59,926
 P I responses, so you can break things safely.
 
 78
-00:03:54,533 --> 00:03:57,099
+00:03:59,926 --> 00:04:02,710
 You will compare a physical F five with a
 
 79
-00:03:57,099 --> 00:04:01,104
+00:04:02,710 --> 00:04:07,058
 cloud NetScaler, seed a hidden persistence timeout mismatch into
 
 80
-00:04:01,104 --> 00:04:04,170
+00:04:07,058 --> 00:04:10,386
 the target, and prove the diff engine catches it,
 
 81
-00:04:04,170 --> 00:04:07,048
+00:04:10,386 --> 00:04:13,510
 Claude explains it, and the tests never let it
 
 82
-00:04:07,048 --> 00:04:10,803
+00:04:13,510 --> 00:04:17,586
 slip through. Then you attempt an unapproved remediation and
 
 83
-00:04:10,803 --> 00:04:13,932
+00:04:17,586 --> 00:04:20,982
 prove the pipeline blocks it and logs the attempt.
 
 84
-00:04:14,682 --> 00:04:17,127
+00:04:21,732 --> 00:04:24,219
 Here is the full table of contents,
 
 85
-00:04:17,127 --> 00:04:19,013
+00:04:24,219 --> 00:04:26,138
 10 modules over three days.
 
 86
-00:04:19,013 --> 00:04:23,204
+00:04:26,138 --> 00:04:30,402
 Day one: Configuration comparison as a migration discipline;
 
 87
-00:04:23,204 --> 00:04:26,347
+00:04:30,402 --> 00:04:33,600
 Setting up Claude Code, the Agent SDK and MCP
 
 88
-00:04:26,347 --> 00:04:30,747
+00:04:33,600 --> 00:04:38,077
 for the workflow; Collecting configuration from every platform;
 
 89
-00:04:30,747 --> 00:04:34,449
+00:04:38,077 --> 00:04:41,843
 and Normalising into a canonical configuration model.
 
 90
-00:04:34,449 --> 00:04:37,243
+00:04:41,843 --> 00:04:44,686
 Day two: Migration planning with Claude;
 
 91
-00:04:37,243 --> 00:04:41,923
+00:04:44,686 --> 00:04:49,447
 The deterministic diff engine; and Claude explains the differences.
 
 92
-00:04:41,923 --> 00:04:46,952
+00:04:49,447 --> 00:04:54,564
 Day three: Guardrails, approvals and audit for configuration comparison;
 
 93
-00:04:46,952 --> 00:04:50,654
+00:04:54,564 --> 00:04:58,330
 Scheduling, Terraform plan checks and GitHub Actions;
 
 94
-00:04:50,654 --> 00:04:54,426
+00:04:58,330 --> 00:05:02,168
 and Capstone: end-to-end physical-to-cloud comparison.
 
 95
-00:04:55,176 --> 00:04:59,348
+00:05:02,918 --> 00:05:07,974
 Every build in this course follows six engineering principles.
 
 96
-00:04:59,348 --> 00:05:01,164
+00:05:07,974 --> 00:05:10,175
 Model output is a proposal,
 
 97
-00:05:01,164 --> 00:05:04,663
+00:05:10,175 --> 00:05:14,416
 never a fact. Authorization lives outside the model.
 
 98
-00:05:04,663 --> 00:05:07,623
+00:05:14,416 --> 00:05:18,004
 A human approves every consequential action.
 
 99
-00:05:07,623 --> 00:05:09,911
+00:05:18,004 --> 00:05:20,776
 Decisions and evidence are logged.
 
 100
-00:05:09,911 --> 00:05:13,881
+00:05:20,776 --> 00:05:25,587
 The stack stays provider-agnostic. And quality is measured,
 
 101
-00:05:13,881 --> 00:05:14,688
+00:05:25,587 --> 00:05:26,566
 not assumed.
 
 102
-00:05:15,438 --> 00:05:19,712
+00:05:27,316 --> 00:05:31,367
 Three migration directions. Five platform A P I families.
 
 103
-00:05:19,712 --> 00:05:22,561
+00:05:31,367 --> 00:05:34,068
 One canonical schema for every object.
 
 104
-00:05:22,561 --> 00:05:25,710
+00:05:34,068 --> 00:05:37,053
 And zero changes applied without approval.
 
 105
-00:05:26,460 --> 00:05:29,530
+00:05:37,803 --> 00:05:41,412
 This course is for enterprise I T and network
 
 106
-00:05:29,530 --> 00:05:33,760
+00:05:41,412 --> 00:05:46,384
 operations teams, load balancer and cloud migration engineers,
 
 107
-00:05:33,760 --> 00:05:36,830
+00:05:46,384 --> 00:05:49,992
 and automation leads, in India and worldwide.
 
 108
-00:05:36,830 --> 00:05:40,786
+00:05:49,992 --> 00:05:54,644
 You need basic networking, Python and command line skills.
 
 109
-00:05:40,786 --> 00:05:42,901
+00:05:54,644 --> 00:05:57,130
 Prior use of Claude is helpful,
 
 110
-00:05:42,901 --> 00:05:43,788
+00:05:57,130 --> 00:05:58,172
 not required.
 
 111
-00:05:44,538 --> 00:05:48,080
+00:05:58,922 --> 00:06:02,839
 Know every difference before the change window opens.
 
 112
-00:05:48,080 --> 00:05:51,288
+00:06:02,839 --> 00:06:06,387
 Configuration Comparison Automation with Claude.
 
 113
-00:05:51,288 --> 00:05:53,226
+00:06:06,387 --> 00:06:08,530
 Enrol now at gennoor dot com.

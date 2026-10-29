@@ -1,6 +1,6 @@
 # Cisco ACI Upgrade Automation with Claude - promo narration
 
-Voice: neural TTS (en-US-AndrewNeural). Duration: 6.0 min.
+Voice: the presenter's own cloned voice. Duration: 6.1 min.
 
 **[hook]** An A C I fabric upgrade is a weekend you do not get back. Two hundred switches, a cluster that must be fully fit before anything moves, and one bad group away from rebooting both v P C peers.
 

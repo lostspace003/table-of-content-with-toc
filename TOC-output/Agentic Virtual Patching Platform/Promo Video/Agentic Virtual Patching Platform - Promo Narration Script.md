@@ -1,6 +1,6 @@
 # Agentic Virtual Patching Platform - promo narration
 
-Voice: neural TTS (en-US-AndrewNeural). Duration: 5.1 min.
+Voice: the presenter's own cloned voice. Duration: 5.1 min.
 
 **[hook]** A critical C V E lands at four in the afternoon. The permanent fix is weeks away. The exposure is now.
 

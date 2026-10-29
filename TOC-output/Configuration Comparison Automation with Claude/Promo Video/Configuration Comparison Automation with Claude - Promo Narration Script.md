@@ -1,6 +1,6 @@
 # Configuration Comparison Automation with Claude - promo narration
 
-Voice: neural TTS (en-US-AndrewNeural). Duration: 6.0 min.
+Voice: the presenter's own cloned voice. Duration: 6.2 min.
 
 **[hook]** A data centre load balancer is moving to the cloud. The cut-over is on Saturday. The configuration on the new platform was rebuilt by hand from a spreadsheet, and nobody can say with certainty that the two sides match.
 

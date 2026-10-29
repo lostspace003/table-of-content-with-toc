@@ -1,471 +1,471 @@
 1
-00:00:01,200 --> 00:00:04,677
+00:00:01,200 --> 00:00:04,828
 A placed candidate's confirmation mail lands at ten in
 
 2
-00:00:04,677 --> 00:00:08,153
+00:00:04,828 --> 00:00:08,456
 the morning. The staffing vendor needs the bill today,
 
 3
-00:00:08,153 --> 00:00:09,570
+00:00:08,456 --> 00:00:09,934
 with G S T or without,
 
 4
-00:00:09,570 --> 00:00:11,823
+00:00:09,934 --> 00:00:12,285
 and the amount had better be right.
 
 5
-00:00:11,823 --> 00:00:14,913
+00:00:12,285 --> 00:00:15,510
 Someone opens a spreadsheet, retypes the figure,
 
 6
-00:00:14,913 --> 00:00:16,780
+00:00:15,510 --> 00:00:17,458
 picks a tax rate from memory,
 
 7
-00:00:16,780 --> 00:00:17,424
+00:00:17,458 --> 00:00:18,130
 and hopes.
 
 8
-00:00:18,174 --> 00:00:20,019
+00:00:18,880 --> 00:00:20,673
 What if Claude read the mail,
 
 9
-00:00:20,019 --> 00:00:23,773
+00:00:20,673 --> 00:00:24,322
 extracted the amount, checked it against the vendor master,
 
 10
-00:00:23,773 --> 00:00:27,018
+00:00:24,322 --> 00:00:27,476
 drafted both versions, and then waited for a person
 
 11
-00:00:27,018 --> 00:00:29,817
+00:00:27,476 --> 00:00:30,197
 to say yes before the right one was numbered
 
 12
-00:00:29,817 --> 00:00:32,489
+00:00:30,197 --> 00:00:32,795
 or sent? That is bill creation automation,
 
 13
-00:00:32,489 --> 00:00:34,398
+00:00:32,795 --> 00:00:34,650
 done with agents, done safely.
 
 14
-00:00:35,148 --> 00:00:39,036
+00:00:35,400 --> 00:00:40,045
 Gennoor Tech presents Bill Creation Automation with Claude.
 
 15
-00:00:39,786 --> 00:00:41,980
+00:00:40,795 --> 00:00:43,039
 One mail in. The right bill out.
 
 16
-00:00:41,980 --> 00:00:44,859
+00:00:43,039 --> 00:00:45,986
 You build the pipeline in nine increments,
 
 17
-00:00:44,859 --> 00:00:47,945
+00:00:45,986 --> 00:00:49,142
 and every increment is something you can run,
 
 18
-00:00:47,945 --> 00:00:50,344
+00:00:49,142 --> 00:00:51,598
 test and demonstrate. Claude reads,
 
 19
-00:00:50,344 --> 00:00:54,526
+00:00:51,598 --> 00:00:55,877
 extracts and explains. Deterministic Python computes the tax.
 
 20
-00:00:54,526 --> 00:00:57,269
+00:00:55,877 --> 00:00:58,683
 A person approves. Every step is logged,
 
 21
-00:00:57,269 --> 00:01:00,354
+00:00:58,683 --> 00:01:01,840
 from the first prompt to the issued document.
 
 22
-00:01:01,104 --> 00:01:04,394
+00:01:02,590 --> 00:01:06,141
 You begin with the workflow as it really happens.
 
 23
-00:01:04,394 --> 00:01:07,618
+00:01:06,141 --> 00:01:09,620
 Who sends the mail, what a compliant tax invoice
 
 24
-00:01:07,618 --> 00:01:10,707
+00:01:09,620 --> 00:01:12,954
 must carry, and when the company issues with G
 
 25
-00:01:10,707 --> 00:01:12,856
+00:01:12,954 --> 00:01:15,274
 S T and when it issues a bill of
 
 26
-00:01:12,856 --> 00:01:16,146
+00:01:15,274 --> 00:01:18,825
 supply without it. Then you set up the toolchain.
 
 27
-00:01:16,146 --> 00:01:18,295
+00:01:18,825 --> 00:01:21,145
 Claude Code on your workstation.
 
 28
-00:01:18,295 --> 00:01:20,511
+00:01:21,145 --> 00:01:23,536
 The Claude Agent S D K in Python.
 
 29
-00:01:20,511 --> 00:01:22,996
+00:01:23,536 --> 00:01:26,218
 And an M C P server that exposes your
 
 30
-00:01:22,996 --> 00:01:26,622
+00:01:26,218 --> 00:01:30,132
 mailbox and vendor master as read-only tools the agent
 
 31
-00:01:26,622 --> 00:01:28,368
+00:01:30,132 --> 00:01:32,017
 can call but never bypass.
 
 32
-00:01:29,118 --> 00:01:33,112
+00:01:32,767 --> 00:01:36,522
 Then intake. The agent reads each mail through the
 
 33
-00:01:33,112 --> 00:01:35,509
+00:01:36,522 --> 00:01:38,775
 Microsoft Graph A P I or I M A
 
 34
-00:01:35,509 --> 00:01:38,305
+00:01:38,775 --> 00:01:41,404
 P, including the P D F attachments,
 
 35
-00:01:38,305 --> 00:01:41,181
+00:01:41,404 --> 00:01:44,108
 and returns a strict J S O N record:
 
 36
-00:01:41,181 --> 00:01:44,936
+00:01:44,108 --> 00:01:47,638
 candidate, vendor, amount, currency, G S T I N,
 
 37
-00:01:44,936 --> 00:01:49,330
+00:01:47,638 --> 00:01:51,769
 service period, and a confidence score for every field.
 
 38
-00:01:49,330 --> 00:01:54,682
+00:01:51,769 --> 00:01:56,801
 Pydantic validates the record. Anything missing or contradictory is
 
 39
-00:01:54,682 --> 00:01:57,558
+00:01:56,801 --> 00:01:59,505
 flagged for a person, never guessed.
 
 40
-00:01:58,308 --> 00:02:01,073
+00:02:00,255 --> 00:02:03,136
 On day two the numbers meet the rules.
 
 41
-00:02:01,073 --> 00:02:03,983
+00:02:03,136 --> 00:02:06,168
 You load the vendor master into S Q Lite
 
 42
-00:02:03,983 --> 00:02:07,985
+00:02:06,168 --> 00:02:10,338
 and reconcile the claimed amount against the rate card,
 
 43
-00:02:07,985 --> 00:02:11,259
+00:02:10,338 --> 00:02:13,750
 with a tolerance you control and a reason for
 
 44
-00:02:11,259 --> 00:02:14,169
+00:02:13,750 --> 00:02:16,782
 every mismatch. Then you write the G S T
 
 45
-00:02:14,169 --> 00:02:16,716
+00:02:16,782 --> 00:02:19,436
 engine as plain Python. C G S T and
 
 46
-00:02:16,716 --> 00:02:18,971
+00:02:19,436 --> 00:02:21,786
 S G S T for intra-state supply.
 
 47
-00:02:18,971 --> 00:02:20,572
+00:02:21,786 --> 00:02:23,454
 I G S T across states.
 
 48
-00:02:20,572 --> 00:02:22,173
+00:02:23,454 --> 00:02:25,122
 H S N and S A C codes,
 
 49
-00:02:22,173 --> 00:02:25,520
+00:02:25,122 --> 00:02:28,610
 rounding, and reverse charge where it applies.
 
 50
-00:02:25,520 --> 00:02:29,012
+00:02:28,610 --> 00:02:32,249
 Claude explains the computation to the reviewer.
 
 51
-00:02:29,012 --> 00:02:30,540
+00:02:32,249 --> 00:02:33,841
 It never performs it.
 
 52
-00:02:31,290 --> 00:02:33,392
+00:02:34,591 --> 00:02:37,373
 Then generation. Two versioned templates,
 
 53
-00:02:33,392 --> 00:02:35,186
+00:02:37,373 --> 00:02:39,749
 a tax invoice and a bill of supply,
 
 54
-00:02:35,186 --> 00:02:37,390
+00:02:39,749 --> 00:02:42,667
 rendered to P D F by the same deterministic
 
 55
-00:02:37,390 --> 00:02:39,902
+00:02:42,667 --> 00:02:45,993
 code every time, from the same validated request.
 
 56
-00:02:39,902 --> 00:02:42,567
+00:02:45,993 --> 00:02:49,522
 Both previews are drafted; only the one that applies
 
 57
-00:02:42,567 --> 00:02:45,130
+00:02:49,522 --> 00:02:52,915
 is ever issued. Invoice numbers live in a sequence
 
 58
-00:02:45,130 --> 00:02:47,180
+00:02:52,915 --> 00:02:55,630
 that only the approved path can advance.
 
 59
-00:02:47,180 --> 00:02:50,307
+00:02:55,630 --> 00:02:59,770
 Claude drafts the covering mail and the one-paragraph summary
 
 60
-00:02:50,307 --> 00:02:52,050
+00:02:59,770 --> 00:03:02,078
 a finance reviewer actually reads.
 
 61
-00:02:52,800 --> 00:02:56,533
+00:03:02,828 --> 00:03:06,598
 Day three is guardrails. Every bill enters an approval
 
 62
-00:02:56,533 --> 00:02:58,399
+00:03:06,598 --> 00:03:08,483
 queue with the source mail,
 
 63
-00:02:58,399 --> 00:03:01,717
+00:03:08,483 --> 00:03:11,834
 the extracted fields, the reconciliation result,
 
 64
-00:03:01,717 --> 00:03:05,104
+00:03:11,834 --> 00:03:15,255
 the tax breakdown and both previews side by side.
 
 65
-00:03:05,104 --> 00:03:08,422
+00:03:15,255 --> 00:03:18,606
 A person approves in ServiceNow or in the review
 
 66
-00:03:08,422 --> 00:03:11,048
+00:03:18,606 --> 00:03:21,259
 C L I. Until then nothing is numbered,
 
 67
-00:03:11,048 --> 00:03:14,228
+00:03:21,259 --> 00:03:24,471
 nothing is sent, and the audit log records who
 
 68
-00:03:14,228 --> 00:03:16,440
+00:03:24,471 --> 00:03:26,705
 saw what, who decided, and when.
 
 69
-00:03:17,190 --> 00:03:19,271
+00:03:27,455 --> 00:03:29,399
 You then harden the pipeline.
 
 70
-00:03:19,271 --> 00:03:22,356
+00:03:29,399 --> 00:03:32,282
 Pytest covers the G S T engine across every
 
 71
-00:03:22,356 --> 00:03:24,580
+00:03:32,282 --> 00:03:34,361
 rate slab and every state pair,
 
 72
-00:03:24,580 --> 00:03:27,952
+00:03:34,361 --> 00:03:37,512
 with golden P D F files guarding the templates.
 
 73
-00:03:27,952 --> 00:03:31,611
+00:03:37,512 --> 00:03:40,931
 GitHub Actions runs the suite on every pull request
 
 74
-00:03:31,611 --> 00:03:35,485
+00:03:40,931 --> 00:03:44,551
 and push. And approved bills export to your accounting
 
 75
-00:03:35,485 --> 00:03:37,494
+00:03:44,551 --> 00:03:46,429
 system as C S V or Tally X M
 
 76
-00:03:37,494 --> 00:03:41,153
+00:03:46,429 --> 00:03:49,848
 L, ready for posting, with the mail dispatched only
 
 77
-00:03:41,153 --> 00:03:44,166
+00:03:49,848 --> 00:03:52,664
 after the approver's decision is recorded.
 
 78
-00:03:44,916 --> 00:03:47,780
+00:03:53,414 --> 00:03:56,371
 Every lab runs on a synthetic mailbox and a
 
 79
-00:03:47,780 --> 00:03:51,111
+00:03:56,371 --> 00:03:59,810
 fictional vendor master. You will feed the agent a
 
 80
-00:03:51,111 --> 00:03:53,042
+00:03:59,810 --> 00:04:01,805
 mail with a missing G S T I N
 
 81
-00:03:53,042 --> 00:03:55,107
+00:04:01,805 --> 00:04:03,937
 and watch it refuse to proceed.
 
 82
-00:03:55,107 --> 00:03:58,504
+00:04:03,937 --> 00:04:07,444
 You will trace an over-claim to its rate-card line,
 
 83
-00:03:58,504 --> 00:04:01,102
+00:04:07,444 --> 00:04:10,127
 break a rate slab in a pull request and
 
 84
-00:04:01,102 --> 00:04:03,966
+00:04:10,127 --> 00:04:13,084
 see the build fail, then approve a bill and
 
 85
-00:04:03,966 --> 00:04:05,964
+00:04:13,084 --> 00:04:15,147
 read its complete audit trail.
 
 86
-00:04:06,714 --> 00:04:09,325
+00:04:15,897 --> 00:04:18,505
 Here is the full table of contents,
 
 87
-00:04:09,325 --> 00:04:11,264
+00:04:18,505 --> 00:04:20,442
 9 modules over three days.
 
 88
-00:04:11,264 --> 00:04:14,920
+00:04:20,442 --> 00:04:24,092
 Day one: The vendor bill workflow and the agentic
 
 89
-00:04:14,920 --> 00:04:17,381
+00:04:24,092 --> 00:04:26,551
 baseline; Setting up Claude Code,
 
 90
-00:04:17,381 --> 00:04:19,918
+00:04:26,551 --> 00:04:29,084
 the Agent SDK and MCP for billing;
 
 91
-00:04:19,918 --> 00:04:23,051
+00:04:29,084 --> 00:04:32,213
 and Mail intake and structured extraction.
 
 92
-00:04:23,051 --> 00:04:27,750
+00:04:32,213 --> 00:04:36,907
 Day two: Vendor master, amount verification and reconciliation;
 
 93
-00:04:27,750 --> 00:04:31,331
+00:04:36,907 --> 00:04:40,483
 The GST computation engine; and Bill generation,
 
 94
-00:04:31,331 --> 00:04:33,942
+00:04:40,483 --> 00:04:43,090
 numbering and templates. Day three:
 
 95
-00:04:33,942 --> 00:04:37,672
+00:04:43,090 --> 00:04:46,815
 Guardrails, approvals and audit for bill issuance;
 
 96
-00:04:37,672 --> 00:04:40,357
+00:04:46,815 --> 00:04:49,497
 Testing, CI and accounting hand-off;
 
 97
-00:04:40,357 --> 00:04:43,938
+00:04:49,497 --> 00:04:53,073
 and Capstone: end-to-end bill creation pipeline.
 
 98
-00:04:44,688 --> 00:04:48,860
+00:04:53,823 --> 00:04:58,879
 Every build in this course follows six engineering principles.
 
 99
-00:04:48,860 --> 00:04:50,676
+00:04:58,879 --> 00:05:01,081
 Model output is a proposal,
 
 100
-00:04:50,676 --> 00:04:54,175
+00:05:01,081 --> 00:05:05,321
 never a fact. Authorization lives outside the model.
 
 101
-00:04:54,175 --> 00:04:57,135
+00:05:05,321 --> 00:05:08,909
 A human approves every consequential action.
 
 102
-00:04:57,135 --> 00:04:59,423
+00:05:08,909 --> 00:05:11,682
 Decisions and evidence are logged.
 
 103
-00:04:59,423 --> 00:05:03,393
+00:05:11,682 --> 00:05:16,493
 The stack stays provider-agnostic. And quality is measured,
 
 104
-00:05:03,393 --> 00:05:04,200
+00:05:16,493 --> 00:05:17,471
 not assumed.
 
 105
-00:05:04,950 --> 00:05:07,054
+00:05:18,221 --> 00:05:20,438
 Nine build steps. Three days,
 
 106
-00:05:07,054 --> 00:05:10,391
+00:05:20,438 --> 00:05:23,955
 hands-on. Two drafts from one source of truth,
 
 107
-00:05:10,391 --> 00:05:14,454
+00:05:23,955 --> 00:05:28,236
 one bill issued. And zero bills issued without approval.
 
 108
-00:05:15,204 --> 00:05:18,195
+00:05:28,986 --> 00:05:32,258
 This course is for enterprise I T and network
 
 109
-00:05:18,195 --> 00:05:22,648
+00:05:32,258 --> 00:05:37,129
 operations teams, finance operations and shared-services engineers,
 
 110
-00:05:22,648 --> 00:05:26,370
+00:05:37,129 --> 00:05:41,201
 and automation and platform teams in India and worldwide
 
 111
-00:05:26,370 --> 00:05:30,224
+00:05:41,201 --> 00:05:45,418
 who want to automate billing without surrendering control.
 
 112
-00:05:30,224 --> 00:05:32,949
+00:05:45,418 --> 00:05:48,398
 You need basic Python, comfort with J S O
 
 113
-00:05:32,949 --> 00:05:35,275
+00:05:48,398 --> 00:05:50,943
 N, and a working knowledge of G S T
 
 114
-00:05:35,275 --> 00:05:35,940
+00:05:50,943 --> 00:05:51,670
 invoicing.
 
 115
-00:05:36,690 --> 00:05:39,938
+00:05:52,420 --> 00:05:55,896
 Turn every candidate mail into a correct bill,
 
 116
-00:05:39,938 --> 00:05:41,774
+00:05:55,896 --> 00:05:57,860
 with a person in the loop.
 
 117
-00:05:41,774 --> 00:05:44,386
+00:05:57,860 --> 00:06:00,656
 Bill Creation Automation with Claude.
 
 118
-00:05:44,386 --> 00:05:46,434
+00:06:00,656 --> 00:06:02,847
 Enrol now at gennoor dot com.

@@ -1,6 +1,6 @@
 # Agentic Attack Surface Management - promo narration
 
-Voice: neural TTS (en-US-AndrewNeural). Duration: 5.1 min.
+Voice: the presenter's own cloned voice. Duration: 5.1 min.
 
 **[hook]** You cannot protect what you cannot find. Forgotten subdomains. Expired certificates. Cloud resources nobody owns.
 

@@ -1,6 +1,6 @@
 # HR Hiring Flow Automation with Claude - promo narration
 
-Voice: neural TTS (en-US-AndrewNeural). Duration: 6.2 min.
+Voice: the presenter's own cloned voice. Duration: 6.5 min.
 
 **[hook]** Three hundred applications land in the job portal overnight. Your recruiters have two days, one phone each, and a hiring manager who wants a shortlist by Friday. Every profile has to be filtered, downloaded, called, judged and pitched, and every one of those steps is done by hand.
 

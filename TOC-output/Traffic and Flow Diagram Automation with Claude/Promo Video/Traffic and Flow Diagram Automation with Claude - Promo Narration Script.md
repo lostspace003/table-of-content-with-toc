@@ -1,6 +1,6 @@
 # Traffic and Flow Diagram Automation with Claude - promo narration
 
-Voice: neural TTS (en-US-AndrewNeural). Duration: 5.8 min.
+Voice: the presenter's own cloned voice. Duration: 6.0 min.
 
 **[hook]** A ticket asks for the traffic flow from the branch office to the payments V I P. Someone opens a terminal, runs traceroute, runs ping, and starts drawing boxes by hand. By the time the diagram is finished, the path has already changed.
 

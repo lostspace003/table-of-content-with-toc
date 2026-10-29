@@ -1,6 +1,6 @@
 # Device Upgrade Automation with Claude - promo narration
 
-Voice: neural TTS (en-US-AndrewNeural). Duration: 6.4 min.
+Voice: the presenter's own cloned voice. Duration: 6.6 min.
 
 **[hook]** It is two in the morning. The change window is open, the firmware is uploaded, the H A pair is waiting, and the box says disk full. Again. The window closes, the ticket slips a week, and nobody slept.
 

@@ -1,6 +1,6 @@
 # Troubleshooting Automation with Claude - promo narration
 
-Voice: neural TTS (en-US-AndrewNeural). Duration: 6.1 min.
+Voice: the presenter's own cloned voice. Duration: 6.3 min.
 
 **[hook]** An incident lands in ServiceNow at nine at night. The acknowledgement mail goes out, and then the questions begin. Which V I P? Since when? What changed? Who is looking at it? And the engineer on call is typing the same first five commands they typed last week.
 

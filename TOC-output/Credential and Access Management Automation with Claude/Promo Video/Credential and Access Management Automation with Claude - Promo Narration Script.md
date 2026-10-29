@@ -1,6 +1,6 @@
 # Credential and Access Management Automation with Claude - promo narration
 
-Voice: neural TTS (en-US-AndrewNeural). Duration: 6.3 min.
+Voice: the presenter's own cloned voice. Duration: 6.5 min.
 
 **[hook]** A new network engineer joins on Monday. By Thursday they still cannot log in to a single load balancer, and five tickets are sitting in five different queues, each waiting for someone to remember the right role.
 

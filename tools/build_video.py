@@ -17,7 +17,9 @@ WORK = HERE.parent / "vwork"
 FPS = 30
 W, H = 1920, 1080
 MIN_SECONDS = 5 * 60 + 8
-VOICE = "en-US-AndrewNeural"
+VOICE = "Jalal (cloned course voice)"
+VOICE_DIR = Path(os.environ.get("VOICE_DIR", HERE.parent.parent / "out" / "_work"))
+LESSONS = json.loads(Path(os.environ.get("VOICE_LESSONS", HERE.parent.parent / "lessons.json")).read_text(encoding="utf-8"))
 GAP = 0.75  # pause between narration segments
 
 
@@ -32,24 +34,12 @@ def dur(path):
 
 async def tts_all(course, wdir):
     """Generate one mp3 per narration segment (cached)."""
-    sys.path.insert(0, str(HERE.parent))
-    from tts import main as tts_one
     files = []
-    import hashlib
+    lesson = LESSONS[course["folder"]]
     for i, (scene, text) in enumerate(course["video"]["narration"]):
-        f = wdir / f"n_{hashlib.sha1((VOICE + text).encode()).hexdigest()[:12]}.mp3"
-        expect = len(text.split()) / 3.6  # rough lower bound in seconds
-        if not f.exists() or f.stat().st_size == 0 or dur(f) < expect:
-            for attempt in range(6):
-                try:
-                    if f.exists(): f.unlink()
-                    await tts_one(text, str(f), VOICE)
-                    if f.stat().st_size > 0 and dur(f) >= expect:
-                        break
-                    print("tts too short, retry", i, attempt, round(dur(f), 1), "<", round(expect, 1))
-                except Exception as e:  # network hiccup: retry
-                    print("tts retry", i, attempt, e)
-                    await asyncio.sleep(2 + attempt * 2)
+        f = VOICE_DIR / lesson / "voice" / f"s{i:02d}.wav"   # owner's voice, voiced on Kaggle (toc_kaggle.py)
+        if not f.exists() or f.stat().st_size == 0:
+            raise FileNotFoundError(f)
         files.append(f)
     return files
 
@@ -160,7 +150,7 @@ async def render_frames(html_path, total, video_tmp):
                            "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-pix_fmt", "yuv420p", "-r", str(FPS), str(video_tmp)],
                           stdin=subprocess.PIPE)
     async with async_playwright() as p:
-        b = await p.chromium.launch(executable_path="/opt/pw-browsers/chromium", args=["--disable-gpu", "--hide-scrollbars"])
+        b = await p.chromium.launch(args=["--disable-gpu", "--hide-scrollbars"])
         pg = await b.new_page(viewport={"width": W, "height": H}, device_scale_factor=1)
         await pg.goto(html_path.as_uri())
         await pg.wait_for_timeout(500)
@@ -254,7 +244,7 @@ async def build(c):
     for a in ["logo-dark.png"]:
         tgt = wdir / a
         if not tgt.exists():
-            tgt.symlink_to(HERE / a)
+            import shutil; shutil.copy2(HERE / a, tgt)
     if os.environ.get("PREPARE_ONLY"):
         print("   prepared", html_path); return None
     audio = wdir / "audio.m4a"; make_audio(wdir, seg_files, seg_start, total, audio, c["theme"]["bed"])
@@ -267,7 +257,7 @@ async def build(c):
          "-movflags", "+faststart", "-metadata", f"title={c['title']} - Gennoor Tech", "-metadata", "artist=Gennoor Tech", str(final)])
     # narration script + captions for the website / subtitles
     (outdir / f"{c['title']} - Promo Narration Script.md").write_text(
-        f"# {c['title']} - promo narration\n\nVoice: neural TTS ({VOICE}). Duration: {total/60:.1f} min.\n\n" +
+        f"# {c['title']} - promo narration\n\nVoice: the presenter's own cloned voice. Duration: {total/60:.1f} min.\n\n" +
         "\n\n".join(f"**[{s}]** {t}" for s, t in c["video"]["narration"]))
     srt = []
     for i, k in enumerate(captions, 1):

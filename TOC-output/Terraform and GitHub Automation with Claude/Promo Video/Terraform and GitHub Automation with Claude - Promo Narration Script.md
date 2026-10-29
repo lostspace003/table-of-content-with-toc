@@ -1,6 +1,6 @@
 # Terraform and GitHub Automation with Claude - promo narration
 
-Voice: neural TTS (en-US-AndrewNeural). Duration: 6.0 min.
+Voice: the presenter's own cloned voice. Duration: 6.2 min.
 
 **[hook]** Your Terraform apply just removed a production virtual server. The plan said minus one. Nobody read it. The change went through at two in the morning, and the incident bridge opened at six.
 

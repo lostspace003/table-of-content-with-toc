@@ -1,6 +1,6 @@
 # Agentic Architecture Reviewer - promo narration
 
-Voice: neural TTS (en-US-AndrewNeural). Duration: 5.1 min.
+Voice: the presenter's own cloned voice. Duration: 5.1 min.
 
 **[hook]** The diagram said encrypted. The implementation said otherwise. And the architecture review happened six months earlier.
 

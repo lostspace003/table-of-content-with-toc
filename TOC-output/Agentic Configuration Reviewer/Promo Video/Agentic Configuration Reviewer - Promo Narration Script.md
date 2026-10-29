@@ -1,6 +1,6 @@
 # Agentic Configuration Reviewer - promo narration
 
-Voice: neural TTS (en-US-AndrewNeural). Duration: 5.1 min.
+Voice: the presenter's own cloned voice. Duration: 5.1 min.
 
 **[hook]** The S three bucket was public for eleven days. The pull request had two approvals. Nobody read line two fourteen.
 

@@ -1,487 +1,487 @@
 1
-00:00:01,200 --> 00:00:04,396
+00:00:01,200 --> 00:00:04,629
 An incident lands in ServiceNow at nine at night.
 
 2
-00:00:04,396 --> 00:00:06,614
+00:00:04,629 --> 00:00:07,008
 The acknowledgement mail goes out,
 
 3
-00:00:06,614 --> 00:00:08,505
+00:00:07,008 --> 00:00:09,038
 and then the questions begin.
 
 4
-00:00:08,505 --> 00:00:10,070
+00:00:09,038 --> 00:00:10,717
 Which V I P? Since when?
 
 5
-00:00:10,070 --> 00:00:12,353
+00:00:10,717 --> 00:00:13,167
 What changed? Who is looking at it?
 
 6
-00:00:12,353 --> 00:00:15,158
+00:00:13,167 --> 00:00:16,176
 And the engineer on call is typing the same
 
 7
-00:00:15,158 --> 00:00:17,832
+00:00:16,176 --> 00:00:19,045
 first five commands they typed last week.
 
 8
-00:00:18,582 --> 00:00:20,727
+00:00:19,795 --> 00:00:21,955
 What if an agent read the ticket,
 
 9
-00:00:20,727 --> 00:00:22,678
+00:00:21,955 --> 00:00:23,919
 asked for the missing details,
 
 10
-00:00:22,678 --> 00:00:25,473
+00:00:23,919 --> 00:00:26,734
 pulled the evidence from the load balancer,
 
 11
-00:00:25,473 --> 00:00:28,138
+00:00:26,734 --> 00:00:29,418
 and suggested the exact C L I commands to
 
 12
-00:00:28,138 --> 00:00:32,039
+00:00:29,418 --> 00:00:33,346
 run next? Troubleshooting, automated, with a person still in
 
 13
-00:00:32,039 --> 00:00:33,534
+00:00:33,346 --> 00:00:34,852
 charge of every change.
 
 14
-00:00:34,284 --> 00:00:38,124
+00:00:35,602 --> 00:00:39,902
 Gennoor Tech presents Troubleshooting Automation with Claude.
 
 15
-00:00:38,874 --> 00:00:41,617
+00:00:40,652 --> 00:00:43,351
 One incident in. One resolution note out.
 
 16
-00:00:41,617 --> 00:00:45,229
+00:00:43,351 --> 00:00:46,906
 You build the troubleshooting workflow in ten modules,
 
 17
-00:00:45,229 --> 00:00:48,975
+00:00:46,906 --> 00:00:50,593
 and every module ends with something that actually runs.
 
 18
-00:00:48,975 --> 00:00:51,182
+00:00:50,593 --> 00:00:52,766
 Claude reads, plans and explains.
 
 19
-00:00:51,182 --> 00:00:55,597
+00:00:52,766 --> 00:00:57,111
 Deterministic Python collects the evidence and updates the ticket.
 
 20
-00:00:55,597 --> 00:00:58,875
+00:00:57,111 --> 00:01:00,337
 A person approves anything that touches a device.
 
 21
-00:00:58,875 --> 00:01:00,548
+00:01:00,337 --> 00:01:01,983
 And every step is logged,
 
 22
-00:01:00,548 --> 00:01:03,625
+00:01:01,983 --> 00:01:05,011
 in your audit trail and in the ServiceNow work
 
 23
-00:01:03,625 --> 00:01:04,026
+00:01:05,011 --> 00:01:05,406
 notes.
 
 24
-00:01:04,776 --> 00:01:08,137
+00:01:06,156 --> 00:01:09,734
 You start with the incident lifecycle in ServiceNow,
 
 25
-00:01:08,137 --> 00:01:10,980
+00:01:09,734 --> 00:01:12,762
 from the moment the ticket is created to the
 
 26
-00:01:10,980 --> 00:01:14,664
+00:01:12,762 --> 00:01:16,684
 acknowledgement mail and the first troubleshooting reply.
 
 27
-00:01:14,664 --> 00:01:17,249
+00:01:16,684 --> 00:01:19,436
 You map where an agent may act and where
 
 28
-00:01:17,249 --> 00:01:19,834
+00:01:19,436 --> 00:01:22,188
 it may not. Then you set up Claude Code,
 
 29
-00:01:19,834 --> 00:01:21,773
+00:01:22,188 --> 00:01:24,252
 the Claude Agent S D K and M C
 
 30
-00:01:21,773 --> 00:01:23,971
+00:01:24,252 --> 00:01:26,592
 P servers for this exact workflow,
 
 31
-00:01:23,971 --> 00:01:26,103
+00:01:26,592 --> 00:01:28,863
 with a read only ServiceNow tool,
 
 32
-00:01:26,103 --> 00:01:27,655
+00:01:28,863 --> 00:01:30,514
 a read only device tool,
 
 33
-00:01:27,655 --> 00:01:30,757
+00:01:30,514 --> 00:01:33,817
 and nothing else. Credentials stay in the vault,
 
 34
-00:01:30,757 --> 00:01:31,920
+00:01:33,817 --> 00:01:35,055
 never in a prompt.
 
 35
-00:01:32,670 --> 00:01:36,548
+00:01:35,805 --> 00:01:40,075
 Then intake. You pull the incident through the ServiceNow
 
 36
-00:01:36,548 --> 00:01:38,249
+00:01:40,075 --> 00:01:41,948
 Table A P I, validate it,
 
 37
-00:01:38,249 --> 00:01:42,263
+00:01:41,948 --> 00:01:46,368
 and let Claude compare it against a primary troubleshooting
 
 38
-00:01:42,263 --> 00:01:44,032
+00:01:46,368 --> 00:01:48,316
 checklist. Affected V I P,
 
 39
-00:01:44,032 --> 00:01:46,754
+00:01:48,316 --> 00:01:51,313
 symptom, start time, scope, last change.
 
 40
-00:01:46,754 --> 00:01:49,884
+00:01:51,313 --> 00:01:54,759
 The agent lists what is missing and drafts the
 
 41
-00:01:49,884 --> 00:01:53,694
+00:01:54,759 --> 00:01:58,954
 clarification mail. An engineer reviews it and sends it.
 
 42
-00:01:54,444 --> 00:01:57,190
+00:01:59,704 --> 00:02:02,153
 Day two is evidence and diagnosis.
 
 43
-00:01:57,190 --> 00:02:00,663
+00:02:02,153 --> 00:02:05,251
 Deterministic collectors run F5 t m s h and
 
 44
-00:02:00,663 --> 00:02:03,974
+00:02:05,251 --> 00:02:08,205
 iControl REST, the NetScaler NITRO A P I,
 
 45
-00:02:03,974 --> 00:02:07,204
+00:02:08,205 --> 00:02:11,086
 Radware Alteon and other load balancers,
 
 46
-00:02:07,204 --> 00:02:10,192
+00:02:11,086 --> 00:02:13,752
 and the Cisco A P I C REST interface,
 
 47
-00:02:10,192 --> 00:02:13,180
+00:02:13,752 --> 00:02:16,417
 and return typed facts with a device,
 
 48
-00:02:13,180 --> 00:02:15,684
+00:02:16,417 --> 00:02:18,650
 a timestamp and the raw output.
 
 49
-00:02:15,684 --> 00:02:19,399
+00:02:18,650 --> 00:02:21,964
 Claude turns those facts into a ranked list of
 
 50
-00:02:19,399 --> 00:02:23,033
+00:02:21,964 --> 00:02:25,206
 likely causes, and for each cause the exact C
 
 51
-00:02:23,033 --> 00:02:26,425
+00:02:25,206 --> 00:02:28,231
 L I command that confirms or rules it out.
 
 52
-00:02:26,425 --> 00:02:27,960
+00:02:28,231 --> 00:02:29,600
 Structured J S O N,
 
 53
-00:02:27,960 --> 00:02:30,544
+00:02:29,600 --> 00:02:31,905
 with a citation for every claim,
 
 54
-00:02:30,544 --> 00:02:31,836
+00:02:31,905 --> 00:02:33,058
 never free text.
 
 55
-00:02:32,586 --> 00:02:36,724
+00:02:33,808 --> 00:02:38,095
 Then the guardrails. Every suggested command is classified read
 
 56
-00:02:36,724 --> 00:02:40,009
+00:02:38,095 --> 00:02:41,497
 only or state changing. Read only commands can run
 
 57
-00:02:40,009 --> 00:02:43,424
+00:02:41,497 --> 00:02:45,036
 in the lab automatically. Anything else waits for an
 
 58
-00:02:43,424 --> 00:02:45,920
+00:02:45,036 --> 00:02:47,622
 engineer to approve, and the approval,
 
 59
-00:02:45,920 --> 00:02:48,876
+00:02:47,622 --> 00:02:50,684
 the command and the output are written to the
 
 60
-00:02:48,876 --> 00:02:51,701
+00:02:50,684 --> 00:02:53,611
 audit log and to the ServiceNow work notes.
 
 61
-00:02:51,701 --> 00:02:54,657
+00:02:53,611 --> 00:02:56,673
 You will try to push a change through without
 
 62
-00:02:54,657 --> 00:02:57,219
+00:02:56,673 --> 00:02:59,327
 approval, and you will watch it refuse.
 
 63
-00:02:57,219 --> 00:02:58,992
+00:02:59,327 --> 00:03:01,164
 Then you run the full loop.
 
 64
-00:02:58,992 --> 00:03:03,327
+00:03:01,164 --> 00:03:05,656
 Suggest, approve, execute, interpret, until the cause is confirmed
 
 65
-00:03:03,327 --> 00:03:05,298
+00:03:05,656 --> 00:03:07,697
 or a senior engineer is paged.
 
 66
-00:03:06,048 --> 00:03:07,734
+00:03:08,447 --> 00:03:10,188
 Day three is the template.
 
 67
-00:03:07,734 --> 00:03:11,234
+00:03:10,188 --> 00:03:13,803
 Reason, action, next action. Claude drafts it from the
 
 68
-00:03:11,234 --> 00:03:14,735
+00:03:13,803 --> 00:03:17,418
 evidence it was given, cites the command output behind
 
 69
-00:03:14,735 --> 00:03:17,782
+00:03:17,418 --> 00:03:20,564
 every line, and marks what it could not verify.
 
 70
-00:03:17,782 --> 00:03:20,700
+00:03:20,564 --> 00:03:23,576
 You post it to the incident through the Table
 
 71
-00:03:20,700 --> 00:03:22,450
+00:03:23,576 --> 00:03:25,384
 A P I, with the close code,
 
 72
-00:03:22,450 --> 00:03:25,951
+00:03:25,384 --> 00:03:28,999
 and you create the knowledge article the next incident
 
 73
-00:03:25,951 --> 00:03:26,664
+00:03:28,999 --> 00:03:29,735
 will reuse.
 
 74
-00:03:27,414 --> 00:03:30,706
+00:03:30,485 --> 00:03:33,843
 You finish by wiring it all into a troubleshooting
 
 75
-00:03:30,706 --> 00:03:33,866
+00:03:33,843 --> 00:03:37,067
 page. A FastAPI service with the incident queue,
 
 76
-00:03:33,866 --> 00:03:36,105
+00:03:37,067 --> 00:03:39,350
 the evidence, the suggested steps,
 
 77
-00:03:36,105 --> 00:03:39,331
+00:03:39,350 --> 00:03:42,641
 the approve and reject buttons and the audit tab.
 
 78
-00:03:39,331 --> 00:03:42,623
+00:03:42,641 --> 00:03:45,999
 Tested with pytest against recorded device output,
 
 79
-00:03:42,623 --> 00:03:46,244
+00:03:45,999 --> 00:03:49,693
 and shipped through a reviewed GitHub pull request with
 
 80
-00:03:46,244 --> 00:03:47,166
+00:03:49,693 --> 00:03:50,633
 Actions green.
 
 81
-00:03:47,916 --> 00:03:51,557
+00:03:51,383 --> 00:03:55,057
 Every lab runs against a ServiceNow developer instance,
 
 82
-00:03:51,557 --> 00:03:53,940
+00:03:55,057 --> 00:03:57,462
 lab load balancers and a Cisco A C I
 
 83
-00:03:53,940 --> 00:03:57,780
+00:03:57,462 --> 00:04:01,336
 sandbox, with synthetic incidents that have real symptoms.
 
 84
-00:03:57,780 --> 00:04:00,958
+00:04:01,336 --> 00:04:04,542
 You will watch the agent ask the right question,
 
 85
-00:04:00,958 --> 00:04:04,136
+00:04:04,542 --> 00:04:07,748
 run the right command, and refuse the wrong one.
 
 86
-00:04:04,136 --> 00:04:07,181
+00:04:07,748 --> 00:04:10,821
 And in the capstone a fresh incident lands and
 
 87
-00:04:07,181 --> 00:04:11,153
+00:04:10,821 --> 00:04:14,828
 your team takes it from acknowledgement to posted resolution
 
 88
-00:04:11,153 --> 00:04:11,484
+00:04:14,828 --> 00:04:15,162
 note.
 
 89
-00:04:12,234 --> 00:04:14,712
+00:04:15,912 --> 00:04:18,327
 Here is the full table of contents,
 
 90
-00:04:14,712 --> 00:04:16,623
+00:04:18,327 --> 00:04:20,191
 10 modules over three days.
 
 91
-00:04:16,623 --> 00:04:21,225
+00:04:20,191 --> 00:04:24,676
 Day one: The troubleshooting workflow and the ServiceNow incident
 
 92
-00:04:21,225 --> 00:04:23,632
+00:04:24,676 --> 00:04:27,022
 lifecycle; Setting up Claude Code,
 
 93
-00:04:23,632 --> 00:04:26,605
+00:04:27,022 --> 00:04:29,921
 the Agent SDK and MCP for incident triage;
 
 94
-00:04:26,605 --> 00:04:30,074
+00:04:29,921 --> 00:04:33,302
 and Incident intake through the Table API and the
 
 95
-00:04:30,074 --> 00:04:35,029
+00:04:33,302 --> 00:04:38,132
 acknowledgement mail. Day two: Evidence collection from load balancers
 
 96
-00:04:35,029 --> 00:04:39,702
+00:04:38,132 --> 00:04:42,687
 and ACI; Claude suggests troubleshooting steps as structured JSON;
 
 97
-00:04:39,702 --> 00:04:43,666
+00:04:42,687 --> 00:04:46,551
 Guardrails, approvals and audit for incident automation;
 
 98
-00:04:43,666 --> 00:04:47,206
+00:04:46,551 --> 00:04:50,001
 and Running approved steps and reading the result.
 
 99
-00:04:47,206 --> 00:04:51,099
+00:04:50,001 --> 00:04:53,797
 Day three: The reason, action and next action template;
 
 100
-00:04:51,099 --> 00:04:54,922
+00:04:53,797 --> 00:04:57,523
 The troubleshooting page: service, tests and delivery;
 
 101
-00:04:54,922 --> 00:04:57,895
+00:04:57,523 --> 00:05:00,421
 and Capstone: incident to resolution note,
 
 102
-00:04:57,895 --> 00:04:58,674
+00:05:00,421 --> 00:05:01,180
 end to end.
 
 103
-00:04:59,424 --> 00:05:03,596
+00:05:01,930 --> 00:05:06,986
 Every build in this course follows six engineering principles.
 
 104
-00:05:03,596 --> 00:05:05,412
+00:05:06,986 --> 00:05:09,188
 Model output is a proposal,
 
 105
-00:05:05,412 --> 00:05:08,911
+00:05:09,188 --> 00:05:13,428
 never a fact. Authorization lives outside the model.
 
 106
-00:05:08,911 --> 00:05:11,871
+00:05:13,428 --> 00:05:17,016
 A human approves every consequential action.
 
 107
-00:05:11,871 --> 00:05:14,159
+00:05:17,016 --> 00:05:19,789
 Decisions and evidence are logged.
 
 108
-00:05:14,159 --> 00:05:18,129
+00:05:19,789 --> 00:05:24,600
 The stack stays provider-agnostic. And quality is measured,
 
 109
-00:05:18,129 --> 00:05:18,936
+00:05:24,600 --> 00:05:25,578
 not assumed.
 
 110
-00:05:19,686 --> 00:05:22,076
+00:05:26,328 --> 00:05:29,222
 Ten modules that run. Three days,
 
 111
-00:05:22,076 --> 00:05:24,393
+00:05:29,222 --> 00:05:32,027
 hands on. Four device platforms.
 
 112
-00:05:24,393 --> 00:05:28,158
+00:05:32,027 --> 00:05:36,586
 And zero device changes without a person saying yes.
 
 113
-00:05:28,908 --> 00:05:31,437
+00:05:37,336 --> 00:05:40,317
 This course is for network operations,
 
 114
-00:05:31,437 --> 00:05:34,100
+00:05:40,317 --> 00:05:43,454
 load balancer and data centre engineers,
 
 115
-00:05:34,100 --> 00:05:36,030
+00:05:43,454 --> 00:05:45,728
 N O C and service desk teams,
 
 116
-00:05:36,030 --> 00:05:39,225
+00:05:45,728 --> 00:05:49,493
 and I T automation leads in India and worldwide.
 
 117
-00:05:39,225 --> 00:05:42,221
+00:05:49,493 --> 00:05:53,022
 You need basic networking, comfort with a C L
 
 118
-00:05:42,221 --> 00:05:46,481
+00:05:53,022 --> 00:05:58,042
 I, and some Python. Familiarity with ServiceNow incidents helps,
 
 119
-00:05:46,481 --> 00:05:48,012
+00:05:58,042 --> 00:05:59,846
 but it is not required.
 
 120
-00:05:48,762 --> 00:05:51,520
+00:06:00,596 --> 00:06:03,756
 Turn every incident into a documented,
 
 121
-00:05:51,520 --> 00:05:55,513
+00:06:03,756 --> 00:06:08,331
 repeatable fix. Troubleshooting Automation with Claude.
 
 122
-00:05:55,513 --> 00:05:57,618
+00:06:08,331 --> 00:06:10,744
 Enrol now at gennoor dot com.

@@ -1,6 +1,6 @@
 # Bill Creation Automation with Claude - promo narration
 
-Voice: neural TTS (en-US-AndrewNeural). Duration: 5.9 min.
+Voice: the presenter's own cloned voice. Duration: 6.1 min.
 
 **[hook]** A placed candidate's confirmation mail lands at ten in the morning. The staffing vendor needs the bill today, with G S T or without, and the amount had better be right. Someone opens a spreadsheet, retypes the figure, picks a tax rate from memory, and hopes.
 
