@@ -1,0 +1,1445 @@
+{
+ "course": "Agentic Attack Surface Management",
+ "domain": "Cybersecurity",
+ "source_input": "From 'Agentic Cybersecurity Course Prototypes' (Course 3, Agentic Attack Surface Management): \"A platform that consolidates approved asset sources, identifies changes and inventory gaps, links assets to owners and known findings, and prioritizes exposure review. Active discovery is constrained to explicitly authorized domains and ranges.\" The build sequence: establish authorization and scope (allowlist of lab-owned domains and synthetic assets, exclusions, rate limits, audit trail; disable arbitrary target entry); fixture-based adapters for DNS, certificate metadata, cloud inventory, CMDB and scanner findings; canonical asset IDs with source, first/last seen, confidence, environment and relationships; deterministic entity resolution with uncertain matches reviewable; snapshot change detection; exposure correlation distinguishing observed facts from inferred exposure; ownership from CMDB, tags and repository metadata with manual correction; transparent ranking and review tickets via a mock connector; metrics for entity-link precision, unowned asset rate, stale-asset classification and change-detection accuracy. Safety note: \"Asset discovery can touch systems outside a customer's authority if scope is weak.\"",
+ "why_this_course": [
+  "Attack surface management starts from a simple problem: organizations do not know everything they expose. Hostnames appear in Certificate Transparency logs as soon as certificates are issued [c20][c3], cloud resources are created and deleted daily across accounts and subscriptions [c1][c2], and DNS records outlive the resources they point to, creating subdomain takeover risk [c9]. Shorter certificate lifetimes, falling toward 47 days by 2029, add more change to track [c21].",
+  "Public policy treats asset visibility as a baseline. CISA's BOD 23-01 requires federal agencies to run automated asset discovery every seven days [c13], and BOD 26-04 makes public exposure a direct input to remediation deadlines and requires tagging of externally reachable assets [c22]. Building that inventory means reconciling sources that disagree, are eventually consistent and only show what the caller can read [c2][c10].",
+  "The same tools that find assets can easily reach systems an organization does not own. That is why this course puts authorization first, following the rules-of-engagement model of NIST SP 800-115 [c6], and keeps scope enforcement, ranking and ownership logic deterministic. The agent's role is narrow: summarize exposure from supplied evidence and keep observed facts separate from inference, which OWASP's guidance on excessive agency and misinformation supports [c14][c23]."
+ ],
+ "design_decisions": [
+  {
+   "decision": "Scope policy is the first module and every adapter must pass through one gate.",
+   "rationale": "The client's build sequence starts with authorization and its safety note names weak scope as the main risk; NIST's ROE model gives a structure learners can reuse [c6]."
+  },
+  {
+   "decision": "All five sources are fixture-based; lab domains use reserved names such as example. and test.",
+   "rationale": "The client requires fixture sources and lab-owned domains; reserved names cannot be registered by third parties [c11]."
+  },
+  {
+   "decision": "Compressed the four-week outline into three days by following the nine-step build sequence one module per step.",
+   "rationale": "Each step yields a tested increment; the client's week-four change monitoring moved to day two because ownership and ranking depend on it."
+  },
+  {
+   "decision": "Entity resolution is precision-first with a review queue; nothing is silently merged.",
+   "rationale": "Direct from the client: 'Keep uncertain matches reviewable' and 'precision-oriented tests'. A false merge corrupts ownership and exposure downstream."
+  },
+  {
+   "decision": "The agent only summarizes exposure; it has no discovery tools.",
+   "rationale": "Avoids excessive agency [c14]; the client asks to 'distinguish observed facts from inferred exposure' and to review for 'unsupported exposure claims'."
+  },
+  {
+   "decision": "Tickets are review tickets through a mock connector; the platform never changes DNS or cloud resources.",
+   "rationale": "The client specifies a mock connector and human review for uncertain ownership or exposure; changes to production need separate approval."
+  }
+ ],
+ "audience_profile": [
+  {
+   "role": "External attack surface analyst",
+   "needs": "A defensible, scoped inventory and change feed instead of ad hoc recon.",
+   "starting_point": "Knows DNS, TLS and recon tools; moderate Python."
+  },
+  {
+   "role": "Security operations engineer",
+   "needs": "Prioritized exposure review queue with owners.",
+   "starting_point": "Knows alerts and ticketing; less inventory work."
+  },
+  {
+   "role": "Cloud security engineer",
+   "needs": "Reconcile cloud inventory with DNS and certificates; detect dangling records.",
+   "starting_point": "Knows one cloud provider's inventory tools."
+  },
+  {
+   "role": "IT asset manager",
+   "needs": "Close CMDB gaps with evidence and ownership suggestions.",
+   "starting_point": "Knows CMDB processes; little scripting."
+  },
+  {
+   "role": "MSSP engineer",
+   "needs": "Reusable scope enforcement and audit for multi-client work.",
+   "starting_point": "Strong tooling skills; needs strict scope discipline."
+  }
+ ],
+ "prerequisite_check": [
+  "Can you explain A, AAAA, CNAME and TXT records and what TTL means?",
+  "Can you read a TLS certificate and find its SANs, issuer and expiry?",
+  "Can you write Python that loads JSON and compares two lists of dicts?",
+  "Do you know what a CIDR range is and whether 10.0.0.0/8 is private?",
+  "Have you used one cloud console to list resources and tags?",
+  "Can you run docker compose up and read logs?"
+ ],
+ "lab_environment": {
+  "overview": "A Docker Compose stack per learner: FastAPI application, PostgreSQL, fixture servers for DNS, CT, cloud inventory (AWS, Azure, GCP shapes), CMDB and scanner findings, a Jira-shaped ticket mock, and a simple web UI for the review queue and asset graph. No real cloud accounts or internet discovery are used. Model calls go through an adapter with a recorded-response mode for offline runs.",
+  "components": [
+   {
+    "name": "Python",
+    "version": "3.12 or later",
+    "purpose": "Application, adapters, tests",
+    "how_to_obtain": "python.org or the provided dev container",
+    "notes": "ipaddress module used for scope checks [c16]."
+   },
+   {
+    "name": "FastAPI and Pydantic v2",
+    "version": "Current releases, pinned",
+    "purpose": "API, review queue, schemas",
+    "how_to_obtain": "PyPI",
+    "notes": "Strict models for adapter results."
+   },
+   {
+    "name": "PostgreSQL",
+    "version": "18 (official postgres:18 image)",
+    "purpose": "Inventory, snapshots, audit, review queue",
+    "how_to_obtain": "Docker Hub",
+    "notes": "Append-only audit table."
+   },
+   {
+    "name": "Docker Engine with Compose v2",
+    "version": "Current stable",
+    "purpose": "Repeatable lab stack",
+    "how_to_obtain": "Docker Engine on Linux or Docker Desktop (check licensing)",
+    "notes": "Cloud VM image for locked-down laptops."
+   },
+   {
+    "name": "Fixture servers",
+    "version": "Course-provided containers",
+    "purpose": "DNS zone export, CT get-entries/get-sth shapes, cloud inventory exports, CMDB, scanner",
+    "how_to_obtain": "Provided in the starter repository",
+    "notes": "CT fixture mirrors RFC 6962 endpoints [c3]; cloud fixtures mirror AWS Config, Azure Resource Graph and Cloud Asset Inventory identifiers [c1][c2][c10]."
+   },
+   {
+    "name": "Python Public Suffix List library",
+    "version": "Current release with a bundled, dated PSL snapshot",
+    "purpose": "Registrable domain checks in scope policy",
+    "how_to_obtain": "PyPI; snapshot committed to the repo",
+    "notes": "Keep the snapshot fixed for deterministic tests [c17]."
+   },
+   {
+    "name": "Jira-shaped ticket mock",
+    "version": "Course-provided container",
+    "purpose": "Review ticket creation and JQL-style search",
+    "how_to_obtain": "Provided; optional free Jira Cloud site",
+    "notes": "Same REST shape as Jira examples [c25]."
+   },
+   {
+    "name": "LLM API access",
+    "version": "Provider-agnostic adapter; Claude API used in delivery",
+    "purpose": "Exposure summary agent",
+    "how_to_obtain": "Instructor proxy with organization key; recorded responses offline",
+    "notes": "JSON schema outputs, stop_reason checked [c24]."
+   },
+   {
+    "name": "Optional real sources (instructor demo only)",
+    "version": "AWS Config, Azure Resource Graph, Cloud Asset Inventory in a course-owned sandbox account",
+    "purpose": "Show real API shapes",
+    "how_to_obtain": "Course-owned accounts with read-only roles",
+    "notes": "Never used for learner discovery."
+   }
+  ],
+  "fixtures": [
+   {
+    "name": "Scope policy and ROE",
+    "contents": "Three lab domains under example., two lab cloud accounts, IP ranges, 14 excluded ranges, look-alike and partner domains for negative tests.",
+    "used_in": "Authorization, scope policy and the lab"
+   },
+   {
+    "name": "Source fixtures",
+    "contents": "DNS zone exports with CNAME chains and planted dangling records; CT entries with SANs, issuers and validity; AWS/Azure/GCP inventory exports; CMDB CIs; scanner findings.",
+    "used_in": "Source adapters; Asset normalization and canonical IDs"
+   },
+   {
+    "name": "Labeled link set",
+    "contents": "Record pairs labeled same, different or ambiguous, including shared CDN IPs and renamed hosts.",
+    "used_in": "Entity resolution"
+   },
+   {
+    "name": "Snapshot pairs with answer keys",
+    "contents": "10-27/10-28 and capstone pairs with expected new, changed, missing, stale and orphaned classes, plus a source-outage trap.",
+    "used_in": "Change detection; Capstone"
+   },
+   {
+    "name": "Exposure evaluation set",
+    "contents": "Assets with findings, services and labeled observed/inferred claims, including misleading text.",
+    "used_in": "Exposure correlation with an agent"
+   },
+   {
+    "name": "Ownership fixtures",
+    "contents": "CMDB owner groups, cloud tags with case variants, CODEOWNERS files, and an answer key with planted wrong suggestions.",
+    "used_in": "Ownership resolution; Prioritization, ticketing and inventory quality metrics"
+   }
+  ],
+  "safety": [
+   "No learner action reaches the internet; all adapters read fixtures, and outbound network is blocked in the lab compose network.",
+   "Arbitrary target entry is removed from the CLI and API in the course build.",
+   "Lab names use reserved domains (example., test.) only; never real company domains in slides or fixtures.",
+   "Instructor demos of real cloud APIs use course-owned accounts with read-only roles.",
+   "Any extension to active checks requires a written ROE with exclude list, hours and halt criteria [c6]."
+  ]
+ },
+ "modules": [
+  {
+   "day": 1,
+   "title": "Authorization, scope policy and the lab",
+   "goal": "Implement an explicit, code-enforced scope policy with allowlists, exclusions, rate limits and an audit trail, and prove that out-of-scope targets are blocked and logged.",
+   "learning_objectives": [
+    "Learners can explain why weak scope is the biggest risk in attack surface tooling and how it maps to rules of engagement.",
+    "Learners can write a scope policy covering domains, IP ranges, cloud accounts, exclusions and rate limits.",
+    "Learners can enforce the policy in a single gate that every adapter must call, outside any model.",
+    "Learners can write tests that prove blocked targets never reach an adapter and are logged."
+   ],
+   "lessons": [
+    {
+     "title": "Why scope comes first",
+     "points": [
+      "Discovery can easily touch systems you do not own: shared hosting, CDNs, partners, previous owners of an IP.",
+      "NIST SP 800-115 defines rules of engagement as constraints set before testing that give authority for defined activities only; its template includes authorized and unauthorized addresses and an explicit exclude list [c6].",
+      "The same template sets test hours, points of contact and halt criteria; the policy file carries these too [c6].",
+      "Even passive information gathering is listed as testing activity in OWASP WSTG 4.1, so it still needs authorization [c8].",
+      "The client input requires arbitrary target entry to be disabled in the course environment."
+     ]
+    },
+    {
+     "title": "The scope policy file",
+     "points": [
+      "Fields: policy_id, version, approver, valid_from/to, domains (with include_subdomains flag), ip_ranges, cloud_accounts, exclusions, rate_limits per adapter, allowed_hours, contacts.",
+      "Use reserved names for lab domains: example. is reserved for documentation and cannot be registered, and test. names are answered negatively by caching resolvers by default [c11].",
+      "Domain matching: normalize to lowercase, strip trailing dot, compare label by label; never match by substring ('lab.example' must not match 'evillab.example').",
+      "Check registrable boundaries with the Public Suffix List so a policy can never accidentally allow a whole public suffix such as co.uk [c17].",
+      "IP matching: ip_address(x) in ip_network(y), with ip_network strict so ranges with host bits set are rejected as typos [c16]."
+     ]
+    },
+    {
+     "title": "Enforcement outside the model",
+     "points": [
+      "One ScopeGate.check(target, action, adapter) call before every network or API action; adapters cannot be constructed without the gate.",
+      "OWASP excessive agency guidance: narrow tools, no open-ended URL tool, least-privilege credentials, and complete mediation in downstream systems [c14].",
+      "The agent can propose a target; the gate decides. Rejected proposals are logged as scope events.",
+      "Exclusions win over inclusions; an excluded range inside an allowed range is blocked.",
+      "Reject non-global addresses unless explicitly listed; is_global and is_private reflect IANA registries, and 100.64.0.0/10 is neither [c16]."
+     ]
+    },
+    {
+     "title": "Rate limits and audit trail",
+     "points": [
+      "Per-adapter token bucket with limits from the policy; exceeding returns a throttled result, not an exception that retries forever.",
+      "Audit events: audit_id, at, actor, adapter, target, action, decision (allowed, blocked, throttled), policy_version, reason.",
+      "Audit logs are append-only and written before the action runs.",
+      "Rate limiting and logging are also OWASP's damage-limiting measures for agentic systems [c14]."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Walk through the NIST ROE template sections and map each to a policy field [c6].",
+    "Show the policy YAML with lab domains under example. and an exclusion list [c11].",
+    "Run asm run with an in-scope target and show the audit entry.",
+    "Try partner-corp.example and evillab.example and show both blocked and logged.",
+    "Try a range with host bits set and show policy load fail [c16].",
+    "Show the agent proposing an out-of-scope target and the gate rejecting it."
+   ],
+   "lab": {
+    "brief": "Implement the scope policy and prove that out-of-scope targets are blocked and logged.",
+    "steps": [
+     "Read docs/rules-of-engagement.md (course-provided) and fill in contacts and allowed hours.",
+     "Write scope/policy.yaml with three lab domains, two lab cloud accounts, IP ranges and exclusions.",
+     "Implement the policy loader with validation (strict networks, lowercase domains, no public suffixes).",
+     "Implement ScopeGate.check with label-wise domain matching and exclusion precedence.",
+     "Implement per-adapter rate limits.",
+     "Implement the append-only audit log in PostgreSQL.",
+     "Write tests: subdomain allowed, look-alike blocked, excluded range blocked, IPv6 handling, throttling.",
+     "Remove any free-text target input from the CLI and API; targets come only from policy and approved sources.",
+     "Run the test suite and commit the audit sample."
+    ],
+    "success_criteria": [
+     "Every out-of-scope test target is blocked and has an audit entry.",
+     "No code path reaches an adapter without passing the gate (checked by a test that patches the gate to deny all).",
+     "Policy load fails on malformed ranges and public suffix entries.",
+     "Arbitrary target entry is not possible in the course build."
+    ]
+   },
+   "common_pitfalls": [
+    "Substring or endswith matching without a label boundary.",
+    "Letting exclusions be overridden by more specific inclusions.",
+    "Writing the audit entry after the action, so failures leave no trace.",
+    "Giving the agent a generic fetch-URL tool.",
+    "Using real company domains in lab examples."
+   ],
+   "knowledge_check": [
+    {
+     "q": "What does an ROE give a testing team, according to NIST?",
+     "a": "Authority to conduct defined activities without further permission, within stated constraints such as an exclude list [c6]."
+    },
+    {
+     "q": "Why use example. or test. names for lab domains?",
+     "a": "They are reserved and cannot be registered, so lab traffic never reaches a real third party [c11]."
+    },
+    {
+     "q": "What happens with ip_network('10.0.0.1/24') by default?",
+     "a": "It raises ValueError because host bits are set; strict is the default [c16]."
+    },
+    {
+     "q": "Where must authorization be enforced?",
+     "a": "In application code and downstream systems, not by the model [c14]."
+    }
+   ],
+   "slides_and_assets": [
+    "Rules of engagement template adapted for the lab.",
+    "Scope policy YAML with annotated fields.",
+    "Domain matching test table (allowed, look-alike, excluded).",
+    "Audit event schema.",
+    "Scope gate sequence diagram."
+   ],
+   "sources": [
+    "c6",
+    "c8",
+    "c11",
+    "c14",
+    "c16",
+    "c17"
+   ]
+  },
+  {
+   "day": 1,
+   "title": "Source adapters",
+   "goal": "Build five fixture-based adapters (DNS, certificate metadata, cloud inventory, CMDB, scanner findings) behind one adapter contract with timeouts, retries and least privilege.",
+   "learning_objectives": [
+    "Learners can define an adapter contract that returns typed records with provenance and explicit errors.",
+    "Learners can describe what each real source provides and its limits (consistency, history, permissions).",
+    "Learners can implement fixture adapters that mirror the shape of real APIs.",
+    "Learners can apply timeouts, bounded retries and least-privilege credentials."
+   ],
+   "lessons": [
+    {
+     "title": "The adapter contract",
+     "points": [
+      "fetch(scope_gate, snapshot_id) returns AdapterResult(records, errors, source, fetched_at, source_version, partial: bool).",
+      "Every call goes through the scope gate first; the adapter receives a gate, not raw targets.",
+      "Timeouts per call, retries with exponential backoff and a maximum count, then a recorded error, never an endless loop.",
+      "Partial results are flagged: Azure Resource Graph silently returns only resources the caller can read, so a 'complete' flag cannot be assumed [c2].",
+      "Credentials are read-only and scoped to the lab accounts; tools are narrow per OWASP excessive agency guidance [c14]."
+     ]
+    },
+    {
+     "title": "DNS and certificate sources",
+     "points": [
+      "DNS fixtures model zone exports: name, type, value, TTL, zone; RR order carries no meaning, so sort before hashing [c5].",
+      "A CNAME should not coexist with other data at the same name; flag violations as data quality issues [c5].",
+      "Certificate Transparency logs are append-only public logs; real readers use /ct/v1/get-sth and /ct/v1/get-entries [c3].",
+      "A CT monitor must inspect every new entry in every log it watches, which is why production monitors track log positions [c4].",
+      "Let's Encrypt submits every certificate it issues to CT logs, so new hostnames often appear in CT before anyone updates the inventory [c20]."
+     ]
+    },
+    {
+     "title": "Cloud inventory sources",
+     "points": [
+      "AWS Config records configuration and relationships over time and aggregators combine accounts and Regions [c1].",
+      "Azure Resource Graph uses KQL across subscriptions, is eventually consistent and throttles per user (x-ms-user-quota-remaining) [c2].",
+      "Google Cloud Asset Inventory exports to BigQuery or Cloud Storage, keeps 35 days of history and is not meant for live queries [c10].",
+      "Fixtures replicate each provider's identifiers (ARN, Azure resource ID, GCP full resource name) because entity resolution depends on them."
+     ]
+    },
+    {
+     "title": "CMDB and scanner findings",
+     "points": [
+      "CMDB entries are configuration items with relationships; the ServiceNow CMDB lists identification and reconciliation as a core feature, which is what this course rebuilds in small form [c7].",
+      "CMDB fixture fields: ci_id, name, class, fqdn, ip, environment, owner_group, criticality, updated_at.",
+      "Scanner findings fixture: finding_id, target (hostname or IP), port, service, title, severity, observed_at, scanner_id.",
+      "Each adapter emits source-native records; normalization happens in the next module."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Show the adapter interface and one implementation end to end.",
+    "Show a CT get-entries request shape from RFC 6962 and the equivalent fixture file [c3].",
+    "Show a Resource Graph KQL query and explain why results can be partial [c2].",
+    "Inject a timeout into the DNS fixture server and show bounded retries and a recorded error.",
+    "Run all five adapters and show counts and errors per source."
+   ],
+   "lab": {
+    "brief": "Build and test the five adapters against fixtures.",
+    "steps": [
+     "Implement sources/base.py with the adapter contract and AdapterResult model.",
+     "Implement the DNS adapter reading fixtures/dns/zone-*.json.",
+     "Implement the certificate adapter reading fixtures/ct/entries-*.json (log id, index, SANs, issuer, notBefore, notAfter).",
+     "Implement the cloud adapter reading AWS, Azure and GCP fixture exports.",
+     "Implement the CMDB and scanner adapters.",
+     "Add timeouts and bounded retries; test with the fault-injection fixture server.",
+     "Add a test that each adapter refuses to run without a scope gate.",
+     "Run all adapters for snapshot 2026-10-27 and store raw results."
+    ],
+    "success_criteria": [
+     "All five adapters return typed records with source, fetched_at and partial flag.",
+     "Fault injection produces recorded errors within the retry limit.",
+     "No adapter can run without the gate.",
+     "Raw record counts match fixtures/expected/raw-counts.json."
+    ]
+   },
+   "common_pitfalls": [
+    "Treating eventually consistent inventory as a point-in-time truth.",
+    "Not flagging partial results from permission gaps.",
+    "Normalizing inside adapters, which hides source-native identifiers.",
+    "Unbounded retries that hammer a source."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Why might an Azure Resource Graph query miss resources without an error?",
+     "a": "It returns only resources the caller has read access to, with no indication the result is partial [c2]."
+    },
+    {
+     "q": "How long does Google Cloud Asset Inventory keep change history?",
+     "a": "Up to 35 days [c10]."
+    },
+    {
+     "q": "Which CT endpoints read the latest tree head and the entries?",
+     "a": "/ct/v1/get-sth and /ct/v1/get-entries [c3]."
+    }
+   ],
+   "slides_and_assets": [
+    "Adapter contract diagram.",
+    "Source comparison table (identifiers, history, consistency, permissions).",
+    "Five fixture sets with expected raw counts.",
+    "Fault-injection fixture server."
+   ],
+   "sources": [
+    "c1",
+    "c2",
+    "c3",
+    "c4",
+    "c5",
+    "c7",
+    "c10",
+    "c14",
+    "c20"
+   ]
+  },
+  {
+   "day": 1,
+   "title": "Asset normalization and canonical IDs",
+   "goal": "Normalize all source records into one inventory with canonical asset IDs, first and last seen, confidence, environment, relationships and provenance on every record.",
+   "learning_objectives": [
+    "Learners can design a canonical asset model and ID scheme that is stable across snapshots.",
+    "Learners can normalize hostnames, IPs, certificates and cloud identifiers consistently.",
+    "Learners can maintain first_seen and last_seen per asset and per source.",
+    "Learners can attach provenance and confidence to every attribute."
+   ],
+   "lessons": [
+    {
+     "title": "Asset types and canonical IDs",
+     "points": [
+      "Types: domain, hostname, ip, certificate, cloud_resource, service (host:port), ci.",
+      "Canonical ID derives from the strongest native identifier: cloud resource ID, certificate SHA-256 fingerprint, normalized FQDN, IP; prefix with type (host:api-eu2.lab.example).",
+      "Do not derive IDs from mutable attributes (owner, environment).",
+      "The ID algorithm is versioned; changes require a migration."
+     ]
+    },
+    {
+     "title": "Normalization rules",
+     "points": [
+      "Hostnames: lowercase, strip trailing dot, IDNA encode; DNS name case carries no significance in certificates [c15].",
+      "Wildcard SANs are kept as wildcard records, not expanded, since RFC 5280 leaves wildcard semantics to applications [c15].",
+      "IPs: canonical string form from the ipaddress module; classify global vs private [c16].",
+      "Certificates: store notBefore/notAfter (inclusive), issuer and SAN list [c15].",
+      "Cloud IDs: keep provider-native form; Azure IDs are case-insensitive in practice, so normalize case for matching but store the original."
+     ]
+    },
+    {
+     "title": "Provenance, seen times and confidence",
+     "points": [
+      "Each attribute has value, source, source_record_id, observed_at; the asset has first_seen and last_seen overall and per source.",
+      "Confidence: observed (directly in a source), derived (computed, e.g. IP from A record), asserted (CMDB claim not observed).",
+      "Environment comes from tags or CMDB with source; conflicts are kept, not resolved silently.",
+      "Relationships (resolves_to, covered_by_cert, hosted_on, owned_by) are edges with their own provenance."
+     ]
+    },
+    {
+     "title": "Storing the inventory",
+     "points": [
+      "Tables: assets, asset_attributes, relationships, snapshots, raw_records; all keyed by snapshot_id.",
+      "Upsert assets by canonical ID; update last_seen, never overwrite first_seen.",
+      "Keep raw records immutable for audit and reprocessing.",
+      "Inventories built this way are also what BOD 26-04 expects in asset tagging by organization, environment, exposure and type [c22]."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Normalize three variants of the same hostname and show one canonical ID.",
+    "Show a certificate with a wildcard SAN stored as a wildcard record [c15].",
+    "Show provenance for an asset with attributes from DNS, cloud and CMDB.",
+    "Re-run normalization and show first_seen unchanged and last_seen updated."
+   ],
+   "lab": {
+    "brief": "Normalize all sources into the inventory store.",
+    "steps": [
+     "Define the canonical asset, attribute and relationship models.",
+     "Implement the canonical ID function with tests for each type.",
+     "Implement hostname, IP, certificate and cloud ID normalizers.",
+     "Write normalized records with per-attribute provenance.",
+     "Create relationships from DNS (resolves_to), certs (covered_by_cert) and cloud (hosted_on).",
+     "Implement first_seen/last_seen upsert logic.",
+     "Run on snapshot 2026-10-27 and compare with fixtures/expected/normalized.json.",
+     "Check that 100% of attributes carry provenance."
+    ],
+    "success_criteria": [
+     "Normalized asset count matches the expected file.",
+     "Every attribute and relationship has source and observed_at.",
+     "Re-runs do not change first_seen or create duplicates.",
+     "Canonical ID tests pass for all types."
+    ]
+   },
+   "common_pitfalls": [
+    "Expanding wildcard certificates into invented hostnames.",
+    "Using display names as IDs.",
+    "Overwriting first_seen on each run.",
+    "Dropping conflicting attribute values."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Does RFC 5280 define wildcard matching for dNSName?",
+     "a": "No, it leaves wildcard semantics to applications [c15]."
+    },
+    {
+     "q": "Why version the canonical ID algorithm?",
+     "a": "Changing it changes IDs, which breaks history and links unless migrated."
+    },
+    {
+     "q": "What is the difference between observed and asserted confidence?",
+     "a": "Observed is seen directly in a technical source; asserted is a claim (e.g. CMDB) not confirmed by observation."
+    }
+   ],
+   "slides_and_assets": [
+    "Canonical asset model diagram.",
+    "Normalization rules card.",
+    "Provenance example record.",
+    "Expected normalized inventory."
+   ],
+   "sources": [
+    "c15",
+    "c16",
+    "c22"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "Entity resolution",
+   "goal": "Link records that refer to the same asset using deterministic signals, send uncertain matches to a review queue, and measure link precision.",
+   "learning_objectives": [
+    "Learners can rank linking signals by strength and implement deterministic rules.",
+    "Learners can route uncertain matches to a review queue with evidence instead of merging.",
+    "Learners can write precision-oriented tests against a labeled link set.",
+    "Learners can explain why false merges are worse than missed links in this domain."
+   ],
+   "lessons": [
+    {
+     "title": "Deterministic signals",
+     "points": [
+      "Exact normalized hostname across DNS, scanner and CMDB.",
+      "Certificate SAN containing the hostname; SANs are CA-verified identities bound to the key [c15].",
+      "Cloud resource ID or ARN present in two sources.",
+      "Verified ownership such as a domain-verification TXT record; Azure App Service asuid TXT records are an example of proof of control [c9].",
+      "A CNAME chain links a hostname to a cloud endpoint; follow it within the snapshot only [c5]."
+     ]
+    },
+    {
+     "title": "Weak signals and the review queue",
+     "points": [
+      "Weak: similar names (vm-7781 vs db-old), shared IP on shared hosting, same CMDB name with different FQDN.",
+      "Weak signals produce a candidate link with score and evidence, status queued; never auto-merge.",
+      "Review actions: confirm, reject, split; each is audited with the reviewer.",
+      "Shared infrastructure (CDN IPs, load balancers) must not merge different services."
+     ]
+    },
+    {
+     "title": "Merge semantics",
+     "points": [
+      "A link is an edge same_as with evidence; the inventory view groups linked records, the raw records stay separate.",
+      "Unlinking is always possible because nothing is destroyed.",
+      "Conflicting attributes in a linked group are shown with sources.",
+      "Registrable domain boundaries from the Public Suffix List prevent linking across different registrants under a shared suffix [c17]."
+     ]
+    },
+    {
+     "title": "Precision-oriented testing",
+     "points": [
+      "Labeled link set: pairs marked same, different, or ambiguous.",
+      "Link precision = correct auto-links / all auto-links; also report recall and queue size.",
+      "Set the acceptance bar on precision first (e.g. 0.97), then improve recall.",
+      "Add regression cases for every false merge found in review."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Link a DNS name, a cert SAN and a cloud load balancer to one asset and show the evidence.",
+    "Show vm-7781 and db-old queued with score 0.61 and evidence.",
+    "Confirm and reject queue items and show the audit.",
+    "Run the precision test and show one false merge caused by a shared CDN IP, then fix the rule."
+   ],
+   "lab": {
+    "brief": "Implement entity resolution with a review queue and measure link precision.",
+    "steps": [
+     "Implement deterministic rules (hostname, SAN, cloud ID, verified ownership, CNAME chain).",
+     "Implement candidate generation for weak signals with scores and evidence.",
+     "Create the review queue table and API endpoints for confirm, reject and split.",
+     "Exclude shared-infrastructure IPs from IP-based linking using the fixture list.",
+     "Run on the snapshot and compute precision and recall against fixtures/evals/links.json.",
+     "Review five queued items and record decisions.",
+     "Add a regression test for any false merge found."
+    ],
+    "success_criteria": [
+     "Link precision meets the course bar on the labeled set.",
+     "No weak-signal match is merged without review.",
+     "Every link has evidence and can be undone.",
+     "Review actions are audited."
+    ]
+   },
+   "common_pitfalls": [
+    "Merging on shared IPs.",
+    "Fuzzy matching auto-merges.",
+    "Destroying raw records on merge.",
+    "Measuring only recall."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Why is a certificate SAN a strong linking signal?",
+     "a": "The CA must verify SAN identities, binding them to the certificate key [c15]."
+    },
+    {
+     "q": "What happens to a 0.61 confidence match?",
+     "a": "It goes to the review queue with its evidence; it is never merged automatically."
+    },
+    {
+     "q": "Why prefer precision?",
+     "a": "A false merge assigns wrong owners and exposure to an asset, which misleads every later step."
+    }
+   ],
+   "slides_and_assets": [
+    "Signal strength ladder.",
+    "Labeled link evaluation set.",
+    "Review queue UI mock.",
+    "False merge case study (shared CDN IP)."
+   ],
+   "sources": [
+    "c5",
+    "c9",
+    "c15",
+    "c17"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "Change detection",
+   "goal": "Compare inventory snapshots to classify assets as new, changed, missing, stale or potentially orphaned, validated against fixtures with known outcomes.",
+   "learning_objectives": [
+    "Learners can implement snapshot diffing on canonical IDs and attributes.",
+    "Learners can define stale and orphaned with explicit rules and windows.",
+    "Learners can relate changes to real risks such as dangling DNS and expiring certificates.",
+    "Learners can validate change detection against expected outcomes."
+   ],
+   "lessons": [
+    {
+     "title": "Snapshot comparison",
+     "points": [
+      "New: canonical ID present now, absent before. Missing: present before, absent now in a source that covered it.",
+      "Changed: monitored attribute differs (cert issuer, IP, CNAME target, open ports).",
+      "Coverage matters: a source that failed or returned partial results cannot make anything 'missing' [c2].",
+      "Cloud sources have their own change feeds: Azure resourcechanges with changeType Create, Update, Delete and previous/new values [c19]; AWS Config history [c1]; GCP 35-day history [c10]."
+     ]
+    },
+    {
+     "title": "Stale and orphaned",
+     "points": [
+      "Stale: not seen by any technical source for longer than a window (e.g. 30 days) but still in CMDB or DNS.",
+      "Potentially orphaned: has DNS or certificate presence but no owner and no matching cloud resource.",
+      "Dangling DNS is the critical case: a CNAME pointing to a deprovisioned resource can be taken over, and the attacker can get a valid certificate [c9].",
+      "Label all of these 'potential'; they become review tickets, not automatic deletions."
+     ]
+    },
+    {
+     "title": "Certificate changes",
+     "points": [
+      "Track issuer change, SAN change, and days to notAfter [c15].",
+      "Maximum public TLS certificate validity is falling from 398 to 47 days between March 2026 and March 2029, so expiry and reissue events will be frequent [c21].",
+      "New certificates for your domains appear in CT logs; a monitor inspects every new entry [c4].",
+      "An unexpected issuer change is a 'changed' event worth review, not proof of compromise."
+     ]
+    },
+    {
+     "title": "Validation with known outcomes",
+     "points": [
+      "Fixtures: snapshot pairs with an answer key per asset (new, changed, missing, stale, orphaned, unchanged).",
+      "Change-detection accuracy = correct classifications / total assets in the key.",
+      "Include traps: source outage, renamed host with same cloud ID, cert renewal with same SANs.",
+      "BOD 23-01's seven-day discovery cadence is a useful reference for choosing snapshot frequency [c13]."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Diff snapshots 10-27 and 10-28 and show the five classes.",
+    "Show legacy-sso.lab.example missing 41 days and flagged as potentially stale.",
+    "Show a dangling CNAME fixture and explain the takeover path [c9].",
+    "Simulate a DNS source outage and show nothing marked missing.",
+    "Query the Azure resourcechanges fixture for deletes and correlate with DNS [c19]."
+   ],
+   "lab": {
+    "brief": "Build snapshot comparison and validate it against the fixture set.",
+    "steps": [
+     "Implement the snapshot diff on canonical IDs and monitored attributes.",
+     "Implement coverage checks per source per snapshot.",
+     "Implement stale and orphaned rules with configurable windows.",
+     "Implement the dangling DNS check: CNAME target with no matching cloud resource.",
+     "Implement certificate expiry and issuer-change detection.",
+     "Run against fixtures/snapshots/ pairs and compute accuracy against the answer key.",
+     "Investigate every misclassification and fix or document.",
+     "Write a change report for the 10-27 to 10-28 pair."
+    ],
+    "success_criteria": [
+     "Accuracy meets the course bar on the answer key.",
+     "Source outages never produce missing classifications.",
+     "Dangling CNAME fixtures are detected.",
+     "Every classification lists the evidence that triggered it."
+    ]
+   },
+   "common_pitfalls": [
+    "Marking assets missing when the source failed.",
+    "Deleting stale assets automatically.",
+    "Treating every certificate renewal as a change.",
+    "Ignoring cloud deletes when DNS still points to the resource."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Why is a CNAME to a deleted cloud resource dangerous?",
+     "a": "An attacker can provision the same FQDN and receive the subdomain's traffic, even with a valid certificate [c9]."
+    },
+    {
+     "q": "Which Azure field should you use to classify a change?",
+     "a": "changeType (Create, Update, Delete), not operation [c19]."
+    },
+    {
+     "q": "What will the maximum public TLS certificate validity be by March 2029?",
+     "a": "47 days [c21]."
+    }
+   ],
+   "slides_and_assets": [
+    "Change class definitions card.",
+    "Snapshot fixture pairs with answer keys.",
+    "Dangling DNS takeover diagram.",
+    "Change report template."
+   ],
+   "sources": [
+    "c1",
+    "c2",
+    "c4",
+    "c9",
+    "c10",
+    "c13",
+    "c15",
+    "c19",
+    "c21"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "Exposure correlation with an agent",
+   "goal": "Join assets to scanner findings, service metadata and business criticality, and have an agent summarize exposure while strictly separating observed facts from inferred exposure, with unsupported claims measured.",
+   "learning_objectives": [
+    "Learners can correlate findings and services to canonical assets.",
+    "Learners can define observed versus inferred exposure with examples.",
+    "Learners can build an agent with a strict schema whose every claim cites evidence IDs.",
+    "Learners can measure the unsupported-claim rate and reduce it."
+   ],
+   "lessons": [
+    {
+     "title": "Correlation",
+     "points": [
+      "Join scanner findings by target hostname or IP to canonical assets through resolved links; unmatched findings are reported.",
+      "Attach service metadata (port, protocol, TLS version) as observed attributes with scanner ID and time.",
+      "Attach criticality from CMDB as asserted, with source [c7].",
+      "Internet-facing means observed from an external vantage point in the fixture, not inferred from a name; BOD 26-04 treats an asset as exposed if any method finds it exposed [c22]."
+     ]
+    },
+    {
+     "title": "Observed versus inferred",
+     "points": [
+      "Observed: port 443 open (scanner#7), TLS 1.2 negotiated, two medium findings.",
+      "Inferred: 'admin path exposed' because a cert SAN contains admin.; plausible but not observed.",
+      "Unknown: compensating controls, authentication on the endpoint.",
+      "Information gathering techniques such as entry-point identification and architecture mapping (WSTG 4.1) produce observations only when actually performed in scope [c8]."
+     ]
+    },
+    {
+     "title": "The exposure agent",
+     "points": [
+      "Input: asset record, linked evidence with IDs, findings and criticality; no free browsing and no discovery tools.",
+      "Output schema: summary, observed[] (claim, evidence_ids), inferred[] (claim, basis, evidence_ids), unknown[], review_needed.",
+      "Use JSON schema outputs; set additionalProperties false and check stop_reason before parsing [c24].",
+      "Validator: each observed claim must cite an evidence ID of an observing source; claims citing only a cert SAN or a name must be in inferred.",
+      "OWASP recommends grounding, automatic validation and labeling AI-generated content [c23]."
+     ]
+    },
+    {
+     "title": "Measuring unsupported claims",
+     "points": [
+      "Unsupported claim: an observed claim without valid evidence, or any claim not traceable to input.",
+      "Rate = unsupported claims / total claims over the evaluation set, run several times.",
+      "Flag, do not drop: flagged claims are shown with a marker in the report.",
+      "Track the rate per prompt version."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Correlate findings for api-eu2.lab.example and show observed attributes with sources.",
+    "Run the agent and show observed, inferred and unknown sections.",
+    "Show the 'admin path exposed' claim flagged as inferred from SAN only.",
+    "Plant a misleading string in a finding title and show the validator catching an unsupported observed claim.",
+    "Show the unsupported-claim rate across five runs."
+   ],
+   "lab": {
+    "brief": "Correlate exposure and review the agent's output for unsupported claims.",
+    "steps": [
+     "Implement correlation of findings and services to canonical assets.",
+     "Report unmatched findings.",
+     "Define the exposure output schema as Pydantic and JSON schema.",
+     "Write the agent prompt with the observed/inferred/unknown rules.",
+     "Implement the claim validator using evidence source types.",
+     "Run on the evaluation set five times and compute the unsupported-claim rate.",
+     "Review ten outputs by hand and compare with the validator.",
+     "Improve the prompt or validator and re-run."
+    ],
+    "success_criteria": [
+     "Every observed claim cites an observing source.",
+     "The unsupported-claim rate is measured and reported per prompt version.",
+     "Unmatched findings are listed, not dropped.",
+     "Manual review agrees with the validator on the sampled outputs, with disagreements documented."
+    ]
+   },
+   "common_pitfalls": [
+    "Treating 'internet-facing' as true because a hostname looks public.",
+    "Letting the agent call discovery tools.",
+    "Dropping flagged claims silently.",
+    "Evaluating one run."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Is 'admin path exposed' observed if the only evidence is a SAN?",
+     "a": "No, it is inferred and must be labeled so."
+    },
+    {
+     "q": "What must you check before parsing a structured response?",
+     "a": "stop_reason, because refusal or max_tokens output may not match the schema [c24]."
+    },
+    {
+     "q": "Define the unsupported-claim rate.",
+     "a": "Claims not supported by supplied evidence divided by all claims."
+    }
+   ],
+   "slides_and_assets": [
+    "Observed vs inferred vs unknown examples sheet.",
+    "Exposure output schema.",
+    "Evaluation set with labeled claims.",
+    "Unsupported-claim dashboard panel."
+   ],
+   "sources": [
+    "c7",
+    "c8",
+    "c22",
+    "c23",
+    "c24"
+   ]
+  },
+  {
+   "day": 3,
+   "title": "Ownership resolution",
+   "goal": "Suggest a responsible team for each asset from synthetic CMDB records, tags and repository metadata, with evidence attached and manual correction supported.",
+   "learning_objectives": [
+    "Learners can combine ownership signals with explicit precedence and confidence.",
+    "Learners can attach evidence to every suggestion.",
+    "Learners can implement manual correction that persists and feeds back into evaluation.",
+    "Learners can measure the unowned asset rate."
+   ],
+   "lessons": [
+    {
+     "title": "Ownership signals",
+     "points": [
+      "CMDB owner group on the CI [c7].",
+      "Cloud tags (e.g. team=platform-eu); AWS tag keys and values are case sensitive, and AWS recommends a standard format enforced with tag policies [c18].",
+      "Repository CODEOWNERS for the infrastructure code that defines the resource; owners are @user or @org/team and the last matching pattern wins [c12].",
+      "DNS zone or certificate requester as weak signals."
+     ]
+    },
+    {
+     "title": "Precedence and confidence",
+     "points": [
+      "Default precedence: verified manual correction > CMDB owner (if recent) > enforced tag > CODEOWNERS > weak signals.",
+      "Agreement of two independent signals raises confidence; disagreement creates a conflict for review.",
+      "Normalize tag keys for matching (Team, team) but report the inconsistency [c18].",
+      "No signal: owner unknown, routed to triage. Never guess."
+     ]
+    },
+    {
+     "title": "Evidence and correction",
+     "points": [
+      "Each suggestion lists signals, values, sources and timestamps.",
+      "Manual corrections record who, why and when, and override until the evidence changes.",
+      "Corrections become labeled data for the ownership evaluation set.",
+      "Tags must not contain personal or sensitive data; record team names, not individuals [c18]."
+     ]
+    },
+    {
+     "title": "Ownership metrics",
+     "points": [
+      "Unowned asset rate = assets with owner unknown / all in-scope assets.",
+      "Suggestion accuracy against the labeled set.",
+      "Conflict rate between signals per source pair.",
+      "BOD 26-04's tagging requirement (organization, environment, exposure, asset type) shows ownership is part of exposure management [c22]."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Show api-eu2.lab.example with tag team=platform-eu and CODEOWNERS @lab-org/platform-eu agreeing.",
+    "Show a conflict between CMDB and tag and the review item.",
+    "Correct a wrong suggestion and show it persists across a rerun.",
+    "Show unowned rate before and after corrections."
+   ],
+   "lab": {
+    "brief": "Resolve ownership for the inventory and correct three wrong suggestions.",
+    "steps": [
+     "Implement signal extractors for CMDB, tags and CODEOWNERS fixtures.",
+     "Implement a CODEOWNERS pattern matcher with last-match-wins semantics.",
+     "Implement precedence and confidence rules.",
+     "Store suggestions with evidence.",
+     "Implement the correction API with audit.",
+     "Run, then find and correct three wrong suggestions using the answer key.",
+     "Compute unowned rate and suggestion accuracy."
+    ],
+    "success_criteria": [
+     "Every suggestion has evidence; no owner is assigned without a signal.",
+     "Three corrections persist across reruns and are audited.",
+     "Unowned rate and accuracy are reported.",
+     "Conflicts are routed to review."
+    ]
+   },
+   "common_pitfalls": [
+    "First-match CODEOWNERS logic.",
+    "Treating tag case variants as different owners.",
+    "Assigning a default owner instead of unknown.",
+    "Losing corrections on rerun."
+   ],
+   "knowledge_check": [
+    {
+     "q": "In CODEOWNERS, which rule wins when several match?",
+     "a": "The last matching pattern [c12]."
+    },
+    {
+     "q": "Are AWS tag keys case sensitive?",
+     "a": "Yes; keys and values are case sensitive [c18]."
+    },
+    {
+     "q": "What should happen when no ownership signal exists?",
+     "a": "Owner unknown, routed to triage, counted in the unowned rate."
+    }
+   ],
+   "slides_and_assets": [
+    "Ownership signal precedence chart.",
+    "CMDB, tag and CODEOWNERS fixtures with answer key.",
+    "Correction workflow diagram."
+   ],
+   "sources": [
+    "c7",
+    "c12",
+    "c18",
+    "c22"
+   ]
+  },
+  {
+   "day": 3,
+   "title": "Prioritization, ticketing and inventory quality metrics",
+   "goal": "Rank exposures with transparent criteria, raise review tickets through a mock connector, and publish inventory quality metrics with an asset graph and audit report.",
+   "learning_objectives": [
+    "Learners can implement transparent, rule-based ranking with visible inputs.",
+    "Learners can raise idempotent review tickets with owner and evidence.",
+    "Learners can compute link precision, unowned rate, stale classification accuracy and change-detection accuracy.",
+    "Learners can produce an asset graph and an audit report."
+   ],
+   "lessons": [
+    {
+     "title": "Transparent ranking",
+     "points": [
+      "Inputs: observed exposure, criticality, finding severity, change class (new, dangling), ownership state, evidence quality.",
+      "Rules as data with points and rationale; inferred exposure counts less than observed.",
+      "Dangling DNS and newly exposed critical assets rank high because of takeover risk [c9].",
+      "Public exposure is a primary factor in federal prioritization under BOD 26-04 [c22]."
+     ]
+    },
+    {
+     "title": "Review tickets through a mock connector",
+     "points": [
+      "Ticket types: review exposure, confirm decommission, assign owner, review match.",
+      "Jira-shaped mock: POST /rest/api/2/issue with project.key, summary, description and issuetype.name; returns id, key, self [c25].",
+      "Idempotency: ticket_key from (asset canonical ID, ticket type); search by label with JQL before create [c25].",
+      "Tickets are for review; the platform never changes DNS or cloud resources."
+     ]
+    },
+    {
+     "title": "Inventory quality metrics",
+     "points": [
+      "Entity-link precision (from the resolution module).",
+      "Unowned asset rate; stale classification accuracy; change-detection accuracy.",
+      "Scope events: blocked and throttled counts per run, and audit entry count.",
+      "Trend over snapshots, not just a single value."
+     ]
+    },
+    {
+     "title": "Asset graph, reports and audit",
+     "points": [
+      "Graph nodes are canonical assets; edges are relationships and same_as links with provenance.",
+      "Export to a simple JSON graph and render in the UI; filter by owner and exposure.",
+      "Report: top exposures, changes, unowned, scope events, metrics, limitations.",
+      "Audit report lists every scope decision and manual correction for the run."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Show the ranking rules and the computed rank for ASM-301 and ASM-302.",
+    "Raise tickets in the mock and re-run to show no duplicates.",
+    "Show the metrics panel and the graph view.",
+    "Show the audit report including the blocked partner-corp.example target."
+   ],
+   "lab": {
+    "brief": "Rank, raise review tickets and publish the quality metrics.",
+    "steps": [
+     "Implement ranking rules as data.",
+     "Generate review items per type.",
+     "Implement the Jira-shaped mock connector client with label-based idempotency.",
+     "Raise tickets and re-run to confirm zero duplicates.",
+     "Compute the four quality metrics plus scope event counts.",
+     "Export the asset graph JSON and render it.",
+     "Write the run report and audit report."
+    ],
+    "success_criteria": [
+     "Rankings match the expected order and each shows its inputs.",
+     "Re-runs create no duplicate tickets.",
+     "All four quality metrics are computed against fixtures.",
+     "Reports include limitations and scope events."
+    ]
+   },
+   "common_pitfalls": [
+    "Ranking inferred exposure the same as observed.",
+    "Tickets without owner or evidence.",
+    "Metrics computed on a different snapshot than the report.",
+    "Letting tickets trigger automatic changes."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Which call creates an issue in the Jira-shaped API?",
+     "a": "POST /rest/api/2/issue with fields project.key, summary, description and issuetype.name [c25]."
+    },
+    {
+     "q": "Name the four inventory quality metrics.",
+     "a": "Entity-link precision, unowned asset rate, stale classification accuracy, change-detection accuracy."
+    },
+    {
+     "q": "Why rank dangling DNS high?",
+     "a": "Because it allows subdomain takeover [c9]."
+    }
+   ],
+   "slides_and_assets": [
+    "Ranking rules table.",
+    "Ticket templates per type.",
+    "Metrics dashboard layout.",
+    "Report and audit templates."
+   ],
+   "sources": [
+    "c9",
+    "c22",
+    "c25"
+   ]
+  },
+  {
+   "day": 3,
+   "title": "Capstone: scoped attack surface platform",
+   "goal": "Run approved sources to owned, prioritized exposures in one repeatable run, with every discovery action constrained to scope, and present acceptance evidence and limitations.",
+   "learning_objectives": [
+    "Learners can run the full platform from a clean environment with one command.",
+    "Learners can show evidence for every acceptance criterion.",
+    "Learners can explain limitations and the boundary between the lab and real deployments.",
+    "Learners can demonstrate a blocked scope violation during the demo."
+   ],
+   "lessons": [
+    {
+     "title": "Acceptance criteria",
+     "points": [
+      "All discovery is constrained to approved scope; violations are blocked and logged.",
+      "Every asset record includes provenance and timestamps.",
+      "Uncertain matches are queued, not merged; new/changed/stale logic is tested against fixtures.",
+      "Ownership suggestions include evidence and can be corrected; metrics report gaps and correlation quality."
+     ]
+    },
+    {
+     "title": "Limitations and deployment boundary",
+     "points": [
+      "Real cloud inventories are eventually consistent and permission-limited [c2][c10].",
+      "Live CT monitoring must process every new entry of every watched log, which is an operational commitment [c4].",
+      "Active checks outside fixtures need a signed ROE with exclude list and halt criteria [c6].",
+      "The agent is advisory; scope, ranking and ownership precedence stay deterministic."
+     ]
+    },
+    {
+     "title": "Demo structure",
+     "points": [
+      "Show the scope policy and one blocked target.",
+      "Run the pipeline, then trace one asset from raw records to ticket.",
+      "Show a change report with a dangling DNS case.",
+      "Close with metrics and limitations."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Run make reset && make run-all on a clean clone.",
+    "Trace one asset through all tables and the graph.",
+    "Show the audit report with the blocked target.",
+    "Model the five-minute demo."
+   ],
+   "lab": {
+    "brief": "Capstone build and demo of the end-to-end attack surface management lab.",
+    "steps": [
+     "Reset and run the full pipeline with one command on the capstone snapshot pair.",
+     "Fix failures; the final run must need no manual edits.",
+     "Collect acceptance evidence in docs/acceptance.md.",
+     "Update README, runbook, architecture diagram, data-flow notes and limitations.",
+     "Include one deliberate out-of-scope attempt in the demo script.",
+     "Prepare and deliver the five-minute demo."
+    ],
+    "success_criteria": [
+     "The run completes from a clean environment without manual edits.",
+     "Every acceptance criterion has linked evidence.",
+     "The demo shows a blocked and logged out-of-scope target.",
+     "Limitations are specific."
+    ]
+   },
+   "common_pitfalls": [
+    "Demo depends on manual steps.",
+    "Scope violation demo uses a real third-party domain.",
+    "Metrics without the snapshot they refer to."
+   ],
+   "knowledge_check": [
+    {
+     "q": "What must be in place before any active check outside fixtures?",
+     "a": "Signed rules of engagement with scope, exclude list and halt criteria [c6]."
+    },
+    {
+     "q": "Why can a cloud inventory snapshot be incomplete?",
+     "a": "Eventual consistency and permission-limited results [c2][c10]."
+    },
+    {
+     "q": "Which decisions stay deterministic?",
+     "a": "Scope, ranking and ownership precedence."
+    }
+   ],
+   "slides_and_assets": [
+    "Capstone snapshot pair with expected outcomes.",
+    "Acceptance evidence template.",
+    "Rubric (functionality 25%, safety controls 20%, testing and evaluation 20%, engineering 15%, explainability 10%, documentation 10%).",
+    "Demo checklist."
+   ],
+   "sources": [
+    "c2",
+    "c4",
+    "c6",
+    "c10"
+   ]
+  }
+ ],
+ "capstone_plan": {
+  "brief": "Build a platform that consolidates approved asset sources, detects changes and inventory gaps, links assets to owners and findings, and prioritizes exposure review, with every discovery action constrained to authorized scope, demonstrated on a new capstone snapshot pair.",
+  "milestones": [
+   "M1: scope policy loaded and gate tests green; out-of-scope attempt blocked and logged.",
+   "M2: five adapters and normalized inventory with 100% provenance.",
+   "M3: entity resolution with review queue meeting the precision bar; change report for the capstone pair.",
+   "M4: exposure summaries with measured unsupported-claim rate; ownership with corrections.",
+   "M5: ranked review tickets, metrics, asset graph, audit report and five-minute demo."
+  ],
+  "evaluation_notes": [
+   "Use the client rubric: working functionality 25%, security and safety controls 20%, testing and evaluation 20%, engineering quality 15%, evidence and explainability 10%, documentation and presentation 10%.",
+   "Automatic fail on any adapter action that bypasses the scope gate or any silent merge.",
+   "Metrics must be computed on the capstone fixtures, not the training snapshots.",
+   "Reward clear limitations and honest unsupported-claim rates."
+  ]
+ },
+ "promo_video_research": {
+  "hook_basis": "'You cannot protect what you cannot find' reflects the asset-visibility premise of BOD 23-01 [c13]. Forgotten subdomains are realistic because dangling DNS records enable subdomain takeover [c9]; expired certificates are realistic because certificate lifetimes are shrinking and every issued certificate is public in CT logs [c21][c20]; 'cloud resources nobody owns' matches the ownership tagging that BOD 26-04 now requires of agencies [c22].",
+  "claims_check": [
+   {
+    "claim": "5 sources, one graph: DNS, certificates, cloud inventory, CMDB and scanner findings",
+    "basis": "Course design from the client's five adapters; each source type is real and documented [c1][c3][c5][c7]."
+   },
+   {
+    "claim": "Weak scope is the biggest risk in attack surface tooling",
+    "basis": "A course position from the client's safety note, not a measured statistic; consistent with NIST's requirement for ROE with an exclude list before testing [c6]."
+   },
+   {
+    "claim": "BLOCKED: target 'partner-corp.example' not in scope (logged, audit#2231)",
+    "basis": "Synthetic lab output; uses a reserved example. name [c11]. Behavior taught in the scope module."
+   },
+   {
+    "claim": "dns: 412 records, certs: 96, cloud: 1,204, cmdb: 388, findings: 2,019; normalized: 1,733 assets",
+    "basis": "Illustrative fixture counts, not real data."
+   },
+   {
+    "claim": "NEW api-eu2.lab.example (dns + cert SAN + cloud lb-eu2)",
+    "basis": "Teaching scenario showing deterministic linking signals; SANs are CA-verified identities [c15]."
+   },
+   {
+    "claim": "CHANGED shop.lab.example cert issuer changed",
+    "basis": "Teaching scenario; issuer changes are visible in CT and the certificate issuer field [c4][c15]."
+   },
+   {
+    "claim": "MISSING legacy-sso.lab.example last seen 41d ago -> STALE?",
+    "basis": "Teaching scenario; the 30-day stale window is a course default, not a standard."
+   },
+   {
+    "claim": "REVIEW vm-7781 <-> 'db-old' match confidence 0.61 (queued)",
+    "basis": "Synthetic; demonstrates the client's rule that uncertain matches are queued, not merged."
+   },
+   {
+    "claim": "observed: TLS 1.2, port 443 open ... inferred: admin path exposed (based on cert SAN only) <- flagged",
+    "basis": "Teaching scenario for observed vs inferred exposure; validation approach supported by OWASP guidance [c23]."
+   },
+   {
+    "claim": "owner: platform-eu (tag team=platform-eu, repo CODEOWNERS) confidence 0.92",
+    "basis": "Synthetic; ownership signals from cloud tags and CODEOWNERS are real mechanisms [c18][c12]."
+   },
+   {
+    "claim": "metrics: link precision 0.97, unowned 3.1%, stale accuracy 0.95, change accuracy 0.98",
+    "basis": "Illustrative lab results, not benchmarks."
+   },
+   {
+    "claim": "0 out-of-scope discovery",
+    "basis": "A property of the lab design (fixture-only sources, blocked outbound network, scope gate), demonstrated by tests rather than a general claim."
+   }
+  ]
+ },
+ "citations": [
+  {
+   "id": "c1",
+   "title": "What Is AWS Config?",
+   "url": "https://docs.aws.amazon.com/config/latest/developerguide/WhatIsConfig.html",
+   "publisher": "Amazon Web Services",
+   "supports": "Source adapters; Change detection",
+   "key_fact": "AWS Config records resource configurations and relationships and how they changed over time, can notify on create/modify/delete, offers advanced queries over current configuration state, and an aggregator collects configuration and compliance data from multiple accounts and Regions into one account and Region.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c2",
+   "title": "Overview of Azure Resource Graph",
+   "url": "https://learn.microsoft.com/en-us/azure/governance/resource-graph/overview",
+   "publisher": "Microsoft Learn",
+   "supports": "Source adapters; Asset normalization and canonical IDs",
+   "key_fact": "Azure Resource Graph queries resource properties across subscriptions with a KQL-based language, returns results only for resources the caller has at least read RBAC access to (partial results give no warning), keeps 14 days of change history, is not strongly consistent, and throttles per user with x-ms-user-quota-remaining and x-ms-user-quota-resets-after headers.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c3",
+   "title": "RFC 6962: Certificate Transparency",
+   "url": "https://www.rfc-editor.org/rfc/rfc6962",
+   "publisher": "IETF (RFC Editor)",
+   "supports": "Source adapters",
+   "key_fact": "CT logs are publicly auditable, append-only, untrusted Merkle-tree logs of issued certificates; precertificates carry a poison extension; clients read entries with GET /ct/v1/get-entries?start=&end= (0-based) and the latest tree head with /ct/v1/get-sth; the RFC is Experimental and obsoleted by RFC 9162.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c4",
+   "title": "RFC 9162: Certificate Transparency Version 2.0",
+   "url": "https://www.rfc-editor.org/rfc/rfc9162.html",
+   "publisher": "IETF (RFC Editor)",
+   "supports": "Source adapters; Change detection",
+   "key_fact": "Monitors watch logs for correct behavior or certificates of interest, such as all certificates for a domain, and \"MUST at least inspect every new entry in every log it watches\"; RFC 9162 is Experimental and obsoletes RFC 6962.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c5",
+   "title": "RFC 1034: Domain Names - Concepts and Facilities",
+   "url": "https://www.rfc-editor.org/rfc/rfc1034",
+   "publisher": "IETF (RFC Editor)",
+   "supports": "Source adapters; Entity resolution",
+   "key_fact": "A zone is authoritative for a connected region of the name space; the order of RRs in a set has no significance; TTL limits how long an RR may be cached; and if a CNAME RR is present at a node no other data should be present.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c6",
+   "title": "NIST SP 800-115: Technical Guide to Information Security Testing and Assessment",
+   "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-115.pdf",
+   "publisher": "NIST",
+   "supports": "Authorization, scope policy and the lab",
+   "key_fact": "Rules of Engagement are detailed guidelines and constraints established before testing that give the team authority to perform defined activities without further permission; the Appendix B template covers scope, test schedule and hours, personnel and points of contact, incident handling with halt criteria, and target systems including authorized and unauthorized addresses and an exclude list.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c7",
+   "title": "Configuration Management Database (CMDB)",
+   "url": "https://www.servicenow.com/docs/r/zurich/servicenow-platform/configuration-management-database-cmdb/c_ITILConfigurationManagement.html",
+   "publisher": "ServiceNow",
+   "supports": "Source adapters; Ownership resolution",
+   "key_fact": "The ServiceNow CMDB builds logical representations of assets, services and the relationships between them, stores component details as configuration items, and lists CMDB Identification and Reconciliation as a core feature; CMDB 360 tracks how multiple sources populate the same CI attributes.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c8",
+   "title": "WSTG v4.2: 4.1 Information Gathering",
+   "url": "https://wstg.owasp.org/v4.2/4-Web_Application_Security_Testing/01-Information_Gathering/",
+   "publisher": "OWASP",
+   "supports": "Authorization, scope policy and the lab; Exposure correlation with an agent",
+   "key_fact": "WSTG section 4.1 lists ten information gathering tests, from search engine discovery and web server fingerprinting to enumerating applications on a web server, identifying entry points and mapping application architecture.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c9",
+   "title": "Prevent dangling DNS entries and avoid subdomain takeover",
+   "url": "https://learn.microsoft.com/en-us/azure/security/fundamentals/subdomain-takeover",
+   "publisher": "Microsoft Learn",
+   "supports": "Change detection; Exposure correlation; promo claims",
+   "key_fact": "A DNS record (especially a CNAME) pointing to a deprovisioned resource is a dangling entry that lets an attacker provision the same FQDN and take over the subdomain, including obtaining a valid TLS certificate; Microsoft recommends removing such records, using alias records and asuid TXT domain verification, adding 'Remove DNS entry' to decommission checklists, and keeping a service catalog of FQDN endpoints and owners.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c10",
+   "title": "Cloud Asset Inventory overview",
+   "url": "https://docs.cloud.google.com/asset-inventory/docs/overview",
+   "publisher": "Google Cloud",
+   "supports": "Source adapters; Change detection",
+   "key_fact": "Cloud Asset Inventory searches, exports (to BigQuery or Cloud Storage) and monitors asset metadata via feeds; create, update and delete history is kept for up to 35 days; it is eventually consistent and not intended for live querying; relationships require Security Command Center Premium or Enterprise.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c11",
+   "title": "RFC 6761: Special-Use Domain Names",
+   "url": "https://www.rfc-editor.org/rfc/rfc6761",
+   "publisher": "IETF (RFC Editor)",
+   "supports": "Authorization, scope policy and the lab",
+   "key_fact": "example., example.com/net/org are reserved for documentation and resolve normally; test. names get immediate negative answers from caching servers by default; invalid. always returns NXDOMAIN; registrars must not register any of these; RFC 6761 updates RFC 2606.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c12",
+   "title": "About code owners",
+   "url": "https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners",
+   "publisher": "GitHub Docs",
+   "supports": "Ownership resolution",
+   "key_fact": "CODEOWNERS lives in .github/, the root or docs/ (first found wins), uses gitignore-style patterns where the last matching pattern takes precedence, names owners as @user or @org/team who must have write access, must be under 3 MB, and invalid lines are skipped.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c13",
+   "title": "BOD 23-01: Improving Asset Visibility and Vulnerability Detection on Federal Networks",
+   "url": "https://www.cisa.gov/news-events/directives/bod-23-01-improving-asset-visibility-and-vulnerability-detection-federal-networks",
+   "publisher": "CISA",
+   "supports": "Why this course; Change detection",
+   "key_fact": "BOD 23-01 requires automated asset discovery every 7 days covering at least the agency's IPv4 space and vulnerability enumeration every 14 days; asset discovery is defined as non-intrusive identification of network-addressable assets, and scope covers IPv4 and IPv6 assets on-premises, roaming and cloud, excluding ephemeral assets and third-party SaaS.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c14",
+   "title": "LLM06:2025 Excessive Agency",
+   "url": "https://genai.owasp.org/llmrisk/llm062025-excessive-agency/",
+   "publisher": "OWASP GenAI Security Project",
+   "supports": "Authorization, scope policy and the lab; Source adapters",
+   "key_fact": "Excessive agency arises from excessive functionality, permissions or autonomy; mitigations include minimal and narrow tools (avoid open-ended URL or shell tools), least-privilege credentials, user approval for high-impact actions, complete mediation of authorization in downstream systems, logging and rate limiting.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c15",
+   "title": "RFC 5280: Internet X.509 PKI Certificate and CRL Profile",
+   "url": "https://www.rfc-editor.org/rfc/rfc5280",
+   "publisher": "IETF (RFC Editor)",
+   "supports": "Entity resolution; Asset normalization",
+   "key_fact": "The subjectAltName extension binds DNS names, IP addresses and other identities to the certificate and must be fully verified by the CA; dNSName uses RFC 1034 preferred name syntax with no significance to case, wildcard semantics are left to applications, and validity is expressed as inclusive notBefore and notAfter times.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c16",
+   "title": "ipaddress: IPv4/IPv6 manipulation library",
+   "url": "https://docs.python.org/3/library/ipaddress.html",
+   "publisher": "Python Software Foundation",
+   "supports": "Authorization, scope policy and the lab",
+   "key_fact": "ip_address(x) in ip_network(y) tests membership; subnet_of, supernet_of and overlaps compare networks; ip_network is strict by default and raises ValueError when host bits are set; is_global and is_private follow IANA special-purpose registries, with 100.64.0.0/10 neither private nor global.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c17",
+   "title": "Public Suffix List",
+   "url": "https://publicsuffix.org/",
+   "publisher": "Mozilla / Public Suffix List community",
+   "supports": "Authorization, scope policy and the lab; Entity resolution",
+   "key_fact": "The Public Suffix List lists suffixes such as com or co.uk under which people can (or historically could) register names, and is used by browsers to stop cookies being set on public suffixes and to group sites; it is maintained by registries and the community.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c18",
+   "title": "Tagging best practices (Tag Editor user guide)",
+   "url": "https://docs.aws.amazon.com/tag-editor/latest/userguide/best-practices-and-strats.html",
+   "publisher": "Amazon Web Services",
+   "supports": "Ownership resolution",
+   "key_fact": "AWS advises not to put PII or sensitive data in tags, to use a standardized case-sensitive format (keys and values are case sensitive), to enforce standards with tag policies in AWS Organizations, and notes a 50 user-tag limit per resource, 128-character keys and 256-character values.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c19",
+   "title": "Get resource changes - Azure Resource Graph",
+   "url": "https://learn.microsoft.com/en-us/azure/governance/resource-graph/how-to/get-resource-changes",
+   "publisher": "Microsoft Learn",
+   "supports": "Change detection",
+   "key_fact": "Each create, update or delete produces a Microsoft.Resources/changes record (usually within five minutes) with targetResourceId, changeType, changeAttributes (timestamp, changedBy, clientType, operation, previous/new snapshot IDs) and per-property previousValue/newValue, queryable from the resourcechanges table; Microsoft recommends using changeType rather than operation to classify changes.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c20",
+   "title": "Certificate Transparency (CT) Logs",
+   "url": "https://letsencrypt.org/docs/ct-logs/",
+   "publisher": "Let's Encrypt",
+   "supports": "Source adapters",
+   "key_fact": "Let's Encrypt submits all certificates it issues to CT logs and operates its own logs (Sycamore and Willow in production, Twig for testing).",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c21",
+   "title": "Ballot SC-081v3: Introduce Schedule of Reducing Validity and Data Reuse Periods",
+   "url": "https://cabforum.org/2025/04/11/ballot-sc081v3-introduce-schedule-of-reducing-validity-and-data-reuse-periods/",
+   "publisher": "CA/Browser Forum",
+   "supports": "Change detection; promo claims",
+   "key_fact": "Ballot SC-081v3 reduces maximum TLS subscriber certificate validity from 398 days to 47 days in steps from March 2026 to March 2029, and SAN validation data reuse from 398 to 10 days; it passed 25-0 among certificate issuers and 4-0 among consumers.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c22",
+   "title": "BOD 26-04: Prioritizing Security Updates Based on Risk",
+   "url": "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+   "publisher": "CISA",
+   "supports": "Prioritization, ticketing and inventory quality metrics; Ownership resolution",
+   "key_fact": "BOD 26-04 makes asset exposure (an asset counts as exposed if any method finds it exposed) one of four remediation-timeline inputs, and requires agencies to continuously identify and tag externally reachable assets by organization, environment, exposure and asset type.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c23",
+   "title": "LLM09:2025 Misinformation",
+   "url": "https://genai.owasp.org/llmrisk/llm092025-misinformation/",
+   "publisher": "OWASP GenAI Security Project",
+   "supports": "Exposure correlation with an agent",
+   "key_fact": "OWASP identifies hallucination and overreliance as causes of LLM misinformation and recommends grounding in trusted sources, cross-verification and human oversight, automatic validation of key outputs and labeling AI-generated content.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c24",
+   "title": "Structured outputs",
+   "url": "https://platform.claude.com/docs/en/build-with-claude/structured-outputs",
+   "publisher": "Anthropic (Claude API docs)",
+   "supports": "Exposure correlation with an agent",
+   "key_fact": "JSON outputs use output_config.format with type json_schema (strict tools use strict: true); objects require additionalProperties false, numeric and string-length constraints are not supported, and refusal or max_tokens stop reasons can yield output that does not match the schema.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c25",
+   "title": "JIRA REST API examples",
+   "url": "https://developer.atlassian.com/server/jira/platform/jira-rest-api-examples/",
+   "publisher": "Atlassian Developer",
+   "supports": "Prioritization, ticketing and inventory quality metrics",
+   "key_fact": "Create issues with POST /rest/api/2/issue using fields.project.key, summary, description and issuetype.name (response: id, key, self) and search with GET /rest/api/2/search?jql=... returning startAt, maxResults, total and issues.",
+   "verified": "2026-10-30"
+  }
+ ]
+}
