@@ -868,6 +868,7 @@ Each learner gets a ServiceNow PDI with five synthetic incidents, access to shar
 - PATCH /api/now/table/incident/{sys_id} with close_notes and close_code after approval; state change to Resolved is done by the engineer [1].
 - Write the template summary to work_notes as well for the audit trail [1].
 - Use the instance's own close code choices; read them rather than hard-coding.
+- If the PATCH fails validation (for example a mandatory close field), surface the instance error to the engineer instead of retrying with guessed values [1].
 
 ##### Knowledge article draft
 
@@ -1052,6 +1053,8 @@ Each learner gets a ServiceNow PDI with five synthetic incidents, access to shar
 - A new incident lands in the PDI with a symptom the teams have not seen (for example an HA sync failure on the NetScaler pair after a change) [23].
 - Teams run intake, acknowledgement draft, evidence collection, suggestions, approvals, execution and template.
 - The instructor plays caller and senior approver.
+- The capstone incident deliberately omits two checklist details so the acknowledgement step is exercised.
+- Teams must use only the collectors and allowlist built during the course; no ad hoc device logins.
 
 ##### Acceptance criteria
 
@@ -1065,6 +1068,7 @@ Each learner gets a ServiceNow PDI with five synthetic incidents, access to shar
 - Five-minute demo of the run.
 - Limitations statement: platforms covered, known gaps, false-positive and false-negative cases seen.
 - Next steps for production: credentials, change control, rollout.
+- Show the audit log and the matching approval records during the demo, not only the final note.
 
 **Instructor demo.**
 

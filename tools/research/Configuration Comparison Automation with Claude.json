@@ -216,7 +216,8 @@
      "points": [
       "Claude plans, drafts and explains; deterministic Python collects, normalizes and diffs; a person approves; every prompt and tool call is logged.",
       "MCP calls for a human in the loop who can deny tool invocations [c14]; the pipeline exposes no write tools to Claude at all.",
-      "The module 1 checklist is the acceptance standard for the capstone."
+      "The module 1 checklist is the acceptance standard for the capstone.",
+      "Each later module ends with a deliverable that slots into this pattern: collectors, model, plan, diff, explanation, approval, pipeline."
      ]
     }
    ],
@@ -689,7 +690,8 @@
      "points": [
       "Plans are committed to Git as JSON plus a rendered summary.",
       "A pull request is the first human checkpoint; reviewers comment on steps, not formatting.",
-      "Plan versions are referenced by the later diff and approval package."
+      "Plan versions are referenced by the later diff and approval package.",
+      "Reject plans whose citations do not resolve to inventory ids before the review starts."
      ]
     }
    ],
@@ -906,7 +908,8 @@
      "points": [
       "Operations managers: drift summary with counts, blocking items and cut-over risk.",
       "Engineers: remediation steps with target CLI or API objects named, never executed.",
-      "Both are generated from the same report and cite the same lines."
+      "Both are generated from the same report and cite the same lines.",
+      "Use the same schema with an audience field so tests can check that both outputs cover the same blocking items [c13]."
      ]
     },
     {
@@ -914,7 +917,8 @@
      "points": [
       "A deterministic check confirms every object id and report line referenced exists.",
       "Outputs that fail the check are rejected and regenerated once, then escalated.",
-      "Tool annotations are not trusted for safety; tools themselves are read-only [c14]."
+      "Tool annotations are not trusted for safety; tools themselves are read-only [c14].",
+      "Log rejected outputs with the reason so prompt changes can be evaluated against them."
      ]
     }
    ],
@@ -1219,7 +1223,8 @@
      "points": [
       "Collect from the lab F5 [c15] and cloud NetScaler [c16].",
       "Normalize, plan, diff and explain with versions recorded.",
-      "Seed one surprise mismatch chosen by the instructor."
+      "Seed one surprise mismatch chosen by the instructor.",
+      "Teams may not edit fixtures or severity rules after the surprise mismatch is seeded."
      ]
     },
     {
@@ -1227,7 +1232,8 @@
      "points": [
       "Plan, severity report, Claude explanation, evidence index, unknowns and manual items.",
       "ServiceNow change created via the Table API [c27].",
-      "Pull request under branch protection [c26]."
+      "Pull request under branch protection [c26].",
+      "Unknowns and manual items (for example iRule logic and named expressions [c3]) are listed with owners."
      ]
     },
     {
@@ -1235,7 +1241,8 @@
      "points": [
       "Check every module 1 checklist row.",
       "Confirm no change was applied and the attempt log is clean.",
-      "Limitations statement and next steps."
+      "Limitations statement and next steps.",
+      "Reviewers replay one diff line from report to raw evidence to show traceability."
      ]
     }
    ],
@@ -1289,6 +1296,7 @@
     "Approval package template."
    ],
    "sources": [
+    "c3",
     "c15",
     "c16",
     "c26",

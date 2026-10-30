@@ -1,0 +1,1859 @@
+{
+ "course": "Device Upgrade Automation with Claude",
+ "domain": "Network and Infrastructure Automation",
+ "source_input": "Client use case 2, 'Device Upgrade Automation': \"Devices upgraded along with space clear, firmware upload, post and pre checks along with scheduler option.\" Use case 10, 'Cisco ACI Upgrade Automation': \"Managing upgrade of ACI chassis as per process suggested by Cisco.\" The client's aim is \"to do automation using Claude for all these content\".",
+ "why_this_course": [
+  "Upgrades are routine maintenance that teams still run by hand at two in the morning. NIST frames patching and upgrading as preventive maintenance that should be operationalized, not improvised [c7]. Load balancer and fabric upgrades are where that is hardest: each vendor has its own space requirements, boot model and HA order [c1][c3][c4][c5].",
+  "Most failed windows come from the same few causes: not enough disk (NetScaler needs 7 GB free in /var [c4]), an unverified image [c2], the wrong HA order [c1][c3], a missing backup, or a window that runs out mid-pair while sync and mirroring are degraded [c2][c3]. Each one can be checked by code before the window opens.",
+  "This course teaches teams to let Claude read the fleet, draft plans and explain diffs, while deterministic code performs every space clear, install and reboot behind a ServiceNow approval. That split follows OWASP's guidance on limiting agent permissions and requiring human approval for high-impact actions [c37]. The client also asked for Cisco ACI upgrades done the way Cisco prescribes, which the course covers with Cisco's own validator and order [c20][c21]."
+ ],
+ "design_decisions": [
+  {
+   "decision": "One vendor-neutral lifecycle across F5, NetScaler, Alteon and ACI",
+   "rationale": "The client asked for space clear, firmware upload, pre and post checks and a scheduler; a single lifecycle lets the same runner and guardrails cover every vendor."
+  },
+  {
+   "decision": "Include one Cisco ACI module in a multi-vendor course",
+   "rationale": "Use case 10 asks for ACI upgrades 'as per process suggested by Cisco' and has its own dedicated course; here one module shows how ACI fits the same lifecycle, following Cisco's pre-upgrade checklist and validator [c20][c21] rather than inventing a process, and leaves depth to the dedicated ACI course."
+  },
+  {
+   "decision": "Space clear is its own module with allowlists and dry run",
+   "rationale": "Disk space is the client's first named step and a top failure cause; vendor guidance lists exactly what can be cleared [c15][c10]."
+  },
+  {
+   "decision": "Golden snapshot and diff instead of ad hoc post-checks",
+   "rationale": "A versioned snapshot makes the post-check objective and gives the change record clear evidence."
+  },
+  {
+   "decision": "Scheduler reads approved windows from ServiceNow",
+   "rationale": "The client asked for a scheduler option; tying it to change windows [c28] stops runs outside approval."
+  },
+  {
+   "decision": "Claude proposes, code executes, a human approves every destructive step",
+   "rationale": "Reboots and deletions are high impact; OWASP recommends human approval and minimal permissions [c37]."
+  }
+ ],
+ "audience_profile": [
+  {
+   "role": "Load balancer and data center engineers",
+   "needs": "Safe, repeatable upgrades across vendors",
+   "starting_point": "Strong on one vendor's GUI and CLI; limited automation"
+  },
+  {
+   "role": "NOC automation leads",
+   "needs": "A pattern for using AI assistance in production change",
+   "starting_point": "Comfortable with Python and REST"
+  },
+  {
+   "role": "Change and release managers",
+   "needs": "Evidence, approvals and window control",
+   "starting_point": "Strong on ServiceNow change process"
+  },
+  {
+   "role": "Enterprise IT and network operations teams",
+   "needs": "To run and support the scheduled pipeline",
+   "starting_point": "Familiar with maintenance windows and runbooks"
+  }
+ ],
+ "prerequisite_check": [
+  "Have you upgraded at least one load balancer or HA pair, or watched it done?",
+  "Can you use a Linux shell to check disk usage and copy files?",
+  "Can you call a REST API with curl and read the JSON?",
+  "Can you read and run a short Python script?",
+  "Do you know your organization's change approval process in ServiceNow?"
+ ],
+ "lab_environment": {
+  "overview": "Each team gets a mixed fleet: an F5 BIG-IP VE HA pair, a NetScaler VPX HA pair, an Alteon VA or recorded Alteon responses, access to the Cisco DevNet Always-On ACI Simulator plus recorded APIC responses, a ServiceNow developer instance and a GitHub repository with a self-hosted runner in the lab network. All hostnames are fictional.",
+  "components": [
+   {
+    "name": "F5 BIG-IP VE HA pair (lb-f5-01, lb-f5-02)",
+    "version": "Source 16.1.x or 17.1.x, target 17.5.x [c1]",
+    "purpose": "F5 staging, install, HA ordering and rollback",
+    "how_to_obtain": "Trial keys through MyF5 or F5 lab licenses through a reseller",
+    "notes": "Allocate disk so the image, two volumes and UCS archives fit; keep the source ISO for rollback tests."
+   },
+   {
+    "name": "NetScaler VPX HA pair (lb-ns-01, lb-ns-02)",
+    "version": "NetScaler 14.1 builds (source and target)",
+    "purpose": "NetScaler staging, install and HA ordering",
+    "how_to_obtain": "VPX Express needs no license file [c40]",
+    "notes": "Express has 20 Mbps and 250 SSL sessions, enough for labs [c40]; size /var for the 7 GB requirement [c4]."
+   },
+   {
+    "name": "Radware Alteon VA (lb-rw-01, lb-rw-02)",
+    "version": "Alteon 33.x; SDK minimum 31.0.10.0 or 32.2.2.0 [c38]",
+    "purpose": "Alteon facts, image selection and rollback",
+    "how_to_obtain": "Evaluation license through Radware sales or partner",
+    "notes": "Public trial terms could not be confirmed; fall back to recorded responses."
+   },
+   {
+    "name": "Cisco ACI",
+    "version": "DevNet Always-On ACI Simulator and recorded APIC responses",
+    "purpose": "Validator review, APIC API reads and plan building",
+    "how_to_obtain": "Free DevNet sandbox, no reservation [c23]",
+    "notes": "Shared instance: read calls only; write payloads are demonstrated with recorded responses."
+   },
+   {
+    "name": "Anaya LB",
+    "version": "Client-supplied",
+    "purpose": "Adapter stub",
+    "how_to_obtain": "Client to provide API documentation or a test device",
+    "notes": "No public documentation found."
+   },
+   {
+    "name": "ServiceNow Personal Developer Instance",
+    "version": "Current release",
+    "purpose": "CMDB, change windows and approvals",
+    "how_to_obtain": "Free through the ServiceNow Developer Program [c41]",
+    "notes": "Reclaimed after ten days unused [c41]; provision close to the course and export the flows."
+   },
+   {
+    "name": "Claude Code and Claude Agent SDK",
+    "version": "Current release",
+    "purpose": "Workbench, planning and explanations",
+    "how_to_obtain": "Official installer [c32]; Agent SDK from the package index with an API key",
+    "notes": "Use organization API keys."
+   },
+   {
+    "name": "Python, Pydantic, pytest, APScheduler",
+    "version": "Python 3.11 or later; APScheduler 3.x [c30]",
+    "purpose": "Runner, models, tests and in-house scheduler",
+    "how_to_obtain": "Standard package index",
+    "notes": "Pin versions."
+   },
+   {
+    "name": "GitHub repository with Actions",
+    "version": "GitHub.com or Enterprise",
+    "purpose": "Scheduling, CI and evidence pull requests",
+    "how_to_obtain": "One repository per team",
+    "notes": "Self-hosted runner for device access."
+   }
+  ],
+  "fixtures": [
+   {
+    "name": "Recorded device responses",
+    "contents": "F5 volume and image, NITRO hanode and install, Alteon SDK reads, APIC queries, including errors",
+    "used_in": "Claude Code, Agent SDK and MCP for upgrade workflows; Inventory and pre-flight discovery"
+   },
+   {
+    "name": "CMDB fixture",
+    "contents": "Lab load balancers with one deliberate role mismatch",
+    "used_in": "Inventory and pre-flight discovery"
+   },
+   {
+    "name": "Disk fill script",
+    "contents": "Creates old images, cores, crash files and traces",
+    "used_in": "Disk space clearing and firmware staging"
+   },
+   {
+    "name": "ACI validator output",
+    "contents": "Recorded script output with PASS, FAIL and MANUAL results",
+    "used_in": "Cisco ACI and fleet-scale, multi-vendor runs"
+   },
+   {
+    "name": "Broken upgrade scenario",
+    "contents": "A pool that fails after upgrade",
+    "used_in": "Post-checks, verification and rollback"
+   }
+  ],
+  "safety": [
+   "Lab devices only, fictional hostnames",
+   "Read-only tools by default; destructive steps only through the runner with an Approved change",
+   "Credentials only in environment variables or the lab vault",
+   "Shared DevNet sandbox used for read calls only",
+   "Reset scripts restore every device each evening"
+  ]
+ },
+ "modules": [
+  {
+   "day": 1,
+   "title": "The device upgrade lifecycle and why upgrades fail",
+   "goal": "Learners can describe how each vendor really upgrades and map every step to one vendor-neutral lifecycle before writing any automation.",
+   "learning_objectives": [
+    "Learners can compare F5, NetScaler, Alteon and Cisco ACI upgrade mechanics",
+    "Learners can name the classic failure modes and the step where each shows up",
+    "Learners can map a vendor runbook onto the lifecycle: inventory, pre-check, space clear, upload, install, post-check, rollback, report",
+    "Learners can explain the course pattern: Claude plans and explains, code executes, a human approves, everything is logged"
+   ],
+   "lessons": [
+    {
+     "title": "F5 BIG-IP: boot locations and UCS",
+     "points": [
+      "Images go in /shared/images and install to an inactive boot location with tmsh install sys software image <iso> volume HD1.x [c1]",
+      "The source must be on 15.x or later to go to 17.5.1.4, so older systems need more than one hop [c1]",
+      "Save a UCS in /var/local/ucs and copy it off the device before upgrading [c1][c11]",
+      "Volumes report active, version, status and default boot location, which is how you know where you are [c9]",
+      "Install takes roughly three to seven minutes; failures are written to /var/log/liveinstall.log [c1]"
+     ]
+    },
+    {
+     "title": "NetScaler: /var/nsinstall and build files",
+     "points": [
+      "Builds are copied to /var/nsinstall/<release>/build_<build>, extracted and installed with ./installns [c14]",
+      "./installns --pre_check runs the pre-upgrade validation before the real install [c14]",
+      "/var needs 7 GB free and /flash at least 250 MB [c4]",
+      "Upgrade one major release at a time, for example 12.1 to 13.1 to 14.1 [c4]"
+     ]
+    },
+    {
+     "title": "Radware Alteon: image banks and no config rollback",
+     "points": [
+      "Back up the configuration and run the Upgrade Advisor Tool against the current config and target version [c5]",
+      "31.x to 33.x upgrade directly; older versions need intermediate hops [c5]",
+      "Configuration rollback is not supported: rollback means factory config for next boot, select the old image, reboot, upload the saved config [c5]",
+      "Some older Radware device families also need an upgrade password tied to the base MAC address; confirm for your Alteon model [c6]"
+     ]
+    },
+    {
+     "title": "Cisco ACI: controllers first, then switch groups",
+     "points": [
+      "APICs are upgraded before switches [c20]",
+      "Since 4.0(1) there is one switch update group type; upgrade one switch of each HA pair at a time [c20]",
+      "The pre-upgrade validator runs when an update group is configured; a standalone script adds checks [c20][c21]",
+      "All switches must be Active under Fabric Membership before starting [c20]"
+     ]
+    },
+    {
+     "title": "Why upgrades fail and the lifecycle",
+     "points": [
+      "Full /shared or /var: the image is uploaded but the install has no room [c4][c15]",
+      "Corrupt or unverified image: always check the vendor checksum before install [c2][c8]",
+      "HA pair in the wrong order: upgrade the standby or secondary first [c1][c3]",
+      "Missing backup or a backup left only on the device [c1]",
+      "Window overrun: F5 notes mirroring does not work until all devices run the new version, so a half-done pair is exposed [c2]",
+      "NIST frames upgrades as routine preventive maintenance to be operationalized, not ad hoc work [c7]"
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Show the F5 volume list on lb-f5-01 through GET /mgmt/tm/sys/software/volume and tmsh show sys software",
+    "Show df -h on a NetScaler and point at /var usage against the 7 GB requirement",
+    "Walk the vendor runbooks side by side on screen",
+    "Fill the lifecycle map live with learner input",
+    "Show a failed install entry in /var/log/liveinstall.log from a recorded fixture",
+    "Explain the operating pattern and who does what at each stage"
+   ],
+   "lab": {
+    "brief": "Walk a real F5 and NetScaler upgrade runbook by hand in the lab, record every step and decision, and map each to the lifecycle stages.",
+    "steps": [
+     "Read the F5 and NetScaler runbooks provided",
+     "On lb-f5-02 (standby) list volumes and images and record the current version",
+     "Save a UCS and copy it to the lab file server",
+     "On lb-ns-02 (secondary) check /var and /flash free space",
+     "Run ./installns --pre_check on the staged build and record the output",
+     "Record each decision point (go or stop) and who would make it",
+     "Map every step to a lifecycle stage on the template",
+     "Mark every point where one of the classic failures would appear"
+    ],
+    "success_criteria": [
+     "Every runbook step is mapped to a lifecycle stage",
+     "Each classic failure mode is placed on the map with its detection point",
+     "Version, disk space and backup location are recorded for both devices",
+     "Decision points name the approver role"
+    ]
+   },
+   "common_pitfalls": [
+    "Treating the vendor upgrade guide as optional reading",
+    "Forgetting multi-hop paths when the source is old",
+    "Leaving the only backup on the device being upgraded",
+    "Assuming Alteon can roll back configuration like F5 or NetScaler"
+   ],
+   "knowledge_check": [
+    {
+     "q": "Where does an F5 install go?",
+     "a": "To an inactive boot location (volume), for example HD1.2, while the active volume keeps running."
+    },
+    {
+     "q": "How much free space does NetScaler need in /var for an upgrade?",
+     "a": "7 GB: 1 GB for the bundle, 2 GB for extraction and 4 GB for the process."
+    },
+    {
+     "q": "What is the rollback path on Alteon?",
+     "a": "Set next-boot config to factory, choose the previous image, reboot and upload the saved configuration."
+    },
+    {
+     "q": "In ACI, what is upgraded first?",
+     "a": "The APIC cluster, before any switches."
+    }
+   ],
+   "slides_and_assets": [
+    "Vendor mechanics comparison table",
+    "Lifecycle map template",
+    "Failure mode cards",
+    "Recorded liveinstall.log failure",
+    "Lab estate topology diagram"
+   ],
+   "sources": [
+    "c1",
+    "c2",
+    "c3",
+    "c4",
+    "c5",
+    "c6",
+    "c7",
+    "c8",
+    "c9",
+    "c11",
+    "c14",
+    "c15",
+    "c20",
+    "c21"
+   ]
+  },
+  {
+   "day": 1,
+   "title": "Claude Code, Agent SDK and MCP for upgrade workflows",
+   "goal": "Learners build a workbench where Claude sees the fleet only through typed read-only tools.",
+   "learning_objectives": [
+    "Learners can install Claude Code and write a CLAUDE.md for the upgrade runner",
+    "Learners can build an MCP server wrapping F5, NetScaler, Alteon and APIC read calls",
+    "Learners can make every tool return validated typed output",
+    "Learners can separate what the model may propose from what code may do"
+   ],
+   "lessons": [
+    {
+     "title": "Claude Code and project conventions",
+     "points": [
+      "Install with curl -fsSL https://claude.ai/install.sh | bash; use claude -p for scripted runs [c32]",
+      "Project instructions in ./CLAUDE.md or ./.claude/CLAUDE.md, shared through source control [c42]",
+      "Record hostnames, version matrix location, naming rules and red lines (no install, reboot or delete tools)",
+      "Keep the file short and specific so it is followed [c42]"
+     ]
+    },
+    {
+     "title": "Agent SDK scaffold",
+     "points": [
+      "Define tools with @tool and register them with create_sdk_mcp_server [c33]",
+      "Tool names become mcp__upgrader__get_version and must be listed in allowed_tools [c33]",
+      "Return structuredContent and isError: true on failure [c33]",
+      "Pre-approve read tools only; anything else must prompt or be absent"
+     ]
+    },
+    {
+     "title": "Read-only device tools",
+     "points": [
+      "F5: GET /mgmt/tm/sys/software/volume and /mgmt/tm/sys/software/image for versions, boot locations and images [c9][c8]",
+      "NetScaler: GET /nitro/v1/config/hanode for HA state and sync [c18]",
+      "Alteon: software and facts through the Radware SDK management functions [c38]",
+      "APIC: log in with POST /api/aaaLogin.json, then read-only class queries [c24]",
+      "Cyber Controller for centrally managed Alteons is an option; confirm its API with Radware before building on it"
+     ]
+    },
+    {
+     "title": "Strict schemas and the propose-versus-do line",
+     "points": [
+      "Every tool output is a Pydantic model validated before it is returned [c31]",
+      "Mark tools with readOnlyHint, but remember annotations are only hints and enforcement stays in code [c34]",
+      "The model may propose plans and explain; only the runner may call write endpoints",
+      "Plans the model proposes are JSON validated against a schema [c35]"
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Create the repo and CLAUDE.md live",
+    "Write get_version for F5 against a recorded volume response",
+    "Write get_ha_state for NetScaler and show the typed output",
+    "Register the server and ask Claude to describe the fleet",
+    "Ask Claude to reboot a device and show there is no tool to do it",
+    "Show a tool returning isError when a device is unreachable"
+   ],
+   "lab": {
+    "brief": "Build the read-only MCP server, connect it to Claude Code and ask Claude to describe the fleet using only tool results.",
+    "steps": [
+     "Clone the starter repo and set up a virtual environment",
+     "Write CLAUDE.md with conventions and red lines",
+     "Implement get_version, get_images and get_ha_state for F5",
+     "Implement get_version and get_ha_state for NetScaler",
+     "Implement get_version for Alteon against recorded responses",
+     "Implement get_firmware_status for APIC against the DevNet sandbox or recorded responses",
+     "Validate every output with Pydantic and add tests",
+     "Ask Claude to describe the fleet and check each statement against tool output"
+    ],
+    "success_criteria": [
+     "All tools return validated typed output",
+     "Claude's fleet description matches tool output with no invented facts",
+     "No write tool exists in the server",
+     "Unreachable devices produce isError results, not guesses"
+    ]
+   },
+   "common_pitfalls": [
+    "A generic shell tool that bypasses the read-only design",
+    "Free-text tool output",
+    "Trusting tool annotations as enforcement",
+    "Device credentials in CLAUDE.md"
+   ],
+   "knowledge_check": [
+    {
+     "q": "What is the full tool name Claude sees for get_version on server upgrader?",
+     "a": "mcp__upgrader__get_version."
+    },
+    {
+     "q": "Are MCP tool annotations enforcement?",
+     "a": "No; they are hints, and clients should not rely on annotations from untrusted servers."
+    },
+    {
+     "q": "Which F5 endpoint lists boot locations?",
+     "a": "/mgmt/tm/sys/software/volume."
+    }
+   ],
+   "slides_and_assets": [
+    "Starter repo and CLAUDE.md template",
+    "Tool catalogue with schemas",
+    "Recorded device responses for all four vendors",
+    "Workbench architecture diagram"
+   ],
+   "sources": [
+    "c8",
+    "c9",
+    "c18",
+    "c24",
+    "c31",
+    "c32",
+    "c33",
+    "c34",
+    "c35",
+    "c38",
+    "c42"
+   ]
+  },
+  {
+   "day": 1,
+   "title": "Inventory and pre-flight discovery",
+   "goal": "Learners reconcile CMDB records with live device facts into one typed inventory and readiness report.",
+   "learning_objectives": [
+    "Learners can query ServiceNow CMDB load balancer tables through the Table API",
+    "Learners can collect version, HA role, sync state and disk usage per vendor",
+    "Learners can express the target version matrix and upgrade paths as data",
+    "Learners can have Claude summarize readiness and flag CMDB mismatches"
+   ],
+   "lessons": [
+    {
+     "title": "CMDB as the starting list",
+     "points": [
+      "Load balancers live in cmdb_ci_lb and classes such as cmdb_ci_lb_bigip and cmdb_ci_lb_netscaler [c26]",
+      "Query with GET /api/now/table/cmdb_ci_lb_bigip?sysparm_query=...&sysparm_fields=name,ip_address,... [c25]",
+      "Page large results with sysparm_limit and sysparm_offset [c25]",
+      "Record owner and support group for each device for later approvals"
+     ]
+    },
+    {
+     "title": "Live facts per vendor",
+     "points": [
+      "F5: active volume version and build, images present, HA state [c9][c8]",
+      "NetScaler: master state Primary or Secondary and sync status from hanode [c18]",
+      "Alteon: software version through SDK management info [c38]",
+      "Disk usage: /shared on F5 and /var and /flash on NetScaler against vendor minimums [c4]"
+     ]
+    },
+    {
+     "title": "The inventory model",
+     "points": [
+      "One Pydantic model: hostname, vendor, platform, version, ha_role, sync_state, disk, license_ok, owner, cmdb_sys_id [c31]",
+      "Validation errors are reported per device, not hidden [c31]",
+      "A mismatch field records where CMDB and the device disagree",
+      "Each record keeps the raw source responses by reference so reviewers can check values"
+     ]
+    },
+    {
+     "title": "Version matrix and paths as data",
+     "points": [
+      "targets.yaml: vendor, platform, target version, allowed source versions",
+      "Path rules: F5 17.5.1.4 needs 15.x or later at source [c1]; NetScaler one major release at a time [c4]; Alteon older than 31.x needs hops [c5]",
+      "The planner reads paths from data, never from the prompt",
+      "Each device gets READY, NOT READY or NEEDS HOP with reasons"
+     ]
+    },
+    {
+     "title": "Claude summarizes readiness",
+     "points": [
+      "Claude reads the inventory and writes a per-device readiness summary",
+      "Every NOT READY device gets a plain-English reason tied to a field",
+      "CMDB mismatches are listed for the CMDB owner, not fixed by the agent",
+      "Summaries cite inventory fields by name so a reviewer can check every claim"
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Query CMDB for lab load balancers and show the JSON",
+    "Collect live facts from the lab fleet",
+    "Show a CMDB mismatch on lb-ns-03 role",
+    "Load targets.yaml and compute readiness",
+    "Ask Claude to explain each not-ready device"
+   ],
+   "lab": {
+    "brief": "Generate the readiness report for a mixed lab fleet and have Claude explain every device marked not ready.",
+    "steps": [
+     "Write the CMDB query for the lab tables",
+     "Implement live-fact collectors for each vendor",
+     "Define the inventory Pydantic model",
+     "Write targets.yaml with lab target versions",
+     "Implement readiness rules from the matrix",
+     "Produce readiness.json and readiness.md",
+     "Ask Claude for explanations and review them against data",
+     "Write tests with recorded CMDB and device responses"
+    ],
+    "success_criteria": [
+     "Every lab device appears with readiness and reasons",
+     "CMDB mismatches are listed",
+     "Path rules come from data files",
+     "Tests pass offline"
+    ]
+   },
+   "common_pitfalls": [
+    "Trusting CMDB HA role without checking the device",
+    "Encoding upgrade paths in prompts",
+    "Ignoring /flash on NetScaler",
+    "Letting the agent update CMDB"
+   ],
+   "knowledge_check": [
+    {
+     "q": "Which table holds F5 BIG-IP CIs?",
+     "a": "cmdb_ci_lb_bigip."
+    },
+    {
+     "q": "Why keep upgrade paths in data?",
+     "a": "So they are reviewed, versioned and enforced in code rather than depending on the model."
+    },
+    {
+     "q": "What happens to a CMDB mismatch?",
+     "a": "It is reported to the CMDB owner and blocks readiness until resolved; the agent does not fix it."
+    }
+   ],
+   "slides_and_assets": [
+    "CMDB field map",
+    "targets.yaml example",
+    "Readiness report sample",
+    "Mismatch report template"
+   ],
+   "sources": [
+    "c1",
+    "c4",
+    "c5",
+    "c8",
+    "c9",
+    "c18",
+    "c25",
+    "c26",
+    "c31",
+    "c38"
+   ]
+  },
+  {
+   "day": 1,
+   "title": "Pre-checks and the golden snapshot",
+   "goal": "Learners capture a versioned snapshot and backups before any change and stop the run when anything is red.",
+   "learning_objectives": [
+    "Learners can collect virtual server, pool, HA, certificate and licence state",
+    "Learners can take and verify backups on each vendor",
+    "Learners can define a versioned JSON snapshot schema",
+    "Learners can enforce hard stop rules"
+   ],
+   "lessons": [
+    {
+     "title": "What goes in the snapshot",
+     "points": [
+      "Virtual servers and their status, pools and member status, monitors",
+      "HA role, failover state and config-sync status [c18][c39]",
+      "Certificate expiry for bound certificates",
+      "Version, active volume and licence validity [c9]"
+     ]
+    },
+    {
+     "title": "Backups before change",
+     "points": [
+      "F5: tmsh save sys ucs <name> writes to /var/local/ucs [c11]; download it with GET /mgmt/shared/file-transfer/ucs-downloads/<name> [c13]",
+      "NetScaler: POST /nitro/v1/config/systembackup?action=create with level full [c17]",
+      "Alteon: export and save the configuration before upgrade [c5]",
+      "Copy every backup off the device and record a hash of the file"
+     ]
+    },
+    {
+     "title": "Snapshot schema",
+     "points": [
+      "snapshot_id, device, captured_at, schema_version, sections{}",
+      "Stable sort order so diffs are meaningful",
+      "Stored in the repo or artifact store, not only on disk",
+      "Secrets and session tokens are never written into a snapshot"
+     ]
+    },
+    {
+     "title": "Hard stop rules",
+     "points": [
+      "Any red pre-check stops the run",
+      "No backup or an unreadable backup stops the run [c1]",
+      "Sync not in sync on an HA pair stops the run",
+      "Claude may explain the stop but cannot override it"
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Capture a snapshot of lb-f5-01 and lb-f5-02",
+    "Save and download a UCS",
+    "Create a NetScaler backup through NITRO",
+    "Corrupt the backup file and rerun to show the stop",
+    "Ask Claude to explain the stop reason"
+   ],
+   "lab": {
+    "brief": "Implement the pre-check and snapshot module with pytest coverage, then break a backup on purpose and watch the run stop.",
+    "steps": [
+     "Define the snapshot schema",
+     "Implement collectors for each section",
+     "Implement UCS save and download for F5",
+     "Implement systembackup for NetScaler",
+     "Implement config export for Alteon",
+     "Implement the stop rules",
+     "Write pytest cases for pass and stop paths",
+     "Break the backup and confirm the run stops"
+    ],
+    "success_criteria": [
+     "Snapshot saved with schema version and ID",
+     "Backups exist off-device with hashes",
+     "A missing or corrupt backup stops the run with a logged reason",
+     "Tests cover each stop rule"
+    ]
+   },
+   "common_pitfalls": [
+    "Backups left only on the device",
+    "Snapshots with unstable ordering",
+    "Treating warnings as passes without a rule",
+    "Skipping the standby"
+   ],
+   "knowledge_check": [
+    {
+     "q": "Where does tmsh save sys ucs write?",
+     "a": "/var/local/ucs."
+    },
+    {
+     "q": "What does the run do if a backup is missing?",
+     "a": "It stops; no backup, no upgrade."
+    },
+    {
+     "q": "Why version the snapshot schema?",
+     "a": "So post-check diffs compare like with like after the schema changes."
+    }
+   ],
+   "slides_and_assets": [
+    "Snapshot schema",
+    "Stop rule table",
+    "Backup procedures per vendor",
+    "Corrupt backup fixture"
+   ],
+   "sources": [
+    "c1",
+    "c5",
+    "c9",
+    "c11",
+    "c13",
+    "c17",
+    "c18",
+    "c39"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "Disk space clearing and firmware staging",
+   "goal": "Learners free space safely from allowlisted paths and stage verified firmware.",
+   "learning_objectives": [
+    "Learners can identify safe deletions per vendor",
+    "Learners can produce a dry-run space plan with sizes",
+    "Learners can upload firmware and verify its checksum",
+    "Learners can execute only approved, allowlisted deletions"
+   ],
+   "lessons": [
+    {
+     "title": "Safe reclamation per vendor",
+     "points": [
+      "F5: delete old images with tmsh delete sys software image <name> or DELETE on /mgmt/tm/sys/software/image [c10][c8]",
+      "F5: remove old UCS archives with delete ucs after confirming off-device copies [c11]",
+      "NetScaler: clear /var/core and /var/crash unless needed, /var/nsinstall except current firmware, /var/tmp/support bundles [c15]",
+      "NetScaler: /var/nstrace is the most common cause of a full disk [c15]",
+      "Alteon: remove stale images only per Radware guidance for your model"
+     ]
+    },
+    {
+     "title": "Allowlists and dry run",
+     "points": [
+      "Allowlist per vendor of directories and file patterns",
+      "Never delete the running image or the image in the active or default boot location [c9]",
+      "Dry run lists each file, size and total freed",
+      "Claude drafts the plan from disk facts; code checks every item against the allowlist"
+     ]
+    },
+    {
+     "title": "Firmware upload",
+     "points": [
+      "F5: POST /mgmt/cm/autodeploy/software-image-uploads/<iso> lands in /shared/images with Content-Range chunking [c13]",
+      "NetScaler: copy the build to /var/nsinstall/<release>/build_<build> [c14]",
+      "Check free space against the vendor minimum before upload [c4]",
+      "Resume interrupted uploads by chunk rather than restarting from zero [c13]"
+     ]
+    },
+    {
+     "title": "Checksum verification",
+     "points": [
+      "Compare a locally computed hash with the vendor-published checksum; F5's upgrade guide uses md5 [c2]",
+      "F5 also reports checksum and verified for each image [c8]",
+      "Store the hash in the run state",
+      "Stop on mismatch and delete the bad upload"
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Fill /var on the lab NetScaler with fixture files",
+    "Run the dry-run plan and show totals",
+    "Show an item refused because it is outside the allowlist",
+    "Approve and execute",
+    "Upload the F5 image and verify the checksum"
+   ],
+   "lab": {
+    "brief": "Fill a lab device disk, run the dry-run plan, approve it and stage the firmware image with checksum verification.",
+    "steps": [
+     "Fill the lab disk with the fixture script",
+     "Collect disk facts",
+     "Ask Claude to draft the space plan",
+     "Validate the plan against the allowlist",
+     "Run dry run and review",
+     "Obtain approval on the lab change",
+     "Execute deletions",
+     "Upload firmware and verify checksum"
+    ],
+    "success_criteria": [
+     "Free space meets the vendor minimum",
+     "Only allowlisted files were deleted",
+     "Firmware checksum matches the vendor value",
+     "All actions logged with approval reference"
+    ]
+   },
+   "common_pitfalls": [
+    "Deleting the image on the rollback volume",
+    "Deleting core files someone is investigating",
+    "Uploading before checking space",
+    "Comparing different hash algorithms"
+   ],
+   "knowledge_check": [
+    {
+     "q": "What is the most common cause of a full NetScaler disk?",
+     "a": "Trace files in /var/nstrace left running."
+    },
+    {
+     "q": "Which F5 endpoint accepts image uploads?",
+     "a": "/mgmt/cm/autodeploy/software-image-uploads/, writing to /shared/images."
+    },
+    {
+     "q": "What does the dry run show?",
+     "a": "Every file to be deleted, its size and the total space freed."
+    }
+   ],
+   "slides_and_assets": [
+    "Allowlist per vendor",
+    "Disk fill fixture script",
+    "Dry-run report sample",
+    "Checksum verification flow"
+   ],
+   "sources": [
+    "c2",
+    "c4",
+    "c8",
+    "c9",
+    "c10",
+    "c11",
+    "c13",
+    "c14",
+    "c15"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "Upgrade execution adapters, HA-aware",
+   "goal": "Learners build a runner that installs to the inactive location, upgrades HA pairs in the right order and can resume after failure.",
+   "learning_objectives": [
+    "Learners can install and reboot on each vendor through API or CLI",
+    "Learners can order HA upgrades correctly",
+    "Learners can make steps idempotent and resumable",
+    "Learners can run only an approved structured plan"
+   ],
+   "lessons": [
+    {
+     "title": "Vendor install steps",
+     "points": [
+      "F5: tmsh install sys software image <iso> volume HD1.x, or POST to /mgmt/tm/sys/software/image; watch status on the volume [c1][c9]",
+      "F5: reboot into the new volume with the reboot option or by setting the boot location [c10]",
+      "NetScaler: POST /nitro/v1/config/install with url and Async to get a job id, then reboot [c16][c19]",
+      "Alteon: set the image for next boot and reload, following the release notes [c5]"
+     ]
+    },
+    {
+     "title": "HA ordering",
+     "points": [
+      "Upgrade standby or secondary first and verify [c1][c3]",
+      "F5: run sys failover standby on the active to move traffic [c12]",
+      "NetScaler: force failover so the upgraded node becomes primary [c3]",
+      "Upgrade the former active, then confirm sync [c39]",
+      "Expect sync and mirroring limits while versions differ [c2][c3]"
+     ]
+    },
+    {
+     "title": "Idempotent and resumable",
+     "points": [
+      "State file per run: step, device, status, timestamps, request ids",
+      "Each step checks current state first: if the target volume already runs the target version, skip",
+      "Resume from the last completed step after a crash",
+      "Rollback path recorded before each destructive step"
+     ]
+    },
+    {
+     "title": "Plan in, actions out",
+     "points": [
+      "Claude proposes the ordered plan and exact calls as JSON validated against a schema [c35]",
+      "The runner executes only the approved plan hash",
+      "Any deviation stops the run",
+      "Human approval required before install and before each reboot"
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Show the plan JSON for an F5 pair",
+    "Run install on the standby and watch status",
+    "Reboot and verify version",
+    "Fail over and upgrade the former active",
+    "Kill the runner halfway and resume"
+   ],
+   "lab": {
+    "brief": "Upgrade an HA pair of lab load balancers end to end through the runner, with a mocked failure halfway to test resumption.",
+    "steps": [
+     "Write the plan schema",
+     "Implement F5 install, reboot and failover steps",
+     "Implement NetScaler install and reboot steps",
+     "Implement the state file",
+     "Add idempotency checks",
+     "Run on the F5 lab pair",
+     "Inject a failure after the standby reboot",
+     "Resume and complete"
+    ],
+    "success_criteria": [
+     "Standby upgraded and verified before failover",
+     "Both units on target version and in sync",
+     "Resume continues from the right step",
+     "No step outside the plan ran"
+    ]
+   },
+   "common_pitfalls": [
+    "Upgrading the active first",
+    "Not waiting for install status complete before reboot",
+    "Losing state on crash",
+    "Assuming sync is normal while versions differ"
+   ],
+   "knowledge_check": [
+    {
+     "q": "Which unit is upgraded first?",
+     "a": "The standby or secondary."
+    },
+    {
+     "q": "How does NetScaler async install report progress?",
+     "a": "It returns an install id tracked with show ns job."
+    },
+    {
+     "q": "Why record state after every step?",
+     "a": "So a failed run can resume or roll back from a known point."
+    }
+   ],
+   "slides_and_assets": [
+    "HA upgrade sequence diagram",
+    "Plan schema",
+    "State file example",
+    "Failure injection script"
+   ],
+   "sources": [
+    "c1",
+    "c2",
+    "c3",
+    "c5",
+    "c9",
+    "c10",
+    "c12",
+    "c16",
+    "c19",
+    "c35",
+    "c39"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "Post-checks, verification and rollback",
+   "goal": "Learners compare the post-upgrade state with the golden snapshot, get a structured verdict and execute rollback when needed.",
+   "learning_objectives": [
+    "Learners can diff post and golden snapshots",
+    "Learners can get a structured pass, warn or fail verdict",
+    "Learners can execute vendor rollback paths",
+    "Learners can generate an evidence pack"
+   ],
+   "lessons": [
+    {
+     "title": "The diff",
+     "points": [
+      "Same schema as the golden snapshot so sections compare directly",
+      "Version must change; virtual servers, pools and members must not degrade",
+      "HA sync may show changes pending until the peer is upgraded; treat as expected only in that window [c2][c3]",
+      "Certificate expiry should be unchanged"
+     ]
+    },
+    {
+     "title": "Structured verdict",
+     "points": [
+      "Claude reads the diff and returns verdict, reasons and rollback recommendation as JSON matching a schema [c35]",
+      "Code applies hard rules first: any fail rule overrides the model",
+      "The verdict text goes into the change record",
+      "A warn verdict needs a named human to accept it before the run continues"
+     ]
+    },
+    {
+     "title": "Rollback paths",
+     "points": [
+      "F5: boot back into the previous volume, which is still installed [c9][c10]",
+      "F5: restore configuration with load ucs if needed [c11]",
+      "NetScaler: reinstall the previous build retained in /var/nsinstall [c14][c15]",
+      "Alteon: factory config next boot, previous image, reboot, upload saved config [c5]"
+     ]
+    },
+    {
+     "title": "Evidence pack",
+     "points": [
+      "Pre and post snapshots, diff, verdict, logs and approvals",
+      "Attach to the change record with a PATCH work note [c25]",
+      "Store hashes of each file in the pack",
+      "Name the pack with the change number and run id so audits can find it"
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Diff a clean upgrade",
+    "Diff a broken one with a pool down",
+    "Show the verdict JSON",
+    "Roll back the broken device",
+    "Generate the evidence pack"
+   ],
+   "lab": {
+    "brief": "Run the post-check diff on a successful and an intentionally broken upgrade, then execute the rollback path for the broken one.",
+    "steps": [
+     "Implement the diff",
+     "Define the verdict schema",
+     "Implement hard rules",
+     "Ask Claude for the verdict on both runs",
+     "Execute rollback for the broken device",
+     "Re-run post-checks after rollback",
+     "Build the evidence pack",
+     "Attach it to the change"
+    ],
+    "success_criteria": [
+     "Clean run verdict pass",
+     "Broken run verdict fail with rollback recommended",
+     "Rollback restores the golden snapshot state",
+     "Evidence pack complete"
+    ]
+   },
+   "common_pitfalls": [
+    "Letting the model override a hard fail",
+    "Deleting the previous volume or build before verification",
+    "Diffing snapshots with different schemas",
+    "Forgetting Alteon has no config rollback"
+   ],
+   "knowledge_check": [
+    {
+     "q": "What is the F5 rollback?",
+     "a": "Boot the previous volume, which remains installed."
+    },
+    {
+     "q": "Who has the final say on fail?",
+     "a": "Code hard rules; the model explains."
+    },
+    {
+     "q": "What goes in the evidence pack?",
+     "a": "Snapshots, diff, verdict, logs and approvals with file hashes."
+    }
+   ],
+   "slides_and_assets": [
+    "Diff output sample",
+    "Verdict schema",
+    "Rollback runbook per vendor",
+    "Evidence pack template"
+   ],
+   "sources": [
+    "c2",
+    "c3",
+    "c5",
+    "c9",
+    "c10",
+    "c11",
+    "c14",
+    "c15",
+    "c25",
+    "c35"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "Guardrails, approvals and audit for upgrades",
+   "goal": "Learners gate every space clear, install and reboot behind ServiceNow approval and prove the gate cannot be talked around.",
+   "learning_objectives": [
+    "Learners can allowlist tools and devices per run",
+    "Learners can create change records and wait for approval",
+    "Learners can keep an append-only audit log without secrets",
+    "Learners can test that the runner refuses prompts to skip checks"
+   ],
+   "lessons": [
+    {
+     "title": "Allowlists and read-only default",
+     "points": [
+      "Each run has an allowlist of devices and actions",
+      "Read-only by default; destructive actions need explicit approval",
+      "OWASP recommends minimal permissions and human approval for high-impact actions [c37]",
+      "Device service accounts for the runner have only the rights the plan needs [c37]"
+     ]
+    },
+    {
+     "title": "ServiceNow approvals",
+     "points": [
+      "Create the change through the Table API or Change Management API [c25][c28]",
+      "Use Ask for Approval before space clear, install and reboot; only Approved proceeds [c27]",
+      "Avoid parallel Ask for Approval actions on the same record [c27]",
+      "Read approval state at run time, not at plan time"
+     ]
+    },
+    {
+     "title": "Audit log",
+     "points": [
+      "Append-only JSON lines for prompts, plans, approvals and API calls",
+      "Redact secrets and tokens",
+      "Each entry has run id, change number and step",
+      "Ship entries off the runner host as they are written so they cannot be edited later"
+     ]
+    },
+    {
+     "title": "Testing the guardrails",
+     "points": [
+      "pytest cases that prompt the agent to skip a pre-check and assert the runner refuses",
+      "PreToolUse hooks deny shell commands that call device write APIs directly [c36]",
+      "Tests for every approval state",
+      "Run the guardrail tests in CI on every pull request"
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Attempt an unapproved reboot",
+    "Approve and retry",
+    "Prompt the agent to skip a check and show refusal",
+    "Open the audit log"
+   ],
+   "lab": {
+    "brief": "Wire the approval gate to a lab ServiceNow instance and attempt an unapproved reboot; inspect the audit trail afterwards.",
+    "steps": [
+     "Implement the allowlist",
+     "Implement change creation",
+     "Build the approval flow",
+     "Implement the gate before destructive steps",
+     "Implement the audit log",
+     "Write guardrail tests",
+     "Attempt the unapproved reboot",
+     "Inspect the audit trail"
+    ],
+    "success_criteria": [
+     "Unapproved reboot refused with logged reason",
+     "Approved reboot proceeds",
+     "Skip-check prompt refused",
+     "Audit log complete and secret-free"
+    ]
+   },
+   "common_pitfalls": [
+    "Treating Requested as approved",
+    "Approval checked only once",
+    "Secrets in logs",
+    "Hooks as the only control"
+   ],
+   "knowledge_check": [
+    {
+     "q": "Which approval states allow a reboot?",
+     "a": "Only Approved."
+    },
+    {
+     "q": "What does a PreToolUse hook do here?",
+     "a": "Denies shell commands that would call device write APIs directly."
+    },
+    {
+     "q": "Why read approval at run time?",
+     "a": "Approvals can be withdrawn or windows can change after planning."
+    }
+   ],
+   "slides_and_assets": [
+    "Guardrail decision table",
+    "Approval flow export",
+    "Audit log schema",
+    "Guardrail test suite"
+   ],
+   "sources": [
+    "c25",
+    "c27",
+    "c28",
+    "c36",
+    "c37"
+   ]
+  },
+  {
+   "day": 3,
+   "title": "Scheduler and change windows",
+   "goal": "Learners schedule upgrades only inside approved windows and handle overruns safely.",
+   "learning_objectives": [
+    "Learners can read change windows from ServiceNow",
+    "Learners can schedule runs with GitHub Actions or APScheduler",
+    "Learners can send reminders, progress and summaries",
+    "Learners can pause safely on overrun"
+   ],
+   "lessons": [
+    {
+     "title": "Windows from ServiceNow",
+     "points": [
+      "Read start_date and end_date from the change [c28]",
+      "Refuse to start outside the window",
+      "Check conflicts with the Change Management API [c28]",
+      "Store the window in run state so a restarted runner still knows the deadline"
+     ]
+    },
+    {
+     "title": "Scheduling options",
+     "points": [
+      "GitHub Actions schedule runs in UTC (or a set timezone) on the default branch, at most every 5 minutes, and can be delayed at the top of the hour [c29]",
+      "workflow_dispatch with inputs for manual starts [c29]",
+      "APScheduler with a persistent job store such as SQLAlchemyJobStore on PostgreSQL [c30]",
+      "Set misfire_grace_time so a missed start inside the window still runs, but not after it closes [c30]"
+     ]
+    },
+    {
+     "title": "Notifications",
+     "points": [
+      "Pre-window reminder with plan and approver",
+      "In-window progress per device",
+      "Post-window summary with verdicts",
+      "Messages carry the change number and a link to the evidence pull request"
+     ]
+    },
+    {
+     "title": "Overruns",
+     "points": [
+      "Estimate time per step from history",
+      "Before each step, check remaining window time",
+      "Pause at the next safe step and request an extension",
+      "Never leave a device mid-install or mid-reboot"
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Show a change window and the schedule",
+    "Start a run automatically",
+    "Shorten the window and show the pause",
+    "Show notifications"
+   ],
+   "lab": {
+    "brief": "Schedule a batch upgrade in the lab, let it start automatically inside the window and watch it pause when the window is about to close.",
+    "steps": [
+     "Read the lab change window",
+     "Configure the scheduled workflow or APScheduler job",
+     "Add the window check",
+     "Add step time estimates",
+     "Add notifications",
+     "Start the batch",
+     "Shorten the window",
+     "Observe the safe pause"
+    ],
+    "success_criteria": [
+     "Run starts only inside the window",
+     "Pause happens at a safe step",
+     "Notifications sent",
+     "State allows resume next window"
+    ]
+   },
+   "common_pitfalls": [
+    "Time zone errors",
+    "Scheduling at minute zero",
+    "No persistent job store",
+    "Pausing mid-reboot"
+   ],
+   "knowledge_check": [
+    {
+     "q": "Which branch does a scheduled workflow run on?",
+     "a": "The latest commit on the default branch."
+    },
+    {
+     "q": "What does misfire_grace_time control?",
+     "a": "Whether a missed run time still triggers when the scheduler comes back."
+    },
+    {
+     "q": "What is a safe step?",
+     "a": "A point where the device is fully on one version and in a known state."
+    }
+   ],
+   "slides_and_assets": [
+    "Window and schedule diagram",
+    "Workflow file",
+    "APScheduler config",
+    "Notification templates"
+   ],
+   "sources": [
+    "c28",
+    "c29",
+    "c30"
+   ]
+  },
+  {
+   "day": 3,
+   "title": "Cisco ACI and fleet-scale, multi-vendor runs",
+   "goal": "Learners plan ACI upgrades the way Cisco prescribes and run large fleets in safe batches.",
+   "learning_objectives": [
+    "Learners can run the ACI pre-upgrade validator and read its results",
+    "Learners can plan APIC-first upgrades and switch update groups",
+    "Learners can design batches with canaries and blast radius limits",
+    "Learners can extend the adapter contract to other load balancers (Anaya LB)"
+   ],
+   "lessons": [
+    {
+     "title": "ACI as Cisco prescribes",
+     "points": [
+      "Export configuration with AES encryption first [c20]",
+      "Run aci-preupgrade-validation-script.py on the APIC from /data/techsupport and fix every FAIL and MANUAL CHECK [c21]",
+      "Checks include target image and MD5, APIC cluster Fully Fit, switch membership and disk usage [c22]",
+      "Upgrade the APIC cluster first, then switches [c20]",
+      "Put the two switches of each pair in different update groups and upgrade one group at a time [c20]"
+     ]
+    },
+    {
+     "title": "APIC API in the lab",
+     "points": [
+      "Authenticate with POST /api/aaaLogin.json [c24]",
+      "Use the DevNet Always-On ACI Simulator for read calls [c23]",
+      "Capture write payloads from the APIC API Inspector in your own lab before automating them",
+      "Treat the built-in validator as a gate, not just a report [c20]"
+     ]
+    },
+    {
+     "title": "Batch strategies",
+     "points": [
+      "Canary first, then batches",
+      "Blast radius: maximum HA pairs in flight",
+      "Stop on first failure",
+      "Re-plan between batches"
+     ]
+    },
+    {
+     "title": "Other load balancers (Anaya LB) and reporting",
+     "points": [
+      "Same lifecycle contract: precheck, clear, stage, install, postcheck, rollback",
+      "Anaya LB adapter stub until the client supplies API details",
+      "Pull request per batch with plan, evidence and audit summary",
+      "claude -p writes the batch summary in CI [c32]"
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Run the validator script output fixture",
+    "Show APIC login and a firmware status read on the sandbox",
+    "Build the update group plan",
+    "Run a canary-first batch"
+   ],
+   "lab": {
+    "brief": "Run the ACI pre-upgrade validator and build an APIC firmware group plan, then execute a canary-first batch across the mixed lab fleet.",
+    "steps": [
+     "Review validator output",
+     "Classify results",
+     "Write the ACI plan",
+     "Check pair separation",
+     "Define batch policy",
+     "Run the canary",
+     "Run the batch",
+     "Open the pull request"
+    ],
+    "success_criteria": [
+     "Validator issues triaged",
+     "APIC-first plan with separated pairs",
+     "Canary succeeds before batch",
+     "Batch stops on injected failure"
+    ]
+   },
+   "common_pitfalls": [
+    "Both pair members in one group",
+    "Ignoring MANUAL CHECK results",
+    "Using an old copy of the script",
+    "No canary"
+   ],
+   "knowledge_check": [
+    {
+     "q": "What is upgraded first in ACI?",
+     "a": "The APIC cluster."
+    },
+    {
+     "q": "Where is the validation script run?",
+     "a": "On the APIC, typically from /data/techsupport."
+    },
+    {
+     "q": "Why separate pair members?",
+     "a": "So both members never reboot together."
+    }
+   ],
+   "slides_and_assets": [
+    "ACI upgrade sequence",
+    "Validator output fixture",
+    "Batch policy template",
+    "PR template"
+   ],
+   "sources": [
+    "c20",
+    "c21",
+    "c22",
+    "c23",
+    "c24",
+    "c32"
+   ]
+  },
+  {
+   "day": 3,
+   "title": "Capstone: scheduled, approved, HA-aware upgrade end to end",
+   "goal": "Teams run the full pipeline from device list to evidence pack and defend it.",
+   "learning_objectives": [
+    "Learners can run the pipeline end to end on a mixed fleet",
+    "Learners can show approvals for every destructive step",
+    "Learners can present evidence and limitations"
+   ],
+   "lessons": [
+    {
+     "title": "Brief",
+     "points": [
+      "Device list and target version matrix in",
+      "Pre-checks, space clear, upload, install, post-checks, rollback readiness",
+      "Scheduler, approval gate, HA-aware runner and diff wired together",
+      "Evidence pack and audit summary as a GitHub pull request"
+     ]
+    },
+    {
+     "title": "Acceptance review",
+     "points": [
+      "Trace one device from inventory to evidence",
+      "Show a blocked step and a rollback",
+      "Zero reboots without approval",
+      "Limitations: Anaya LB, Alteon without a VA, ACI writes"
+     ]
+    },
+    {
+     "title": "Demo and handover",
+     "points": [
+      "Ten-minute demo",
+      "Operator runbook",
+      "Next batch plan",
+      "Open questions for the client"
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Show the acceptance checklist",
+    "Walk a sample evidence pack",
+    "Explain scoring",
+    "Show a limitations statement"
+   ],
+   "lab": {
+    "brief": "Take a mixed lab fleet from device list to evidence pack through the full pipeline, then demo the run, the approvals and the audit trail to the group.",
+    "steps": [
+     "Load the device list and matrix",
+     "Run inventory and readiness",
+     "Run pre-checks and snapshot",
+     "Get approvals",
+     "Run space clear and staging",
+     "Run HA-aware upgrades",
+     "Run post-checks and any rollback",
+     "Open the evidence pull request and demo"
+    ],
+    "success_criteria": [
+     "All in-scope devices upgraded or rolled back with evidence",
+     "Every destructive step has an approval",
+     "Audit log complete",
+     "Runbook and limitations delivered"
+    ]
+   },
+   "common_pitfalls": [
+    "Skipping blocked and rollback cases",
+    "Polishing code instead of evidence",
+    "No limitations statement"
+   ],
+   "knowledge_check": [
+    {
+     "q": "What must every reboot have?",
+     "a": "An Approved change and an audit entry."
+    },
+    {
+     "q": "What goes in the pull request?",
+     "a": "Plan, evidence pack and audit summary."
+    },
+    {
+     "q": "What is the Anaya LB status?",
+     "a": "Adapter stub awaiting client API details."
+    }
+   ],
+   "slides_and_assets": [
+    "Acceptance checklist",
+    "Scoring rubric",
+    "Runbook template"
+   ],
+   "sources": [
+    "c20",
+    "c25",
+    "c27",
+    "c29"
+   ]
+  }
+ ],
+ "capstone_plan": {
+  "brief": "Teams build a repeatable workflow that takes a device list and target versions, runs pre-checks, clears space, stages verified firmware, upgrades HA pairs in the right order inside an approved window, verifies against a golden snapshot and ships an evidence pack, with no reboot executed without human approval.",
+  "milestones": [
+   "Readiness report",
+   "Golden snapshots and backups",
+   "Approved space clear and staging",
+   "HA-aware upgrade of at least one pair per vendor",
+   "Post-check verdicts and one rollback",
+   "Scheduled batch and evidence pull request"
+  ],
+  "evaluation_notes": [
+   "Evidence and safety outweigh code style",
+   "Every destructive step must trace to an Approved change",
+   "Check the ACI plan follows APIC-first and pair separation",
+   "Limitations must name Anaya LB and anything run only on recorded responses"
+  ]
+ },
+ "promo_video_research": {
+  "hook_basis": "The two a.m. disk-full scenario is a teaching scenario, not a reported incident. It is realistic because NetScaler needs 7 GB free in /var for an upgrade [c4] and its own guidance names leftover traces, cores and old firmware as common space consumers [c15], while F5 images must sit in /shared/images before install [c1].",
+  "claims_check": [
+   {
+    "claim": "11 build modules; 3 days; 4 vendor families",
+    "basis": "Matches the outline: eleven modules over three days covering F5, NetScaler, Radware and Cisco ACI."
+   },
+   {
+    "claim": "F5 boot volumes and UCS archives, NetScaler build files, Alteon image banks, ACI firmware groups",
+    "basis": "F5 volumes and UCS [c9][c11]; NetScaler builds in /var/nsinstall [c14]; Alteon image selection for next boot [c5]; ACI switch update groups [c20]. Current ACI releases call them update groups."
+   },
+   {
+    "claim": "lb-f5-01 BIG-IP 16.1.4 ... /shared: 91% used; 1 CMDB mismatch",
+    "basis": "Illustrative lab output with fictional hosts and values."
+   },
+   {
+    "claim": "UCS backup saved, snapshot #117; gate READY",
+    "basis": "UCS via tmsh save sys ucs [c11]; snapshot and gate are course design."
+   },
+   {
+    "claim": "Delete BIGIP-15.1.8.iso, 2 old UCS, 3 core files, frees 4.2 GB",
+    "basis": "F5 supports deleting images and UCS archives [c10][c11]; sizes are illustrative."
+   },
+   {
+    "claim": "upload 100%, sha256 match, image installed to HD1.2 (inactive)",
+    "basis": "Install to an inactive volume is F5 practice [c1]. F5's upgrade guide uses md5 checksums [c2]; we could not confirm F5 publishes SHA256 for BIG-IP ISOs, so the course compares against whatever algorithm the vendor publishes. Treat 'sha256' in the promo as illustrative."
+   },
+   {
+    "claim": "Standby first, failover, then active",
+    "basis": "F5 and NetScaler both prescribe this order [c1][c3][c12]."
+   },
+   {
+    "claim": "HA sync CHANGES PENDING after standby upgrade; verdict WARN, sync deferred",
+    "basis": "F5 mirroring does not work until all devices run the new version [c2] and NetScaler disables sync across differing HA versions [c3]; the exact status string is illustrative."
+   },
+   {
+    "claim": "ServiceNow change windows; runs through GitHub Actions; refuse outside window",
+    "basis": "Change start and end dates [c28]; Actions schedule and workflow_dispatch [c29]; refusal is course design."
+   },
+   {
+    "claim": "ACI pre-upgrade validator PASS; APIC first; firmware group pod1-leafs",
+    "basis": "Validator and APIC-first order [c20][c21]; group name illustrative."
+   },
+   {
+    "claim": "Pause at safe step when window closes; reboots without approval: 0",
+    "basis": "Course design demonstrated in labs."
+   },
+   {
+    "claim": "Upgrade every device the same safe way",
+    "basis": "Marketing call to action, not a factual claim."
+   }
+  ]
+ },
+ "citations": [
+  {
+   "id": "c1",
+   "title": "Installing BIG-IP Version 17.5.1.4",
+   "url": "https://techdocs.f5.com/en-us/bigip-17-5-1-4/big-ip-release-notes/big-ip-install.html",
+   "publisher": "F5 (techdocs.f5.com)",
+   "supports": "Lifecycle; F5 staging and install",
+   "key_fact": "The source system must run 15.x or later; the .iso goes in /shared/images; save a UCS in /var/local/ucs and copy it off the device, upgrade the standby first and only then the active, turn off mirroring, and install with tmsh install sys software image <iso> volume HD1.x to an inactive location; watch progress with tmsh show sys software and read failures in /var/log/liveinstall.log.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c2",
+   "title": "BIG-IP System: Upgrading Software (device group upgrade)",
+   "url": "https://techdocs.f5.com/kb/en-us/products/big-ip_ltm/manuals/product/bigip-system-upgrading-software-12-0-0/2.html",
+   "publisher": "F5 (techdocs.f5.com)",
+   "supports": "Lifecycle; HA ordering",
+   "key_fact": "A device is forced offline before upgrade (it terminates connections and accepts no new ones, and the state persists across reboots on 11.1.0 and later); mirroring does not work until every device in the group has rebooted onto the new version, so F5 recommends a maintenance window; preparation includes verifying the .iso with an md5 checksum and checking RAID health.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c3",
+   "title": "Upgrade a NetScaler high availability pair",
+   "url": "https://docs.netscaler.com/en-us/citrix-adc/current-release/upgrade-downgrade-citrix-adc-appliance/upgrade-downgrade-ha-pair",
+   "publisher": "NetScaler (docs.netscaler.com)",
+   "supports": "HA ordering",
+   "key_fact": "Upgrade the secondary first, confirm with show ha node that it is secondary with synchronization disabled, run force failover so it becomes primary, then upgrade the former primary; when builds have different internal HA versions, synchronization and propagation are disabled until both match.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c4",
+   "title": "Before you begin (NetScaler upgrade)",
+   "url": "https://docs.netscaler.com/en-us/citrix-adc/current-release/upgrade-downgrade-citrix-adc-appliance/upgrade-downgrade-before-you-begin",
+   "publisher": "NetScaler (docs.netscaler.com)",
+   "supports": "Pre-flight; space clear",
+   "key_fact": "/var needs 7 GB free (1 GB bundle, 2 GB extraction, 4 GB upgrade) and /flash needs at least 250 MB; NetScaler recommends upgrading one major release at a time (for example 12.1 to 13.1 to 14.1) and backing up and removing /var/customizations before upgrading.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c5",
+   "title": "AlteonOS 33.5.2.0 Release Notes: Upgrade Path",
+   "url": "https://portals.radware.com/ReleaseNotes/Alteon_Release_Notes_33_5_2_0/Alteon_Release_Notes/AlteonOS-33_5_2_0-Release_Notes.1.03.html",
+   "publisher": "Radware",
+   "supports": "Lifecycle; Alteon rollback",
+   "key_fact": "Back up the configuration and run the Upgrade Advisor Tool (updated database) before upgrading; 31.x to 33.x upgrade directly while older versions need intermediate hops; configuration rollback is not supported, so a version rollback means setting the next-boot configuration to factory, selecting the old image, rebooting and uploading the saved configuration.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c6",
+   "title": "Updating Device Software (Radware device web help v6.13)",
+   "url": "https://webhelp.radware.com/lp/v613/Index/wwhelp/wwhimpl/js/Updating_Software.htm",
+   "publisher": "Radware",
+   "supports": "Lifecycle (older Radware device families)",
+   "key_fact": "This Radware device help page requires an upgrade password from Radware tied to the base MAC address and the software file size, a saved configuration before upgrading, and lets the operator choose whether to enable the new version immediately; the device then reboots and the console confirms the version.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c7",
+   "title": "SP 800-40 Rev. 4: Guide to Enterprise Patch Management Planning",
+   "url": "https://csrc.nist.gov/pubs/sp/800/40/r4/final",
+   "publisher": "NIST",
+   "supports": "Why this course",
+   "key_fact": "Published April 2022, it defines enterprise patch management as identifying, prioritizing, acquiring, installing and verifying patches, updates and upgrades, and frames it as preventive maintenance to be operationalized with an enterprise strategy.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c8",
+   "title": "APIRef_tm_sys_software_image",
+   "url": "https://clouddocs.f5.com/api/icontrol-rest/APIRef_tm_sys_software_image.html",
+   "publisher": "F5 (clouddocs.f5.com)",
+   "supports": "Inventory; staging",
+   "key_fact": "/mgmt/tm/sys/software/image lists images (resource methods GET, DELETE, POST) with properties build, checksum, fileSize, product, verified (yes if the image is authentic), version and volume.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c9",
+   "title": "APIRef_tm_sys_software_volume",
+   "url": "https://clouddocs.f5.com/api/icontrol-rest/APIRef_tm_sys_software_volume.html",
+   "publisher": "F5 (clouddocs.f5.com)",
+   "supports": "Inventory; install; rollback",
+   "key_fact": "/mgmt/tm/sys/software/volume reports each boot location with active, version, build, basebuild, product, status (complete, installing and so on) and /media/default-boot-location.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c10",
+   "title": "sys software image (tmsh reference)",
+   "url": "https://clouddocs.f5.com/cli/tmsh-reference/latest/modules/sys/sys_software_image.html",
+   "publisher": "F5 (clouddocs.f5.com)",
+   "supports": "Space clear; install",
+   "key_fact": "tmsh install sys software image takes create-volume, reboot and volume options; list image can show checksum and verified; delete image removes named images or all; mirrored volume names must begin with MD1.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c11",
+   "title": "sys ucs (tmsh reference)",
+   "url": "https://clouddocs.f5.com/cli/tmsh-reference/latest/modules/sys/sys_ucs.html",
+   "publisher": "F5 (clouddocs.f5.com)",
+   "supports": "Pre-checks; rollback",
+   "key_fact": "save ucs <name> writes the running configuration to /var/local/ucs/<name>.ucs; load ucs restores it (options include no-license and passphrase); list ucs and delete ucs manage archives in /var/local/ucs.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c12",
+   "title": "sys failover (tmsh reference)",
+   "url": "https://clouddocs.f5.com/cli/tmsh-reference/latest/modules/sys/sys_failover.html",
+   "publisher": "F5 (clouddocs.f5.com)",
+   "supports": "HA ordering",
+   "key_fact": "run sys failover standby makes the active unit standby so its peer becomes active; run failover also supports offline and online.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c13",
+   "title": "Demystifying iControl REST Part 5: Transferring Files",
+   "url": "https://community.f5.com/kb/technicalarticles/demystifying-icontrol-rest-part-5-transferring-files/286689",
+   "publisher": "F5 DevCentral",
+   "supports": "Staging; backups",
+   "key_fact": "Image files upload with POST /mgmt/cm/autodeploy/software-image-uploads/ to /shared/images/; UCS archives download with GET /mgmt/shared/file-transfer/ucs-downloads/ from /var/local/ucs/; transfers are chunked with Content-Range: start-end/filesize and anything over 1M must be chunked.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c14",
+   "title": "Upgrade a NetScaler standalone appliance",
+   "url": "https://docs.netscaler.com/en-us/citrix-adc/current-release/upgrade-downgrade-citrix-adc-appliance/upgrade-standalone-appliance",
+   "publisher": "NetScaler (docs.netscaler.com)",
+   "supports": "Staging; install",
+   "key_fact": "Run save config and copy ns.conf off the box, create /var/nsinstall/<release>/build_<build>, copy and extract the build .tgz, run ./installns --pre_check for pre-upgrade validation and then ./installns; the installer asks whether to delete old signature files and kernel images, and NetScaler advises answering No in most cases.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c15",
+   "title": "How to free space on /var directory",
+   "url": "https://docs.netscaler.com/en-us/citrix-adc/current-release/system/troubleshooting-citrix-adc/how-to-free-space-on-var-directory.html",
+   "publisher": "NetScaler (docs.netscaler.com)",
+   "supports": "Space clear",
+   "key_fact": "Check with df -h and free space when /var reaches 90%; /var/nstrace is the most common cause of a full disk; clear /var/core and /var/crash unless recent investigation needs them; clear /var/nsinstall except the firmware currently in use; delete unneeded support bundles in /var/tmp/support.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c16",
+   "title": "install (NITRO API)",
+   "url": "https://developer-docs.netscaler.com/en-us/adc-nitro-api/current-release/configuration/utility/install.html",
+   "publisher": "NetScaler (developer-docs.netscaler.com)",
+   "supports": "Install",
+   "key_fact": "POST /nitro/v1/config/install takes a mandatory url for the build file (http, https, sftp, scp, ftp or file://), y to skip the reboot prompt, dontreboot, and Async, which returns an install id to track progress with show ns job.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c17",
+   "title": "systembackup (NITRO API)",
+   "url": "https://developer-docs.netscaler.com/en-us/adc-nitro-api/current-release/configuration/system/systembackup.html",
+   "publisher": "NetScaler (developer-docs.netscaler.com)",
+   "supports": "Pre-checks; backups",
+   "key_fact": "POST /nitro/v1/config/systembackup?action=create makes a .tgz backup with filename, level (basic or full, default basic), includekernel and comment.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c18",
+   "title": "hanode (NITRO API)",
+   "url": "https://developer-docs.netscaler.com/en-us/adc-nitro-api/current-release/configuration/ha/hanode.html",
+   "publisher": "NetScaler (developer-docs.netscaler.com)",
+   "supports": "Inventory; HA ordering",
+   "key_fact": "hanode exposes the read-only master state (Primary, Secondary, UNKNOWN), hastatus (ENABLED, STAYSECONDARY, STAYPRIMARY, DISABLED), hasync and the reason for any HA sync failure.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c19",
+   "title": "reboot (NITRO API)",
+   "url": "https://developer-docs.netscaler.com/en-us/adc-nitro-api/current-release/configuration/ns/reboot.html",
+   "publisher": "NetScaler (developer-docs.netscaler.com)",
+   "supports": "Install",
+   "key_fact": "POST /nitro/v1/config/reboot reboots the appliance; warm: true restarts the NetScaler software without rebooting the operating system.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c20",
+   "title": "Cisco APIC Installation and ACI Upgrade and Downgrade Guide: Pre-upgrade checklists",
+   "url": "https://www.cisco.com/c/en/us/td/docs/dcn/aci/apic/all/apic-installation-aci-upgrade-downgrade/Cisco-APIC-Installation-ACI-Upgrade-Downgrade-Guide/m-pre-upgrade-checklists.html",
+   "publisher": "Cisco",
+   "supports": "Cisco ACI",
+   "key_fact": "The APIC pre-upgrade validator runs automatically when an update group is configured and a standalone script can be run on the APIC; export the configuration with AES encryption first; APICs are upgraded before switches; since 4.0(1) there is a single switch update group type; upgrade one switch of each HA pair at a time; all switches must be Active under Fabric Membership.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c21",
+   "title": "ACI Pre-Upgrade Validation Script",
+   "url": "https://datacenter.github.io/ACI-Pre-Upgrade-Validation-Script/",
+   "publisher": "Cisco datacenter (GitHub Pages)",
+   "supports": "Cisco ACI",
+   "key_fact": "Copy aci-preupgrade-validation-script.py to the APIC (suggested /data/techsupport), run it with python, give admin credentials and the target version (which must already be on the APIC), and act on every FAIL or MANUAL CHECK REQUIRED result; output totals PASS, FAIL - OUTAGE WARNING, FAIL - UPGRADE FAILURE, MANUAL CHECK REQUIRED, N/A and ERROR.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c22",
+   "title": "ACI Pre-Upgrade Validation Script: Validation reference",
+   "url": "https://datacenter.github.io/ACI-Pre-Upgrade-Validation-Script/validations/",
+   "publisher": "Cisco datacenter (GitHub Pages)",
+   "supports": "Cisco ACI",
+   "key_fact": "Checks include target image and MD5, APIC cluster Fully Fit, switch fabric membership, NTP, switch upgrade group guidelines, APIC and switch disk and /bootflash usage; the built-in validator runs during APIC or switch upgrades, and the Pre-Upgrade Validator app was deprecated in ACI 6.1(2); APICs are upgraded first prior to switches.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c23",
+   "title": "ACI Sandboxes",
+   "url": "https://developer.cisco.com/docs/aci/sandbox",
+   "publisher": "Cisco DevNet",
+   "supports": "Lab environment",
+   "key_fact": "The Always-On ACI Simulator sandbox accepts APIC API requests at any time with no reservation, as a shared instance.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c24",
+   "title": "ACI Programmability: Getting Started",
+   "url": "https://developer.cisco.com/docs/aci/getting-started/",
+   "publisher": "Cisco DevNet",
+   "supports": "Cisco ACI; MCP tools",
+   "key_fact": "APIC REST authentication is POST /api/aaaLogin.json with an aaaUser object holding name and pwd attributes.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c25",
+   "title": "Table API",
+   "url": "https://www.servicenow.com/docs/r/api-reference/rest-apis/c_TableAPI.html",
+   "publisher": "ServiceNow",
+   "supports": "Inventory; guardrails; scheduler",
+   "key_fact": "The Table API provides GET, POST, PUT, PATCH and DELETE on /api/now/table/{tableName}; GET filters with sysparm_query (for example field=value^ORDERBYfield), trims with sysparm_fields and pages with sysparm_limit and sysparm_offset; POST inserts one record and returns 201.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c26",
+   "title": "Load balancer fields and probes (CMDB tables)",
+   "url": "https://www.servicenow.com/docs/r/guxhDnVk8OUAJKLm7WZsYA/Gaji~uTPELoKJAs~J7YyCA",
+   "publisher": "ServiceNow",
+   "supports": "Inventory",
+   "key_fact": "Load balancer CIs are stored in cmdb_ci_lb with classes such as cmdb_ci_lb_bigip (F5 BIG-IP) and cmdb_ci_lb_netscaler (Citrix NetScaler), plus related tables cmdb_ci_lb_pool, cmdb_ci_lb_pool_member, cmdb_ci_lb_service, cmdb_ci_lb_interface, cmdb_ci_lb_vlan and cmdb_ci_lb_appl.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c27",
+   "title": "Ask for Approval action",
+   "url": "https://www.servicenow.com/docs/r/build-workflows/workflow-studio/ask-approval-flow-designer.html",
+   "publisher": "ServiceNow",
+   "supports": "Guardrails",
+   "key_fact": "Ask for Approval takes a record, table, approval and rejection rules and an optional due date, and outputs an approval state (Requested, Approved, Rejected, Cancelled, No Longer Required, Skipped); running several Ask for Approval actions on the same record in parallel branches is discouraged.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c28",
+   "title": "Change Management API",
+   "url": "https://www.servicenow.com/docs/r/api-reference/rest-apis/change-management-api.html",
+   "publisher": "ServiceNow",
+   "supports": "Guardrails; scheduler",
+   "key_fact": "The sn_chg_rest Change Management API creates change requests (one per call) and runs conflict checks (GET /api/sn_chg_rest/change/{sys_id}/conflict); change records carry start_date and end_date for the planned implementation window, and change model states include New, Scheduled, Implement, Review and Closed.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c29",
+   "title": "Events that trigger workflows",
+   "url": "https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows",
+   "publisher": "GitHub Docs",
+   "supports": "Scheduler",
+   "key_fact": "schedule runs on the latest commit of the default branch in UTC (optional IANA timezone), no more often than every 5 minutes, and may be delayed or dropped at high load such as the top of the hour; workflow_dispatch accepts typed inputs and needs the workflow file on the default branch.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c30",
+   "title": "APScheduler 3.x User guide",
+   "url": "https://apscheduler.readthedocs.io/en/3.x/userguide.html",
+   "publisher": "APScheduler project",
+   "supports": "Scheduler",
+   "key_fact": "APScheduler has triggers, job stores, executors and schedulers; persistent job stores survive restarts, SQLAlchemyJobStore on PostgreSQL is recommended when free to choose, and misfire_grace_time decides whether a missed run still executes.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c31",
+   "title": "Pydantic: Models",
+   "url": "https://docs.pydantic.dev/latest/concepts/models/",
+   "publisher": "Pydantic",
+   "supports": "Inventory; tool outputs",
+   "key_fact": "Pydantic models validate data on creation or through model_validate and model_validate_json, raising ValidationError when data cannot be parsed into the model.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c32",
+   "title": "Claude Code overview",
+   "url": "https://code.claude.com/docs/en/overview",
+   "publisher": "Anthropic",
+   "supports": "Workbench setup; pipeline",
+   "key_fact": "Claude Code is an agentic coding tool for the terminal, IDE, desktop and browser; on macOS, Linux and WSL it installs with curl -fsSL https://claude.ai/install.sh | bash, and claude -p runs it non-interactively for scripts and CI.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c33",
+   "title": "Give Claude custom tools (Agent SDK)",
+   "url": "https://code.claude.com/docs/en/agent-sdk/custom-tools",
+   "publisher": "Anthropic",
+   "supports": "Workbench setup",
+   "key_fact": "Python tools are defined with @tool, wrapped with create_sdk_mcp_server and passed in mcp_servers; their names are mcp__{server_name}__{tool_name} and are pre-approved through allowed_tools; tools can set readOnlyHint, return structuredContent and return isError: true on failure.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c34",
+   "title": "MCP schema reference: ToolAnnotations",
+   "url": "https://modelcontextprotocol.io/specification/2025-06-18/schema",
+   "publisher": "Model Context Protocol",
+   "supports": "Workbench setup; guardrails",
+   "key_fact": "ToolAnnotations provide readOnlyHint, destructiveHint, idempotentHint and openWorldHint; all are hints, not guarantees, and clients should never make tool-use decisions based on annotations from untrusted servers.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c35",
+   "title": "Structured outputs",
+   "url": "https://platform.claude.com/docs/en/build-with-claude/structured-outputs",
+   "publisher": "Anthropic",
+   "supports": "Upgrade plan; post-check verdict",
+   "key_fact": "JSON outputs send a JSON schema in output_config.format (type json_schema) so the response matches the schema, and strict tool use (strict: true) guarantees schema validation of tool names and inputs.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c36",
+   "title": "Hooks reference",
+   "url": "https://code.claude.com/docs/en/hooks",
+   "publisher": "Anthropic",
+   "supports": "Guardrails",
+   "key_fact": "PreToolUse hooks run after Claude creates tool parameters and before the call is processed, match built-in and MCP tool names, and can block the call (exit code 2) or return permissionDecision deny with a reason.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c37",
+   "title": "LLM06:2025 Excessive Agency",
+   "url": "https://genai.owasp.org/llmrisk/llm062025-excessive-agency/",
+   "publisher": "OWASP Gen AI Security Project",
+   "supports": "Guardrails",
+   "key_fact": "Mitigations include minimizing extension functionality and permissions and requiring human-in-the-loop approval of high-impact actions, implemented in a downstream system or the extension itself.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c38",
+   "title": "alteon-sdk (Python package metadata)",
+   "url": "https://pypi.org/pypi/alteon-sdk/json",
+   "publisher": "PyPI (package copyright Radware Ltd)",
+   "supports": "MCP tools; Alteon adapter",
+   "key_fact": "alteon-sdk wraps the Alteon REST backend with configurators, management functions for facts collection and operations (for example client.api.mgmt.info.software and config commit) and deploy options dry_run, write_on_change and get_diff; minimum supported Alteon versions are 31.0.10.0 and 32.2.2.0.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c39",
+   "title": "cm config-sync (tmsh reference)",
+   "url": "https://clouddocs.f5.com/cli/tmsh-reference/latest/modules/cm/cm_config-sync.html",
+   "publisher": "F5 (clouddocs.f5.com)",
+   "supports": "HA ordering; post-checks",
+   "key_fact": "run cm config-sync starts a configuration synchronization job and must be given one of to-group, from-group or recover-sync to set the direction.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c40",
+   "title": "NetScaler licensing (VPX Express)",
+   "url": "https://docs.netscaler.com/en-us/citrix-adc/current-release/licensing",
+   "publisher": "NetScaler (docs.netscaler.com)",
+   "supports": "Lab environment",
+   "key_fact": "VPX Express needs no license file and offers 20 Mbps bandwidth, a maximum of 250 SSL sessions and 20 Mbps SSL throughput; from release 14.1 build 29.65 it includes all Premium-license features.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c41",
+   "title": "Understanding PDIs",
+   "url": "https://www.servicenow.com/docs/r/SmYvGPN0OygSQs53fsexIQ/yG_RdLKb649OcfnDiGEkwQ",
+   "publisher": "ServiceNow",
+   "supports": "Lab environment",
+   "key_fact": "Personal Developer Instances are free for Developer Program members; an instance unused for ten days is reclaimed and reset, and idle instances hibernate until the owner signs in to the Developer Site.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c42",
+   "title": "How Claude remembers your project (CLAUDE.md)",
+   "url": "https://code.claude.com/docs/en/memory",
+   "publisher": "Anthropic",
+   "supports": "Workbench setup",
+   "key_fact": "A project CLAUDE.md lives at ./CLAUDE.md or ./.claude/CLAUDE.md, is shared through source control and should hold build and test commands, coding standards, naming conventions and common workflows.",
+   "verified": "2026-10-30"
+  }
+ ]
+}

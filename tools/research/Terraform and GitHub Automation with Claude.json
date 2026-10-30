@@ -1,0 +1,1929 @@
+{
+ "course": "Terraform and GitHub Automation with Claude",
+ "domain": "Network and Infrastructure Automation",
+ "source_input": "Client use case 11, \"Terraform and GitHub Automation\": \"Terraform scripting step by step and common mistakes. How to use GitHub repository.\" The client's stated aim for all use cases: \"Our Aim is to do automation using Claude for all these content\", with titles of the form \"Automation of <> using Claude\". Related use cases name the estate: F5, NetScaler, Radware and Anaya LB load balancers and Cisco ACI.",
+ "why_this_course": [
+  "Network and load balancer teams are adopting infrastructure as code, but most start from GUI and CLI habits. The client asked for Terraform taught step by step, the common mistakes, and how to use a GitHub repository. Those mistakes are well documented and costly: unpinned providers, secrets that end up in state and plan files, state committed to Git, count where for_each belonged, renames that destroy live objects, and targeted applies that leave drift [c10] [c12] [c13] [c16] [c19].",
+  "This course teaches Terraform for the estate the client runs: F5 BIG-IP, NetScaler and Cisco ACI through their published providers, and Radware Alteon and other load balancers through Python wrappers in the same pipeline [c38] [c41] [c43] [c54]. GitHub is taught as the control plane for change: protected branches, CODEOWNERS, plan on pull request, apply on merge, and environment approvals [c5] [c6] [c7] [c27].",
+  "Claude is added where it helps and where it is safe: drafting HCL and workflows, explaining plans in plain English, and reviewing plan JSON with a structured risk verdict. Claude never holds apply. Permission rules, tool restriction, policy checks and human approval keep it that way, and every change leaves an audit record [c11] [c47] [c50] [c51]."
+ ],
+ "design_decisions": [
+  {
+   "decision": "Teach Terraform from zero before adding automation.",
+   "rationale": "The client input asks for 'Terraform scripting step by step', and the audience prerequisites say no Terraform is required. Day 1 builds a real module, import and remote state before any pipeline [c3] [c17] [c20]."
+  },
+  {
+   "decision": "A whole module on common mistakes, reproduced in the lab.",
+   "rationale": "The client named 'common mistakes'. Each mistake is reproduced, its symptom shown in plan output and a check wired to catch it, which sticks better than a list [c4] [c12] [c13] [c26] [c35]."
+  },
+  {
+   "decision": "GitHub as the change process, not just storage.",
+   "rationale": "The client asked 'how to use GitHub repository'. For infrastructure that means protection, ownership, required checks, environments and secrets, not only commits [c5] [c6] [c27] [c34]."
+  },
+  {
+   "decision": "Claude reviews and explains, but never applies.",
+   "rationale": "An agent with apply rights is a production risk. Deny rules, tools=[] and an MCP server with no write tools keep Claude out of apply; prompt text alone is not enforcement [c47] [c48] [c50]."
+  },
+  {
+   "decision": "Structured verdicts from plan JSON.",
+   "rationale": "Plan JSON gives exact actions and replace_paths, so the verdict can be tested and compared with policy results rather than trusted as free text [c11] [c51]."
+  },
+  {
+   "decision": "Cover F5, NetScaler, ACI with providers and Radware or Anaya LB through wrappers.",
+   "rationale": "These are the platforms in the client's use cases; where no maintained provider is used, a Python wrapper keeps the same gate and audit [c38] [c41] [c43] [c54]."
+  }
+ ],
+ "audience_profile": [
+  {
+   "role": "Load balancer engineer (F5, NetScaler, Radware)",
+   "needs": "Manage VIPs, pools and certificates as code with safe review.",
+   "starting_point": "Strong GUI and CLI skills; little or no Terraform or Git."
+  },
+  {
+   "role": "Data center and ACI engineer",
+   "needs": "Manage tenants and bridge domains through reviewed code.",
+   "starting_point": "Knows ACI concepts; new to Terraform."
+  },
+  {
+   "role": "Network operations engineer",
+   "needs": "Understand plans and approve changes confidently.",
+   "starting_point": "Basic Linux; reads configs daily."
+  },
+  {
+   "role": "Platform or DevOps engineer",
+   "needs": "Pipelines, policy and governance for network IaC.",
+   "starting_point": "Knows Git and CI; may be new to network providers."
+  },
+  {
+   "role": "Team lead or change manager",
+   "needs": "An approval process and audit trail that holds up.",
+   "starting_point": "Approves changes today; wants clear evidence."
+  }
+ ],
+ "prerequisite_check": [
+  "Can you edit a text file on Linux and run commands in a terminal?",
+  "Can you explain what a VIP, a pool and a pool member are?",
+  "Do you know what a TLS certificate is used for on a load balancer?",
+  "Have you used Git at all (clone, commit)? Helpful, not required.",
+  "Do you have a GitHub account you can add to the course organization?"
+ ],
+ "lab_environment": {
+  "overview": "Each learner gets a Linux VM with Terraform, Git, the GitHub CLI, Python and Claude Code; a seat in a shared GitHub organization; lab F5 BIG-IP VE and NetScaler VPX Express instances; and access to an APIC simulator. Remote state lives in a lab backend with locking. Nothing in the lab can reach a production device.",
+  "components": [
+   {
+    "name": "Learner VM",
+    "version": "Ubuntu 24.04 LTS with Terraform CLI 1.x (latest at delivery, pinned in the lab guide), Git, GitHub CLI, Python 3.12",
+    "purpose": "Authoring, local plans and Claude Code.",
+    "how_to_obtain": "Course image from the training team.",
+    "notes": "HashiCorp docs currently list v1.17.x as the latest documented release; pin one version for the class [c20]."
+   },
+   {
+    "name": "Terraform providers",
+    "version": "F5Networks/bigip 1.29.0, citrix/citrixadc 3.0.3, CiscoDevNet/aci 2.20.0 at time of writing",
+    "purpose": "Device management.",
+    "how_to_obtain": "Downloaded from the Terraform Registry on init [c46].",
+    "notes": "Pin with ~> and commit .terraform.lock.hcl [c15] [c16]."
+   },
+   {
+    "name": "GitHub organization",
+    "version": "GitHub Enterprise Cloud (or public lab repositories on Team plan)",
+    "purpose": "Repositories, Actions, environments with required reviewers.",
+    "how_to_obtain": "Course organization created by the training team.",
+    "notes": "Required reviewers on private repositories need Enterprise Cloud [c27]."
+   },
+   {
+    "name": "Self-hosted Actions runner",
+    "version": "Current GitHub Actions runner on the lab network",
+    "purpose": "Lets workflows reach lab devices.",
+    "how_to_obtain": "Registered to the course organization by the lab team.",
+    "notes": "GITHUB_TOKEN lifetime on self-hosted runners is at most 24 hours [c32]."
+   },
+   {
+    "name": "F5 BIG-IP Virtual Edition",
+    "version": "BIG-IP VE 17.x LTM",
+    "purpose": "F5 provider labs.",
+    "how_to_obtain": "30-day trial via MyF5 or lab license [c56].",
+    "notes": "AS3 extension installed for the optional AS3 demo [c8]."
+   },
+   {
+    "name": "NetScaler VPX Express",
+    "version": "NetScaler VPX 14.1 Express",
+    "purpose": "citrixadc provider labs.",
+    "how_to_obtain": "Free download, no license file [c57].",
+    "notes": "No vendor support cases on Express."
+   },
+   {
+    "name": "Cisco APIC simulator",
+    "version": "DevNet ACI Simulator sandbox (reserved) or ACI Simulator VM",
+    "purpose": "ACI provider labs.",
+    "how_to_obtain": "Cisco DevNet sandbox reservation, up to 5 days [c55].",
+    "notes": "Use a reserved sandbox; the Always-On instance is shared."
+   },
+   {
+    "name": "Radware Alteon",
+    "version": "Alteon VA 32.x or recorded responses",
+    "purpose": "Python wrapper labs.",
+    "how_to_obtain": "Partner evaluation or mock server with recorded responses [c54].",
+    "notes": "Anaya LB is taught with a mock API following the same wrapper contract."
+   },
+   {
+    "name": "Policy and lint tools",
+    "version": "Conftest, TFLint, pre-commit (pinned)",
+    "purpose": "Guardrails and mistake catching.",
+    "how_to_obtain": "Installed on the VM image [c26] [c36] [c37].",
+    "notes": "Same versions in CI."
+   },
+   {
+    "name": "Claude Code and Claude Agent SDK (Python)",
+    "version": "Current releases at delivery",
+    "purpose": "Drafting, explaining and plan review.",
+    "how_to_obtain": "Organization API key or seats.",
+    "notes": "Settings and hooks provided in the repository template [c47] [c52]."
+   }
+  ],
+  "fixtures": [
+   {
+    "name": "Course repository template",
+    "contents": "Layout, .gitignore, CODEOWNERS, workflows, policy pack, CLAUDE.md and settings.",
+    "used_in": "GitHub repository fundamentals for infrastructure code; GitHub Actions pipelines: plan on pull request, apply on merge"
+   },
+   {
+    "name": "Mistakes branch",
+    "contents": "Five seeded mistakes with expected symptoms.",
+    "used_in": "Common Terraform mistakes and how to catch them early"
+   },
+   {
+    "name": "Fixture plan pack",
+    "contents": "Plan JSON for delete, replace, certificate change, out-of-scope and no-op cases.",
+    "used_in": "Claude as plan reviewer: Agent SDK, MCP and structured verdicts; Guardrails, approvals and audit for Terraform and GitHub automation"
+   },
+   {
+    "name": "Legacy objects",
+    "contents": "Pre-built F5 pool and ACI tenant for import labs.",
+    "used_in": "Terraform scripting step by step: init, plan, apply, state; Terraform for F5, NetScaler, Cisco ACI and other load balancers"
+   },
+   {
+    "name": "Capstone change ticket",
+    "contents": "Fictional CHG ticket with requirements and a seeded rename problem.",
+    "used_in": "Capstone: end-to-end change through the Claude-reviewed pipeline"
+   }
+  ],
+  "safety": [
+   "Lab devices are isolated; no route to production.",
+   "Claude has no apply, destroy, import or state tools and Bash apply is denied.",
+   "Device credentials live in environment secrets released only after approval.",
+   "All names, tickets and addresses are fictional.",
+   "Instructors hold the only admin accounts on lab devices and the organization."
+  ]
+ },
+ "modules": [
+  {
+   "day": 1,
+   "title": "Infrastructure as code for network and load balancer teams",
+   "goal": "Show network and load balancer engineers why declarative Terraform beats click-ops and ad hoc scripts, and get every learner to a first successful plan.",
+   "learning_objectives": [
+    "Learners can explain declarative configuration and the role of the state file.",
+    "Learners can name the HCL building blocks: providers, resources, data sources, variables, outputs and modules.",
+    "Learners can describe the course pattern of Claude planning and reviewing, pipelines executing and humans approving.",
+    "Learners can run terraform init and plan against a sample F5 pool configuration."
+   ],
+   "lessons": [
+    {
+     "title": "Why Terraform for network teams",
+     "points": [
+      "Click-ops leaves no review trail; scripts are imperative and rarely idempotent; Terraform compares desired configuration with recorded state and real objects and plans only the difference [c1].",
+      "Vendor providers exist for the estate in scope: F5Networks/bigip, citrix/citrixadc and CiscoDevNet/aci, all on the public registry [c46].",
+      "A plan is a reviewable artifact: + create, - destroy, ~ update in place, -/+ replace [c10].",
+      "The cost is discipline: state must be protected, providers pinned and every change go through review."
+     ]
+    },
+    {
+     "title": "HCL building blocks",
+     "points": [
+      "terraform { required_providers { bigip = { source = \"F5Networks/bigip\", version = \"~> 1.29\" } } } pins the provider [c15] [c46].",
+      "provider \"bigip\" {} reads BIGIP_HOST, BIGIP_USER and BIGIP_PASSWORD from the environment, so no credentials live in code [c38].",
+      "resource blocks declare objects; data sources read existing ones; variables and outputs form the interface; modules group resources [c3].",
+      "State is JSON that maps addresses such as bigip_ltm_pool.web to real objects; never edit it by hand or commit it [c1]."
+     ]
+    },
+    {
+     "title": "The course pattern",
+     "points": [
+      "Claude drafts HCL, explains plans and reviews pull requests; it never runs apply.",
+      "Terraform runs in GitHub Actions; apply happens only on merge and after environment approval [c7] [c27].",
+      "Every change has an audit record: request, plan hash, Claude verdict, approver and run URL.",
+      "Policy and tests catch what review misses."
+     ]
+    },
+    {
+     "title": "Lab environment tour",
+     "points": [
+      "GitHub organization with a team repository template.",
+      "Lab F5 BIG-IP VE, NetScaler VPX Express and an APIC simulator [c56] [c57] [c55].",
+      "Terraform CLI on a Linux VM; providers downloaded on init and locked in .terraform.lock.hcl [c16].",
+      "All devices are lab-only with fictional names."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Create a pool in the F5 GUI, then show the same pool as 12 lines of HCL.",
+    "Run terraform init and show the provider download and lock file [c16].",
+    "Run terraform plan and read the symbols aloud [c10].",
+    "Change the pool's load balancing mode in the GUI and re-run plan to show detected drift.",
+    "Show where state lives after a local apply and why that is a problem for teams [c1]."
+   ],
+   "lab": {
+    "brief": "Install Terraform, clone the course repository and run terraform init and plan against a sample F5 BIG-IP pool configuration.",
+    "steps": [
+     "Install the Terraform CLI version given in the lab guide and confirm terraform version.",
+     "Clone the course repository and open examples/f5-pool.",
+     "Export BIGIP_HOST, BIGIP_USER and BIGIP_PASSWORD for the lab device [c38].",
+     "Run terraform init and inspect .terraform.lock.hcl [c16].",
+     "Run terraform fmt -check and terraform validate [c4].",
+     "Run terraform plan and write down each planned action.",
+     "Change one argument and plan again; note the symbol change.",
+     "Do not apply; the apply happens through the pipeline later."
+    ],
+    "success_criteria": [
+     "terraform init completes and the lock file exists.",
+     "A plan shows the expected pool, node and member creations.",
+     "No credentials are written to any .tf or .tfvars file.",
+     "The learner can explain each plan symbol."
+    ]
+   },
+   "common_pitfalls": [
+    "Putting device passwords in provider blocks.",
+    "Running apply locally 'just to test' and creating unmanaged state.",
+    "Ignoring the lock file and getting different provider versions per laptop [c16].",
+    "Treating a plan as a guarantee rather than a prediction from current state."
+   ],
+   "knowledge_check": [
+    {
+     "q": "What does -/+ mean in a plan?",
+     "a": "Destroy then create a replacement [c10]."
+    },
+    {
+     "q": "Why should state not be committed to Git?",
+     "a": "It can contain sensitive values and must not be hand-edited or versioned there; use a remote backend [c1] [c19]."
+    },
+    {
+     "q": "How does the F5 provider get credentials without code?",
+     "a": "From BIGIP_HOST, BIGIP_USER and BIGIP_PASSWORD environment variables [c38]."
+    }
+   ],
+   "slides_and_assets": [
+    "Click-ops versus scripts versus Terraform comparison slide.",
+    "HCL anatomy poster with an F5 pool example.",
+    "Course pattern diagram: Claude, pipeline, approver, audit.",
+    "Lab access sheet."
+   ],
+   "sources": [
+    "c1",
+    "c3",
+    "c4",
+    "c7",
+    "c10",
+    "c15",
+    "c16",
+    "c19",
+    "c27",
+    "c38",
+    "c46",
+    "c55",
+    "c56",
+    "c57"
+   ]
+  },
+  {
+   "day": 1,
+   "title": "Setting up Claude Code, the Agent SDK and MCP for Terraform work",
+   "goal": "Configure Claude so it can format, validate, plan and explain Terraform but has no route to apply.",
+   "learning_objectives": [
+    "Learners can write CLAUDE.md conventions and permission rules for a Terraform repository.",
+    "Learners can explain why deny rules and tool removal, not prompt text, keep apply out of reach.",
+    "Learners can build an MCP server exposing fmt, validate, plan and show -json as tools.",
+    "Learners can use the Agent SDK to get a structured plan explanation that cites resource addresses."
+   ],
+   "lessons": [
+    {
+     "title": "Claude Code in the repository",
+     "points": [
+      "CLAUDE.md at ./CLAUDE.md or ./.claude/CLAUDE.md records layout, naming, module conventions and the rule that apply is never run by Claude [c48].",
+      "CLAUDE.md is context, not enforcement; enforcement is permission rules and hooks [c48].",
+      "Deny rules: Bash(terraform apply *), Bash(terraform destroy *), Bash(terraform import *), Bash(terraform state *) and Bash(terraform force-unlock *); deny wins over any allow [c47].",
+      "Bash rules match command text, so a determined path around them exists (for example a script that calls terraform); for the review agent, remove Bash entirely [c47]."
+     ]
+    },
+    {
+     "title": "Agent SDK basics",
+     "points": [
+      "A query() session with ClaudeAgentOptions(tools=[], mcp_servers={...}, allowed_tools=['mcp__tf__plan', ...]) gives Claude only Terraform tools [c50].",
+      "Structured output with output_format and a Pydantic schema returns validated JSON in structured_output [c51].",
+      "PreToolUse hooks can deny any tool call whose arguments point outside the repository [c52].",
+      "PostToolUse hooks log every call for the audit record [c52]."
+     ]
+    },
+    {
+     "title": "A Terraform MCP server",
+     "points": [
+      "Tools: fmt_check(dir), validate(dir), plan(dir, var_file) that always writes -out=plan.tfplan, and show_json(plan_file) [c10] [c23].",
+      "Each tool runs terraform with -input=false and TF_IN_AUTOMATION=1 [c24].",
+      "No apply, destroy, import or state tools exist on the server at all.",
+      "Validate inputs: the directory must be under envs/ or modules/, var files must match an allow list [c53].",
+      "Register with claude mcp add --scope project tf -- python -m tf_mcp [c49]."
+     ]
+    },
+    {
+     "title": "Explaining a plan",
+     "points": [
+      "Prompt Claude to explain each resource change by address, for example bigip_ltm_virtual_server.vs_web_443, and the action list from show -json [c11].",
+      "Ask Claude to list unknown values (after_unknown) instead of guessing them [c11].",
+      "Never pass sensitive values: show -json prints sensitive state values in plain text, so the tool strips fields marked in before_sensitive and after_sensitive [c23] [c11].",
+      "Claude's explanation ends with a statement of what it cannot do, including apply."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Show .claude/settings.json with deny rules for apply and destroy [c47].",
+    "Ask Claude Code to run terraform apply and show the denial.",
+    "Register the MCP server and list its tools [c49].",
+    "Run the Agent SDK explainer on a saved plan and show structured output with addresses [c51].",
+    "Show the redaction step removing a sensitive attribute before Claude sees the plan [c23]."
+   ],
+   "lab": {
+    "brief": "Configure Claude Code for the repo, start the Terraform MCP server, and ask Claude to explain a plan without being able to apply it.",
+    "steps": [
+     "Write CLAUDE.md with repository conventions.",
+     "Create .claude/settings.json with the deny rules and allowed MCP tools.",
+     "Implement the MCP server with fmt_check, validate, plan and show_json.",
+     "Add sensitive-value redaction to show_json.",
+     "Register the server at project scope.",
+     "Ask Claude Code to plan the F5 example and explain it.",
+     "Ask Claude to apply and record the refusal.",
+     "Run the Agent SDK explainer and save the structured output."
+    ],
+    "success_criteria": [
+     "Claude produces a plan explanation citing every changed address.",
+     "Attempts to apply or destroy are refused and logged.",
+     "No sensitive value appears in any Claude input or output.",
+     "The MCP server has no tool that can change infrastructure."
+    ]
+   },
+   "common_pitfalls": [
+    "Relying on a CLAUDE.md line saying 'never apply' [c48].",
+    "Allowing Bash(terraform *) and trying to carve out apply with a narrower rule; it does not work that way in reverse [c47].",
+    "Feeding raw show -json with sensitive values to the model [c23].",
+    "Plan tools that do not write -out, so the reviewed plan is lost [c10]."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Which comes first in Claude Code rule evaluation: allow or deny?",
+     "a": "Deny, then ask, then allow [c47]."
+    },
+    {
+     "q": "What does terraform show -json do with sensitive state values?",
+     "a": "Prints them in plain text, so they must be redacted [c23]."
+    },
+    {
+     "q": "How do you make sure the SDK agent has no shell?",
+     "a": "Pass tools=[] and expose only MCP Terraform tools [c50]."
+    }
+   ],
+   "slides_and_assets": [
+    "CLAUDE.md and settings.json templates for Terraform repositories.",
+    "Terraform MCP server skeleton.",
+    "Plan explanation prompt and schema.",
+    "Slide: what Claude can and cannot do in this course."
+   ],
+   "sources": [
+    "c10",
+    "c11",
+    "c23",
+    "c24",
+    "c47",
+    "c48",
+    "c49",
+    "c50",
+    "c51",
+    "c52",
+    "c53"
+   ]
+  },
+  {
+   "day": 1,
+   "title": "Terraform scripting step by step: init, plan, apply, state",
+   "goal": "Teach the full Terraform lifecycle hands-on, from first module to import and a locked remote backend.",
+   "learning_objectives": [
+    "Learners can run init, fmt, validate, plan, apply and destroy and read plan output symbol by symbol.",
+    "Learners can build a reusable module for an F5 virtual server and pool with variables and outputs.",
+    "Learners can import an existing object and use state list, show, mv and rm safely.",
+    "Learners can configure a locked remote backend, pinned providers and separate dev and prod state."
+   ],
+   "lessons": [
+    {
+     "title": "The lifecycle and plan reading",
+     "points": [
+      "init downloads providers and configures the backend; fmt and validate check syntax; plan predicts; apply executes; destroy removes [c4] [c10].",
+      "Plan symbols: + create, - destroy, ~ update in place, -/+ destroy then create replacement [c10].",
+      "'# forces replacement' next to an attribute tells you why a resource will be replaced.",
+      "terraform plan -out=tfplan then terraform apply tfplan applies exactly what was reviewed [c10] [c24]."
+     ]
+    },
+    {
+     "title": "Variables, locals, outputs and a first module",
+     "points": [
+      "modules/f5-vserver/ has variables name, destination, port, members (map) and monitors; outputs vs_name and pool_name [c3].",
+      "bigip_ltm_virtual_server requires name, destination and port, optionally pool [c39].",
+      "Pool members use bigip_ltm_pool_attachment with node such as 10.20.1.15:443 [c40].",
+      "tfvars files per environment hold non-secret values; secrets come from TF_VAR_ environment variables with sensitive = true on the variable [c18].",
+      "Locals compute names consistently, for example local.vs_name = \"vs-${var.app}-${var.port}\"."
+     ]
+    },
+    {
+     "title": "Import and state commands",
+     "points": [
+      "terraform import bigip_ltm_pool.web /Common/web-pool imports an existing pool by full path [c17] [c39].",
+      "An import block in configuration lets the import go through plan and review, which is better for teams [c17].",
+      "terraform state list and state show inspect; state mv SOURCE DESTINATION re-addresses; state rm stops tracking without deleting [c22].",
+      "Prefer moved blocks over state mv so the change is reviewed in a pull request [c12] [c22]."
+     ]
+    },
+    {
+     "title": "Remote state, locking, workspaces and pinning",
+     "points": [
+      "Only one backend block per configuration; backend credentials go in environment variables because backend config is written in plain text to .terraform and plan files [c2].",
+      "Choose a backend that supports locking; Terraform then locks automatically on any write operation [c20].",
+      "force-unlock only releases your own stuck lock; never break a colleague's lock [c20].",
+      "Workspaces share credentials and code; for prod with different credentials and approvals, use separate directories envs/dev and envs/prod [c21].",
+      "Pin with version = \"~> 1.29\" and commit .terraform.lock.hcl; upgrade only with terraform init -upgrade in a reviewed change [c15] [c16]."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Ask Claude Code to draft the f5-vserver module from a spec; review the diff and fix one naming issue.",
+    "Plan, save with -out and apply the saved plan in the lab dev environment [c10].",
+    "Import an existing pool created in the GUI using an import block [c17].",
+    "Rename a resource and show the destroy and create, then fix it with a moved block [c12].",
+    "Migrate local state to the remote backend with terraform init -migrate-state and show the lock during a plan [c20]."
+   ],
+   "lab": {
+    "brief": "Build a module for an F5 virtual server with Claude drafting the HCL, import an existing pool, and move state to a locked remote backend.",
+    "steps": [
+     "Ask Claude Code to draft modules/f5-vserver from the spec sheet and review every line.",
+     "Write envs/dev/main.tf calling the module with dev tfvars.",
+     "Run fmt, validate and plan; save the plan with -out.",
+     "Apply the saved plan to the lab F5 (dev only, instructor-approved).",
+     "Write an import block for the pre-built legacy pool and plan the import.",
+     "Configure the remote backend with locking and migrate state.",
+     "Run two plans at once from two terminals and observe the lock.",
+     "Commit code, lock file and tfvars without secrets."
+    ],
+    "success_criteria": [
+     "The module is reusable with no hard-coded addresses.",
+     "The legacy pool is in state with a clean plan afterwards.",
+     "State lives only in the locked remote backend.",
+     "The second concurrent plan waits or fails on the lock."
+    ]
+   },
+   "common_pitfalls": [
+    "Using workspaces for prod and dev with the same credentials [c21].",
+    "Using terraform state mv in a terminal instead of a reviewed moved block [c12].",
+    "Forgetting that import does not write configuration; the resource block must match.",
+    "Choosing a backend without locking [c20]."
+   ],
+   "knowledge_check": [
+    {
+     "q": "How do you guarantee apply uses the plan that was reviewed?",
+     "a": "Save it with plan -out and pass the file to apply [c10]."
+    },
+    {
+     "q": "What does ~> 1.29 allow?",
+     "a": "1.29 and later 1.x versions, but not 2.0 [c15]."
+    },
+    {
+     "q": "When is terraform force-unlock appropriate?",
+     "a": "Only to release your own lock when automatic unlocking failed [c20]."
+    }
+   ],
+   "slides_and_assets": [
+    "Plan reading worksheet with annotated output.",
+    "F5 virtual server module reference solution.",
+    "Backend and locking setup guide for the lab.",
+    "State command cheat sheet."
+   ],
+   "sources": [
+    "c2",
+    "c3",
+    "c4",
+    "c10",
+    "c12",
+    "c15",
+    "c16",
+    "c17",
+    "c18",
+    "c20",
+    "c21",
+    "c22",
+    "c24",
+    "c39",
+    "c40"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "Common Terraform mistakes and how to catch them early",
+   "goal": "Reproduce the classic Terraform mistakes in the lab, learn each symptom, and wire checks that catch them before review.",
+   "learning_objectives": [
+    "Learners can name, reproduce and fix at least five common Terraform mistakes.",
+    "Learners can choose correctly between count and for_each and refactor with moved blocks.",
+    "Learners can detect drift with plan -detailed-exitcode and explain why -target causes it.",
+    "Learners can set up fmt, validate, tflint, pre-commit and a Claude review that names the mistake and line."
+   ],
+   "lessons": [
+    {
+     "title": "Pinning, secrets and state in Git",
+     "points": [
+      "Unpinned providers: without a version constraint and lock file, a new major provider can change behavior on the next init; pin with ~> and commit the lock file [c15] [c16].",
+      "Secrets in variables or tfvars end up in state and plan files even if marked sensitive in output [c19] [c18].",
+      "Use TF_VAR_ environment variables from GitHub environment secrets, and sensitive = true to hide values in output [c18] [c34].",
+      "A committed terraform.tfstate exposes everything in it; .gitignore must cover *.tfstate, *.tfstate.*, .terraform/ and *.tfvars [c35] [c1].",
+      "The GitHub Terraform.gitignore template does not ignore plan files by default; add *.tfplan yourself [c35]."
+     ]
+    },
+    {
+     "title": "count, for_each and renames",
+     "points": [
+      "count gives index addresses such as bigip_ltm_pool_attachment.m[0]; removing the first member shifts every index and recreates attachments [c13].",
+      "Use count only for nearly identical instances and for_each when instances have distinct identities, such as pool members keyed by address [c13] [c14].",
+      "for_each keys must be known at plan time [c14].",
+      "Renaming a resource block plans destroy and create; a moved block maps old to new address without destroy [c12].",
+      "Moving from count to for_each needs moved blocks for each index-to-key pair."
+     ]
+    },
+    {
+     "title": "Drift and targeted applies",
+     "points": [
+      "-target is for exceptional circumstances; it leaves the rest of the configuration unapplied and the next full plan shows surprises [c10].",
+      "Manual changes on the device cause drift that the next plan reverses, possibly during an unrelated change.",
+      "terraform plan -detailed-exitcode returns 2 when changes exist, so a scheduled job can flag drift [c10].",
+      "terraform plan -refresh-only shows what changed outside Terraform without proposing configuration changes [c10]."
+     ]
+    },
+    {
+     "title": "Wiring the catchers",
+     "points": [
+      "terraform fmt -check -recursive fails on unformatted files [c4].",
+      "terraform validate catches syntax and type errors; tflint adds rules such as unused declarations and deprecated syntax, configured in .tflint.hcl with tflint --init [c26].",
+      "pre-commit runs fmt, validate and tflint on every commit after pre-commit install [c37].",
+      "A Claude review step reads the diff and plan JSON and must name the mistake, the file and the line, with a fix.",
+      "The same checks run in CI so a skipped local hook does not matter."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Remove the version constraint, run init -upgrade against a newer test provider and show the plan change [c16].",
+    "Commit a tfstate file and show what is inside it.",
+    "Remove the first member from a count-based list and show the recreate cascade [c13].",
+    "Fix it with for_each and moved blocks [c12] [c14].",
+    "Run -target on one resource, then a full plan, and show the leftover changes [c10].",
+    "Run pre-commit and the Claude review on a branch with all five mistakes."
+   ],
+   "lab": {
+    "brief": "Reproduce five classic mistakes in the lab repo, watch each one surface in plan or review, and fix them one by one.",
+    "steps": [
+     "Check out the mistakes branch with an unpinned provider, a hard-coded password, a committed tfstate, a count-based member list and a renamed resource.",
+     "Install pre-commit and the hook config; run pre-commit run --all-files [c37].",
+     "Run tflint and record its findings [c26].",
+     "Run the Claude review and compare its findings with tflint.",
+     "Fix the provider pin and commit the lock file.",
+     "Move the password to a TF_VAR_ variable marked sensitive.",
+     "Remove the committed state file, fix .gitignore, and note that history still holds the old copy until it is purged.",
+     "Convert count to for_each and add moved blocks; rename with a moved block; confirm a clean plan."
+    ],
+    "success_criteria": [
+     "All five mistakes are fixed and plan shows no unintended destroy.",
+     "pre-commit and CI checks pass.",
+     "The mistake catalogue has symptom, cause, fix and the check that caught it for each mistake.",
+     "No secret remains in the repository working tree."
+    ]
+   },
+   "common_pitfalls": [
+    "Believing sensitive = true keeps secrets out of state [c19].",
+    "Deleting a committed state file in a new commit and assuming it is gone from history.",
+    "Using -target as a routine way to 'just change one thing' [c10].",
+    "Relying only on local hooks that developers can skip."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Why does removing the first element of a count list recreate other resources?",
+     "a": "Instances are addressed by index, so every later index shifts [c13]."
+    },
+    {
+     "q": "What exit code does plan -detailed-exitcode return when changes are present?",
+     "a": "2 [c10]."
+    },
+    {
+     "q": "Does the GitHub Terraform.gitignore template ignore plan files?",
+     "a": "No, that line is commented out; add *.tfplan [c35]."
+    },
+    {
+     "q": "What does a moved block do?",
+     "a": "Tells Terraform an object moved address so it is renamed in state, not destroyed [c12]."
+    }
+   ],
+   "slides_and_assets": [
+    "Mistake catalogue template.",
+    "Mistakes branch in the lab repository.",
+    ".pre-commit-config.yaml and .tflint.hcl.",
+    "Before and after plan screenshots for each mistake."
+   ],
+   "sources": [
+    "c1",
+    "c4",
+    "c10",
+    "c12",
+    "c13",
+    "c14",
+    "c15",
+    "c16",
+    "c18",
+    "c19",
+    "c26",
+    "c34",
+    "c35",
+    "c37"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "GitHub repository fundamentals for infrastructure code",
+   "goal": "Set up a protected team repository with a clear layout, review ownership and safe secret handling.",
+   "learning_objectives": [
+    "Learners can lay out a Terraform repository by environment and module with a correct .gitignore.",
+    "Learners can use branches, commits and pull requests with a merge strategy suited to a network team.",
+    "Learners can configure CODEOWNERS, branch protection, required reviews and status checks.",
+    "Learners can choose between repository secrets, environment secrets and OIDC for credentials."
+   ],
+   "lessons": [
+    {
+     "title": "Repository layout",
+     "points": [
+      "modules/f5-vserver, modules/netscaler-vserver, modules/aci-bd; envs/dev and envs/prod; policy/; .github/workflows/.",
+      ".gitignore covers .terraform/, *.tfstate, *.tfstate.*, *.tfvars with secrets, crash logs and *.tfplan [c35].",
+      "Commit .terraform.lock.hcl for every root module [c16].",
+      "README per environment: backend, approvers and how to raise a change."
+     ]
+    },
+    {
+     "title": "Branches, commits and pull requests",
+     "points": [
+      "One change per branch: feature/add-vs-web-443; small commits with meaningful messages.",
+      "Open the pull request with gh pr create --base main and a template that links the change ticket.",
+      "Squash merge keeps one commit per change, making revert simple.",
+      "Reviews focus on the plan comment, not just the diff."
+     ]
+    },
+    {
+     "title": "CODEOWNERS and branch protection",
+     "points": [
+      "CODEOWNERS in .github/ maps modules/f5-* to @netops/f5-team and modules/aci-* to @netops/aci-team; owners need write access [c6].",
+      "CODEOWNERS is read from the base branch, so changes to it are themselves reviewed [c6].",
+      "Protect main: require pull requests, required reviews from code owners, required status checks (fmt, validate, tflint, plan, policy) and block force pushes [c5].",
+      "Enable 'Do not allow bypassing the above settings' so admins follow the same rules [c5].",
+      "Only one branch protection rule applies to a branch; rulesets can layer, which matters for larger organizations [c5]."
+     ]
+    },
+    {
+     "title": "Secrets and credentials",
+     "points": [
+      "Repository secrets for low-risk values; environment secrets for device credentials, released only after environment approval [c34].",
+      "OIDC removes long-lived cloud credentials from GitHub by exchanging a short-lived token [c28].",
+      "For on-premises devices, fetch short-lived credentials from Vault at run time using the job's OIDC identity.",
+      "Plan jobs use read-only device accounts; only apply jobs get write credentials."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Create the repository from the template and walk the layout.",
+    "Add CODEOWNERS and show automatic review requests on a pull request [c6].",
+    "Configure branch protection and show a blocked direct push to main [c5].",
+    "Create dev and prod environments with environment secrets [c34].",
+    "Raise a pull request with gh pr create and walk the review."
+   ],
+   "lab": {
+    "brief": "Create the team repository, protect main, add CODEOWNERS for the F5 and ACI folders, and raise your first pull request from a feature branch.",
+    "steps": [
+     "Create the team repository from the course template in the lab organization.",
+     "Review and extend .gitignore [c35].",
+     "Add CODEOWNERS for modules/f5-* and modules/aci-* [c6].",
+     "Protect main with required reviews, code owner review and required checks [c5].",
+     "Create dev and prod environments and add environment secrets [c34].",
+     "Create a feature branch, add a variable to the F5 module and push.",
+     "Open a pull request with the template and request review.",
+     "Try to push directly to main and record the refusal."
+    ],
+    "success_criteria": [
+     "Direct pushes to main are blocked for everyone, including admins.",
+     "Code owners are requested automatically on the pull request.",
+     "No secret value exists in the repository.",
+     "The pull request links a change ticket."
+    ]
+   },
+   "common_pitfalls": [
+    "Leaving admins able to bypass protection [c5].",
+    "CODEOWNERS entries for teams without write access [c6].",
+    "Putting prod device credentials in repository secrets visible to every workflow.",
+    "Large multi-change pull requests that nobody can review."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Which copy of CODEOWNERS applies to a pull request?",
+     "a": "The one on the base branch [c6]."
+    },
+    {
+     "q": "When can a job read environment secrets that have required reviewers?",
+     "a": "Only after approval is granted [c34]."
+    },
+    {
+     "q": "What does OIDC remove from the pipeline?",
+     "a": "Long-lived cloud credentials stored as GitHub secrets [c28]."
+    }
+   ],
+   "slides_and_assets": [
+    "Repository template with layout and .gitignore.",
+    "CODEOWNERS example.",
+    "Branch protection settings checklist.",
+    "Pull request template."
+   ],
+   "sources": [
+    "c5",
+    "c6",
+    "c16",
+    "c28",
+    "c34",
+    "c35"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "GitHub Actions pipelines: plan on pull request, apply on merge",
+   "goal": "Build the two workflows that make every change visible as a plan and apply only the reviewed plan after approval.",
+   "learning_objectives": [
+    "Learners can write workflows with triggers, jobs, setup-terraform and concurrency groups.",
+    "Learners can post the plan as a pull request comment and run fmt, validate and tflint as required checks.",
+    "Learners can scope apply to a protected environment with required reviewers.",
+    "Learners can carry the reviewed plan file to the apply job safely."
+   ],
+   "lessons": [
+    {
+     "title": "Workflow anatomy",
+     "points": [
+      "on: pull_request for plan; on: push to main for apply, as in HashiCorp's reference workflow [c7].",
+      "hashicorp/setup-terraform installs a pinned terraform_version; its wrapper exposes stdout, stderr and exitcode [c25].",
+      "concurrency: group: tf-${{ github.workflow }}-prod with cancel-in-progress: false keeps applies serial; never cancel a running apply [c29].",
+      "Cache the provider plugin directory keyed on .terraform.lock.hcl to speed up init."
+     ]
+    },
+    {
+     "title": "Plan on every pull request",
+     "points": [
+      "Steps: fmt -check -recursive, init -input=false, validate, tflint, plan -out=tfplan -input=false [c4] [c24] [c26].",
+      "Post the plan as a comment with actions/github-script; trim to stay under GitHub's 65535-character comment limit and update the existing bot comment [c25].",
+      "Set permissions: contents: read, pull-requests: write for the plan job [c31].",
+      "Make the checks required in branch protection [c5]."
+     ]
+    },
+    {
+     "title": "Apply only on merge, behind an environment",
+     "points": [
+      "The apply job sets environment: prod; required reviewers must approve before it runs and before it can read prod secrets [c27] [c34].",
+      "Enable prevent self-review so the author cannot approve their own apply [c27].",
+      "On Free, Pro and Team plans required reviewers only work on public repositories; private infrastructure repositories need GitHub Enterprise Cloud [c27].",
+      "Use a wait timer if the change window requires a delay [c27]."
+     ]
+    },
+    {
+     "title": "Applying exactly the reviewed plan",
+     "points": [
+      "Upload the plan as an artifact with a short retention-days [c33].",
+      "A plan file contains backend config and possibly secrets in plain text, so protect artifacts and keep retention short [c2] [c19].",
+      "Plans and applies on different machines need the same working directory, including .terraform, so archive it after plan [c24].",
+      "Record the plan's SHA-256 in the PR and verify it before apply.",
+      "If main moved since the plan, re-plan after merge and require approval of the new plan."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Ask Claude Code to draft plan.yml and apply.yml from the course spec, then review the diff.",
+    "Open a pull request and show checks and the plan comment [c25].",
+    "Merge and show the apply waiting for prod approval [c27].",
+    "Approve as a second user and show the apply using the uploaded plan [c33].",
+    "Trigger two merges quickly and show the concurrency queue [c29]."
+   ],
+   "lab": {
+    "brief": "Write the plan and apply workflows with Claude Code, open a pull request, read the plan comment and merge to see the gated apply run.",
+    "steps": [
+     "Draft plan.yml with Claude Code and review every line.",
+     "Add fmt, validate, tflint and plan steps and the PR comment step.",
+     "Draft apply.yml with environment: prod and a concurrency group.",
+     "Add the plan artifact upload and download with a hash check.",
+     "Make the checks required in branch protection.",
+     "Open a pull request that adds a virtual server and read the plan comment.",
+     "Merge, wait for approval and approve as your partner.",
+     "Verify the applied change on the lab F5."
+    ],
+    "success_criteria": [
+     "Every pull request gets a plan comment and required checks.",
+     "Apply runs only after merge and environment approval by someone other than the author.",
+     "The applied plan hash matches the reviewed plan hash.",
+     "Two applies never run at the same time."
+    ]
+   },
+   "common_pitfalls": [
+    "cancel-in-progress: true on apply, killing a run mid-change [c29].",
+    "Re-planning in the apply job instead of using the reviewed plan.",
+    "Plan comments over the size limit failing silently [c25].",
+    "Assuming required reviewers work on a private repository on a Team plan [c27]."
+   ],
+   "knowledge_check": [
+    {
+     "q": "How many required reviewers must approve an environment job?",
+     "a": "One of the listed reviewers (up to six can be listed) [c27]."
+    },
+    {
+     "q": "Why archive the working directory with the plan?",
+     "a": "Apply on another machine needs the same files, including .terraform [c24]."
+    },
+    {
+     "q": "What permission does the plan job need to comment on a PR?",
+     "a": "pull-requests: write [c31]."
+    }
+   ],
+   "slides_and_assets": [
+    "plan.yml and apply.yml reference workflows.",
+    "Plan comment script.",
+    "Environment and approval setup guide.",
+    "Pipeline sequence diagram."
+   ],
+   "sources": [
+    "c2",
+    "c4",
+    "c5",
+    "c7",
+    "c19",
+    "c24",
+    "c25",
+    "c26",
+    "c27",
+    "c29",
+    "c31",
+    "c33",
+    "c34"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "Guardrails, approvals and audit for Terraform and GitHub automation",
+   "goal": "Add policy checks, human approval and a per-change audit record so no unsafe plan reaches a device.",
+   "learning_objectives": [
+    "Learners can write policies over plan JSON that block disallowed resource types, unticketed destroys and out-of-scope changes.",
+    "Learners can configure environment protection as the human approval gate.",
+    "Learners can produce an audit record for each change.",
+    "Learners can apply least privilege to pipelines and agents."
+   ],
+   "lessons": [
+    {
+     "title": "Policy checks before apply",
+     "points": [
+      "Write policies against terraform show -json: resource_changes[].change.actions contains delete means a destroy or replace [c11] [c23].",
+      "Conftest runs Rego policies from policy/ against the plan JSON [c36].",
+      "Rule 1: only allowed types (bigip_ltm_*, citrixadc_*, aci_*) may change.",
+      "Rule 2: any delete requires a CHG ticket in the PR title or body.",
+      "Rule 3: resource addresses must be under the module folders touched by the PR."
+     ]
+    },
+    {
+     "title": "Environment approvals",
+     "points": [
+      "Required reviewers on the prod environment approve each apply; prevent self-review is on [c27].",
+      "Environment secrets stay locked until approval, so an unapproved job cannot reach the device [c34].",
+      "Approvers see the plan comment, the policy result and Claude's verdict before approving.",
+      "Branch protection plus environment protection gives two human checks: review and apply approval [c5]."
+     ]
+    },
+    {
+     "title": "Audit record",
+     "points": [
+      "Fields: change ticket, requester, PR number, commit SHA, plan SHA-256, policy result, Claude verdict JSON, approver, approval time, apply result and run URL.",
+      "Write the record as a JSON artifact and to an append-only store.",
+      "PostToolUse hooks log every tool call made by the review agent [c52].",
+      "Never store plan contents with secrets in the audit store [c19]."
+     ]
+    },
+    {
+     "title": "Least privilege",
+     "points": [
+      "Default permissions: {} at workflow level, then grant per job: contents: read, pull-requests: write, checks: write, id-token: write only where needed [c31].",
+      "GITHUB_TOKEN lasts only for the job and is limited to the repository [c32].",
+      "Plan uses read-only device accounts; apply uses write accounts fetched at run time.",
+      "The review agent has no write credentials of any kind."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Show a Rego policy that denies delete without a ticket and run conftest against a plan [c36].",
+    "Open a PR that destroys a pool without a ticket and show the policy failure.",
+    "Add the ticket and show the policy pass.",
+    "Show the prod approval screen with plan, policy and verdict links [c27].",
+    "Export the audit record JSON for the change."
+   ],
+   "lab": {
+    "brief": "Add a policy job that blocks a destroy without a ticket, require approval on the prod environment, and export the audit record for one change.",
+    "steps": [
+     "Write policy/deny_delete_without_ticket.rego and policy/allowed_types.rego.",
+     "Add a policy job running conftest on the plan JSON [c36].",
+     "Make the policy check required.",
+     "Turn on required reviewers and prevent self-review for prod [c27].",
+     "Set workflow-level permissions: {} and per-job permissions [c31].",
+     "Raise a PR that removes a pool without a ticket and observe the block.",
+     "Add the ticket, merge, approve and apply.",
+     "Export and review the audit record."
+    ],
+    "success_criteria": [
+     "Unticketed destroys cannot merge.",
+     "Prod apply cannot run without another person's approval.",
+     "The audit record includes plan hash, verdict, approver and run URL.",
+     "No job has more permissions than it needs."
+    ]
+   },
+   "common_pitfalls": [
+    "Checking only for ['delete'] and missing replacements, which include delete [c11].",
+    "Policies that read the HCL instead of the plan, missing module-generated changes.",
+    "Granting write-all to every job for convenience [c31].",
+    "Storing full plan files in the audit store."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Which action lists in plan JSON mean the object will be deleted?",
+     "a": "[\"delete\"], [\"delete\",\"create\"] and [\"create\",\"delete\"] [c11]."
+    },
+    {
+     "q": "Which tool runs Rego policies against plan JSON in this course?",
+     "a": "Conftest [c36]."
+    },
+    {
+     "q": "What does permissions: {} do?",
+     "a": "Disables all GITHUB_TOKEN permissions for that scope [c31]."
+    }
+   ],
+   "slides_and_assets": [
+    "Rego policy pack.",
+    "Audit record schema.",
+    "Permissions matrix per job.",
+    "Approval checklist for approvers."
+   ],
+   "sources": [
+    "c5",
+    "c11",
+    "c19",
+    "c23",
+    "c27",
+    "c31",
+    "c32",
+    "c34",
+    "c36",
+    "c52"
+   ]
+  },
+  {
+   "day": 3,
+   "title": "Claude as plan reviewer: Agent SDK, MCP and structured verdicts",
+   "goal": "Build an Agent SDK application that reads plan JSON, returns a structured risk verdict, posts it to the pull request and never merges or applies.",
+   "learning_objectives": [
+    "Learners can define a verdict schema and get validated verdicts from the Agent SDK.",
+    "Learners can post the verdict as a PR comment and a check run.",
+    "Learners can test the reviewer against fixture plans for deletes, replacements, certificate changes and out-of-scope resources.",
+    "Learners can make the agent mark unknowns and request a human."
+   ],
+   "lessons": [
+    {
+     "title": "The verdict schema",
+     "points": [
+      "Fields: risk (LOW, MEDIUM, HIGH, UNKNOWN), summary, findings[{address, action, reason, evidence_path}], requires_ticket, unclassified[], recommendation.",
+      "Pass it as output_format json_schema from a Pydantic model and read structured_output [c51].",
+      "Treat error_max_structured_output_retries as UNKNOWN risk and fail the check [c51].",
+      "A deterministic pre-pass computes counts and replace_paths from plan JSON so Claude explains facts rather than discovering them [c11]."
+     ]
+    },
+    {
+     "title": "Running in the pull request workflow",
+     "points": [
+      "The review job downloads the plan artifact, runs terraform show -json, redacts sensitive values and runs the agent [c23] [c33].",
+      "Post a PR comment, and a check run with conclusion action_required or failure for HIGH risk [c30].",
+      "In Actions, GITHUB_TOKEN is a GitHub App installation token, so checks: write lets the job create check runs [c32] [c31].",
+      "Keep annotations under 50 per API call [c30].",
+      "The agent has tools=[] and only a read-only plan tool; it cannot merge, approve or apply [c50]."
+     ]
+    },
+    {
+     "title": "Prompt and schema tests",
+     "points": [
+      "Fixtures: a pool member delete, a virtual server replacement due to a name change, a certificate content change, an aci_tenant change outside scope, and a no-op.",
+      "Assert the risk level and that each finding's address exists in resource_changes [c11].",
+      "Run tests on every change to the prompt or schema.",
+      "Compare the agent's findings with the policy job; they must not disagree on deletes."
+     ]
+    },
+    {
+     "title": "Handling uncertainty",
+     "points": [
+      "Resources not in the classification table go into unclassified[] and force risk UNKNOWN.",
+      "Values in after_unknown are reported as 'known after apply', not guessed [c11].",
+      "The agent asks for a named human reviewer in the comment when risk is UNKNOWN.",
+      "An optional route uses anthropics/claude-code-action in automation mode with a prompt; the course prefers the SDK app for the fixed schema [c9]."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Show the verdict model and a fixture plan with a hidden replacement.",
+    "Run the agent locally and show HIGH risk with replace_paths cited [c11].",
+    "Run the PR workflow and show the comment and failing check run [c30].",
+    "Introduce a resource type not in the table and show UNKNOWN and a human request.",
+    "Show the agent's tool list to prove it cannot apply [c50]."
+   ],
+   "lab": {
+    "brief": "Build and test the plan-review agent, run it inside the pull request workflow and watch it flag a hidden resource replacement.",
+    "steps": [
+     "Write the Pydantic verdict model.",
+     "Write the deterministic pre-pass over plan JSON.",
+     "Write the agent with output_format and a read-only plan tool.",
+     "Write pytest cases for the five fixture plans.",
+     "Add the review job to the PR workflow with checks: write and pull-requests: write.",
+     "Open a PR that renames a virtual server without a moved block.",
+     "Read the verdict comment and check run.",
+     "Fix with a moved block and see the verdict drop to LOW."
+    ],
+    "success_criteria": [
+     "All fixture tests pass.",
+     "The hidden replacement is flagged HIGH with the right address.",
+     "Unclassified resources produce UNKNOWN and a human request.",
+     "The agent has no merge, approve or apply capability."
+    ]
+   },
+   "common_pitfalls": [
+    "Letting the model read raw plan text instead of JSON.",
+    "Trusting structured_output without a success check [c51].",
+    "Using a personal token and expecting to create check runs; only GitHub Apps can [c30].",
+    "No regression tests when the prompt changes."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Which plan JSON field explains why a resource will be replaced?",
+     "a": "replace_paths [c11]."
+    },
+    {
+     "q": "Why can an Actions job create a check run with GITHUB_TOKEN?",
+     "a": "GITHUB_TOKEN is a GitHub App installation token, and checks: write grants the permission [c32] [c31]."
+    },
+    {
+     "q": "What should the agent do with a resource it cannot classify?",
+     "a": "List it as unclassified, set risk UNKNOWN and request a human."
+    }
+   ],
+   "slides_and_assets": [
+    "Verdict schema and sample verdicts.",
+    "Fixture plan pack.",
+    "Review job workflow snippet.",
+    "Risk classification table for F5, NetScaler and ACI resources."
+   ],
+   "sources": [
+    "c9",
+    "c11",
+    "c23",
+    "c30",
+    "c31",
+    "c32",
+    "c33",
+    "c50",
+    "c51"
+   ]
+  },
+  {
+   "day": 3,
+   "title": "Terraform for F5, NetScaler, Cisco ACI and other load balancers",
+   "goal": "Use vendor providers for F5, NetScaler and ACI, and bring Radware Alteon and other load balancers into the same gated workflow.",
+   "learning_objectives": [
+    "Learners can manage F5 nodes, pools, virtual servers and certificates with the BIG-IP provider.",
+    "Learners can manage NetScaler lbvservers, service groups and bindings with the citrixadc provider.",
+    "Learners can manage ACI tenants, application profiles and bridge domains with the ACI provider.",
+    "Learners can drive a Python change for Radware Alteon or another load balancer through the same approval gate."
+   ],
+   "lessons": [
+    {
+     "title": "F5 BIG-IP provider",
+     "points": [
+      "Resources: bigip_ltm_node, bigip_ltm_pool, bigip_ltm_pool_attachment, bigip_ltm_virtual_server and bigip_ssl_certificate, all over iControl REST [c38] [c39] [c40].",
+      "Pool names use full paths such as /Common/web-pool; members are address:port [c40].",
+      "bigip_ssl_certificate takes name, content (usually file()) and partition.",
+      "For declarative app deployments, bigip_as3 with tenant_filter is an alternative; it needs AS3 3.10 or later and Administrator role [c8].",
+      "Current provider release is 1.29.0; pin ~> 1.29 [c46]."
+     ]
+    },
+    {
+     "title": "Citrix ADC provider for NetScaler",
+     "points": [
+      "citrixadc_lbvserver with name, servicetype, ipv46, port and lbmethod (default LEASTCONNECTION) [c41].",
+      "citrixadc_servicegroup and citrixadc_lbvserver_servicegroup_binding with name and servicegroupname [c42].",
+      "Import bindings with the composite ID vserver,servicegroup [c42].",
+      "Provider endpoint and credentials come from the environment or variables, never literals."
+     ]
+    },
+    {
+     "title": "Cisco ACI provider",
+     "points": [
+      "aci_tenant maps to fvTenant, DN uni/tn-{name} [c43].",
+      "aci_application_profile maps to fvAp (uni/tn-{name}/ap-{name}) and aci_bridge_domain to fvBD (uni/tn-{name}/BD-{name}), both with parent_dn [c58] [c44].",
+      "Authenticate with password or private_key plus cert_name; certificate login suits pipelines [c45].",
+      "Import existing objects by DN, for example terraform import aci_tenant.example uni/tn-pay [c43]."
+     ]
+    },
+    {
+     "title": "Where no provider is used",
+     "points": [
+      "Radware's alteon-sdk gives Python access to Alteon over REST; minimum Alteon 31.0.10.0 or 32.2.2.0 [c54].",
+      "Wrap Python changes as plan and apply steps: plan prints intended changes as JSON, apply runs only in the approved apply job.",
+      "Anaya LB and other platforms use the same wrapper contract; if no API exists, the change stays manual with a ticket.",
+      "The Claude reviewer reads the wrapper's plan JSON with the same schema as Terraform changes.",
+      "Same environment gate, same audit record."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Plan an F5 virtual server with pool and certificate in the lab [c39].",
+    "Plan a NetScaler lbvserver and service group binding [c41] [c42].",
+    "Plan an ACI tenant, application profile and bridge domain against the sandbox [c43] [c44] [c55].",
+    "Run the Alteon wrapper's plan mode and show its JSON [c54].",
+    "Show all four changes in one PR with one approval."
+   ],
+   "lab": {
+    "brief": "Add a NetScaler virtual server and an ACI bridge domain through the pull request workflow, and attach a Python-driven Radware change to the same gate.",
+    "steps": [
+     "Add modules/netscaler-vserver and call it from envs/dev.",
+     "Add modules/aci-bd with tenant, application profile and bridge domain.",
+     "Configure provider credentials from environment secrets.",
+     "Write the Alteon wrapper plan and apply commands using alteon-sdk or the recorded mock.",
+     "Add the wrapper to the plan and apply workflows.",
+     "Open one PR with all changes and read the plan comment and verdict.",
+     "Approve and apply to dev.",
+     "Import one pre-existing ACI tenant and confirm a clean plan."
+    ],
+    "success_criteria": [
+     "NetScaler and ACI objects are created through the pipeline only.",
+     "The Alteon change is gated by the same environment approval.",
+     "The imported tenant shows no changes after import.",
+     "Provider versions are pinned and locked."
+    ]
+   },
+   "common_pitfalls": [
+    "Using short names where the F5 provider expects full paths [c40].",
+    "Forgetting the composite import ID for NetScaler bindings [c42].",
+    "Running the Alteon wrapper outside the gated job.",
+    "Using the APIC admin password in the pipeline instead of certificate auth [c45]."
+   ],
+   "knowledge_check": [
+    {
+     "q": "What is the DN format of an ACI bridge domain?",
+     "a": "uni/tn-{name}/BD-{name} [c44]."
+    },
+    {
+     "q": "What import ID does citrixadc_lbvserver_servicegroup_binding use?",
+     "a": "vserver,servicegroup [c42]."
+    },
+    {
+     "q": "What account role does bigip_as3 need?",
+     "a": "Administrator [c8]."
+    }
+   ],
+   "slides_and_assets": [
+    "Module reference solutions for F5, NetScaler and ACI.",
+    "Alteon wrapper skeleton with plan and apply modes.",
+    "Provider version matrix.",
+    "Import ID cheat sheet."
+   ],
+   "sources": [
+    "c8",
+    "c38",
+    "c39",
+    "c40",
+    "c41",
+    "c42",
+    "c43",
+    "c44",
+    "c45",
+    "c46",
+    "c54",
+    "c55",
+    "c58"
+   ]
+  },
+  {
+   "day": 3,
+   "title": "Capstone: end-to-end change through the Claude-reviewed pipeline",
+   "goal": "Take a change request through pull request, Claude verdict, policy, approval, gated apply, audit and rollback, and hand the repository over to the team.",
+   "learning_objectives": [
+    "Learners can run a full change from ticket to applied change with audit record.",
+    "Learners can write a runbook for raising, reviewing, approving, applying and reverting.",
+    "Learners can hand over CODEOWNERS, environment reviewers and audit export.",
+    "Learners can roll back by reverting a pull request and show the result."
+   ],
+   "lessons": [
+    {
+     "title": "The capstone change",
+     "points": [
+      "Ticket: add vs-api-443 on the lab F5 with a pool and certificate, plus an ACI bridge domain and a NetScaler failover vserver.",
+      "One instructor-seeded problem: a rename that would replace a live virtual server.",
+      "Teams must catch it through the verdict or policy and fix it with a moved block [c12].",
+      "Every step produces an audit entry."
+     ]
+    },
+    {
+     "title": "Runbook",
+     "points": [
+      "Raise: branch, PR template, ticket link.",
+      "Review: plan comment, policy, Claude verdict, CODEOWNERS approval [c6].",
+      "Approve: environment reviewer, not the author [c27].",
+      "Apply: saved plan only; Revert: git revert the merge commit, new PR, same gate."
+     ]
+    },
+    {
+     "title": "Handover and acceptance",
+     "points": [
+      "CODEOWNERS and environment reviewers set to the real team.",
+      "Audit export location and format documented.",
+      "Acceptance: mistakes caught, approvals enforced, rollback demonstrated.",
+      "Demo to the group with the audit record on screen."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Brief the change ticket and acceptance checklist.",
+    "Show a reference run of a small change end to end.",
+    "Show a revert PR and its plan.",
+    "Model a good approval decision using the verdict."
+   ],
+   "lab": {
+    "brief": "Capstone build and demo.",
+    "steps": [
+     "Create the change branch and modules for the ticket.",
+     "Open the PR and resolve checks.",
+     "Handle the seeded replacement finding.",
+     "Get CODEOWNERS review and merge.",
+     "Get environment approval and apply.",
+     "Export the audit record.",
+     "Revert the change through a PR and apply the revert.",
+     "Present the runbook and demo."
+    ],
+    "success_criteria": [
+     "The seeded replacement is caught before merge.",
+     "Apply happened only after another person's approval.",
+     "The audit record is complete for both the change and the revert.",
+     "The runbook is usable by someone who did not attend."
+    ]
+   },
+   "common_pitfalls": [
+    "Approving your own change.",
+    "Reverting by editing the device instead of reverting the PR.",
+    "Skipping the audit export."
+   ],
+   "knowledge_check": [
+    {
+     "q": "How is a change rolled back in this workflow?",
+     "a": "Revert the merge commit in a new PR, which goes through the same plan, review and approval."
+    },
+    {
+     "q": "Who may approve the prod apply?",
+     "a": "A required reviewer other than the person who started the deployment [c27]."
+    },
+    {
+     "q": "What fixes a rename that would replace a live virtual server?",
+     "a": "A moved block from the old to the new address [c12]."
+    }
+   ],
+   "slides_and_assets": [
+    "Capstone ticket and acceptance checklist.",
+    "Runbook template.",
+    "Audit record example.",
+    "Demo script."
+   ],
+   "sources": [
+    "c6",
+    "c12",
+    "c27"
+   ]
+  }
+ ],
+ "capstone_plan": {
+  "brief": "Teams run a change for F5, NetScaler, Cisco ACI and a wrapper-driven load balancer through a pull request, a Claude plan review, policy checks and a human approval before a gated apply, with an audit record for every change and rollback by revert.",
+  "milestones": [
+   "Change branch and PR opened with ticket link.",
+   "Checks green: fmt, validate, tflint, policy and plan.",
+   "Seeded replacement caught and fixed with a moved block.",
+   "Code owner review and merge.",
+   "Environment approval and gated apply from the saved plan.",
+   "Audit record exported.",
+   "Revert PR applied through the same gate."
+  ],
+  "evaluation_notes": [
+   "Fail if any apply ran without another person's approval.",
+   "Check plan hash continuity from PR to apply.",
+   "Check that the verdict and policy results agree on deletes and replacements.",
+   "Assess runbook clarity for a new team member.",
+   "Assess repository hygiene: no state, plans or secrets committed."
+  ]
+ },
+ "promo_video_research": {
+  "hook_basis": "The scenario (an apply removes a production virtual server because nobody read 'minus one' in the plan at two in the morning) is a teaching scenario. It is grounded in documented behavior: plans mark destroys with - and replacements with -/+, and a renamed resource is planned as destroy and create unless a moved block is used [c10] [c12].",
+  "claims_check": [
+   {
+    "claim": "10 modules, 3 days, hands-on",
+    "basis": "Matches content.py: 10 modules over 3 days."
+   },
+   {
+    "claim": "5 common mistakes reproduced and fixed",
+    "basis": "Course design: unpinned providers, hard-coded secrets, committed state, count versus for_each, targeted apply drift (plus renames), each documented by HashiCorp [c10] [c13] [c16] [c19] [c1]."
+   },
+   {
+    "claim": "0 applies without human approval",
+    "basis": "Enforced by GitHub environment required reviewers with prevent self-review; on Free, Pro and Team plans this requires public repositories, so private use needs Enterprise Cloud [c27]."
+   },
+   {
+    "claim": "Initializing provider F5Networks/bigip v1.22.2 ... locked in .terraform.lock.hcl",
+    "basis": "Lock file behavior is accurate [c16]. The version is illustrative: the registry lists 1.29.0 as current on the verification date, so update the on-screen version or treat it as an older pinned example [c46]."
+   },
+   {
+    "claim": "Plan: 3 to add, 0 to change, 0 to destroy",
+    "basis": "Standard plan summary format; numbers are scenario values [c10]."
+   },
+   {
+    "claim": "claude 'explain plan.tfplan' ... Apply is not available to me",
+    "basis": "Design behavior from deny rules and a tool set without apply [c47] [c50]; the command line shown is illustrative of the course MCP tooling, which explains the plan through show -json [c23]."
+   },
+   {
+    "claim": "count = length(var.members) replaced by for_each = var.members on bigip_ltm_pool_attachment",
+    "basis": "Matches HashiCorp guidance on count versus for_each and the F5 pool attachment resource [c13] [c14] [c40]."
+   },
+   {
+    "claim": "password = var.bigip_password # from GitHub environment secret",
+    "basis": "Environment secrets released after approval and sensitive variables are documented; note the value still lands in state if passed to a resource [c34] [c18] [c19]."
+   },
+   {
+    "claim": ".gitignore: *.tfstate, *.tfplan, .terraform/",
+    "basis": "The GitHub Terraform template covers state and .terraform/ but leaves plan files commented out, so *.tfplan must be added, as shown [c35]."
+   },
+   {
+    "claim": "gh pr create; checks fmt, tflint, policy pass; plan comment posted; environment prod waiting for approval",
+    "basis": "Consistent with fmt -check, TFLint, Conftest, the setup-terraform PR comment pattern and environment approvals [c4] [c26] [c36] [c25] [c27]. Ticket CHG0041233 and repository names are fictional."
+   },
+   {
+    "claim": "PLAN REVIEW risk HIGH: bigip_ltm_virtual_server.vs_api_443 will be REPLACED (name changed)",
+    "basis": "Replacement is visible in plan JSON actions and replace_paths, and renames plan as destroy and create [c11] [c12]. Values are fictional."
+   },
+   {
+    "claim": "\"An M C P server that exposes the Terraform C L I as tools, so the agent can run init, validate and plan, but never apply\"",
+    "basis": "Course design using MCP tools and Claude Code permissions [c49] [c53] [c47]. The course tool set is fmt, validate, plan and show -json; init runs in the plan tool's working directory setup."
+   },
+   {
+    "claim": "\"Python wrappers for Radware Alteon and other load balancers (Anaya LB) where no provider exists\"",
+    "basis": "Radware publishes alteon-sdk for Python REST access [c54]. No public Anaya LB API documentation was found; the course uses a mock API for it, which should be stated to buyers."
+   },
+   {
+    "claim": "\"Nothing you do in the lab can reach a production device\"",
+    "basis": "Lab design commitment (isolated lab network, trial and sandbox devices) [c55] [c56] [c57]."
+   }
+  ]
+ },
+ "citations": [
+  {
+   "id": "c1",
+   "title": "State | Terraform | HashiCorp Developer",
+   "url": "https://developer.hashicorp.com/terraform/language/state",
+   "publisher": "HashiCorp",
+   "supports": "Module 1 and 3: what state is and where it should live",
+   "key_fact": "Terraform uses workspace state to map real resources to configuration; state is a JSON file that should not be edited directly or stored in version control, and HashiCorp recommends HCP Terraform or a remote backend.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c2",
+   "title": "Backend block configuration overview",
+   "url": "https://developer.hashicorp.com/terraform/language/backend",
+   "publisher": "HashiCorp",
+   "supports": "Module 3: remote backends",
+   "key_fact": "A configuration can have only one backend block; Terraform writes backend configuration in plain text to .terraform/terraform.tfstate and to plan files, so credentials should come from environment variables.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c3",
+   "title": "Modules overview",
+   "url": "https://developer.hashicorp.com/terraform/language/modules",
+   "publisher": "HashiCorp",
+   "supports": "Module 1 and 3: reusable modules",
+   "key_fact": "A module is a collection of resources managed together; modules can come from local paths, a registry or VCS, and registry modules download automatically when source and version are set.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c4",
+   "title": "terraform fmt command reference",
+   "url": "https://developer.hashicorp.com/terraform/cli/commands/fmt",
+   "publisher": "HashiCorp",
+   "supports": "Module 4 and 6: formatting gate",
+   "key_fact": "terraform fmt rewrites files to one canonical style with no options; -check returns non-zero when files are not formatted and -recursive processes subdirectories.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c5",
+   "title": "About protected branches",
+   "url": "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches",
+   "publisher": "GitHub Docs",
+   "supports": "Module 5: branch protection",
+   "key_fact": "Rules can require status checks or linear history, block force pushes and deletion by default, and do not apply to admins unless 'Do not allow bypassing the above settings' is enabled; only one branch protection rule applies to a branch at a time, unlike rulesets.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c6",
+   "title": "About code owners",
+   "url": "https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners",
+   "publisher": "GitHub Docs",
+   "supports": "Module 5 and 10: CODEOWNERS",
+   "key_fact": "CODEOWNERS in .github/, the root or docs/ requests reviews automatically when a pull request touches owned files; the base branch copy is used, owners need write access, invalid lines are skipped and files over 3 MB are not loaded.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c7",
+   "title": "Automate Terraform with GitHub Actions",
+   "url": "https://developer.hashicorp.com/terraform/tutorials/automation/github-actions",
+   "publisher": "HashiCorp",
+   "supports": "Module 6: reference plan-on-PR, apply-on-merge workflow",
+   "key_fact": "The tutorial runs a plan for every commit to a pull request branch and applies on push to main (including merges); it authenticates to HCP Terraform with a team token stored as the TF_API_TOKEN secret.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c8",
+   "title": "AS3 Integration with Terraform",
+   "url": "https://clouddocs.f5.com/products/orchestration/terraform/latest/userguide/as3-integration.html",
+   "publisher": "F5 (clouddocs.f5.com)",
+   "supports": "Module 9: declarative F5 option",
+   "key_fact": "bigip_as3 takes a required as3_json declaration and optional tenant_filter; it needs BIG-IP 12.1.x or later, AS3 3.10 or later and an Administrator-role account.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c9",
+   "title": "Claude Code GitHub Actions",
+   "url": "https://code.claude.com/docs/en/github-actions",
+   "publisher": "Anthropic (code.claude.com)",
+   "supports": "Module 8: alternative way to run Claude in a workflow",
+   "key_fact": "anthropics/claude-code-action runs in interactive mode on @claude mentions when no prompt is given, or automation mode on any event when a prompt is supplied; it uses an ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN secret, requires write access from the triggering user and rejects bots unless listed in allowed_bots.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c10",
+   "title": "terraform plan command reference",
+   "url": "https://developer.hashicorp.com/terraform/cli/commands/plan",
+   "publisher": "HashiCorp",
+   "supports": "Module 3, 4 and 6: plan symbols, saved plans, targeting and drift checks",
+   "key_fact": "Plan symbols are + create, - destroy, ~ update in place and -/+ destroy then create replacement; -out=FILE saves a plan to apply later, mainly for automation; -detailed-exitcode returns 0 for no changes, 1 for error and 2 for changes; -target is for exceptional circumstances only; -refresh-only updates state to match remote objects.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c11",
+   "title": "JSON Output Format",
+   "url": "https://developer.hashicorp.com/terraform/internals/json-format",
+   "publisher": "HashiCorp",
+   "supports": "Module 8: what the plan-review agent reads",
+   "key_fact": "Plan JSON has resource_changes[], each with address and change.actions, which is one of [\"no-op\"], [\"create\"], [\"read\"], [\"update\"], [\"delete\",\"create\"], [\"create\",\"delete\"] or [\"delete\"]; before, after and after_unknown give values; before_sensitive and after_sensitive mark sensitive leaves; replace_paths lists the attributes that forced replacement.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c12",
+   "title": "Refactor modules (moved block)",
+   "url": "https://developer.hashicorp.com/terraform/language/modules/develop/refactoring",
+   "publisher": "HashiCorp",
+   "supports": "Module 4: renames without destroy",
+   "key_fact": "By default Terraform treats a changed address as destroy and create; a moved { from = ... to = ... } block renames the object in state so it is not destroyed, and also maps count instances to the new address.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c13",
+   "title": "The count meta-argument",
+   "url": "https://developer.hashicorp.com/terraform/language/meta-arguments/count",
+   "publisher": "HashiCorp",
+   "supports": "Module 4: count versus for_each",
+   "key_fact": "Use count for nearly identical instances and for_each when instances need distinct values that cannot be derived from an integer index; count and for_each cannot be used together; count must be known before apply; instances are addressed as name[0].",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c14",
+   "title": "The for_each meta-argument",
+   "url": "https://developer.hashicorp.com/terraform/language/meta-arguments/for_each",
+   "publisher": "HashiCorp",
+   "supports": "Module 4 and 9: keyed instances",
+   "key_fact": "for_each takes a map or set of strings, exposing each.key and each.value; keys must be known values, otherwise Terraform reports that for_each has dependencies that cannot be determined before apply.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c15",
+   "title": "Version constraints",
+   "url": "https://developer.hashicorp.com/terraform/language/expressions/version-constraints",
+   "publisher": "HashiCorp",
+   "supports": "Module 3 and 4: pinning providers",
+   "key_fact": "~> allows only the right-most version component to increment: ~> 1.0.4 allows 1.0.5 and 1.0.10 but not 1.1.0; ~> 1.1 allows 1.2 and 1.10 but not 2.0.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c16",
+   "title": "Dependency Lock File (.terraform.lock.hcl)",
+   "url": "https://developer.hashicorp.com/terraform/language/files/dependency-lock",
+   "publisher": "HashiCorp",
+   "supports": "Module 3 and 4: lock file in Git",
+   "key_fact": "terraform init creates or updates .terraform.lock.hcl; it should be committed so dependency changes are code reviewed; Terraform re-selects the locked version unless terraform init -upgrade is run.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c17",
+   "title": "terraform import command reference",
+   "url": "https://developer.hashicorp.com/terraform/cli/commands/import",
+   "publisher": "HashiCorp",
+   "supports": "Module 3: bringing existing objects under management",
+   "key_fact": "Usage is terraform import [options] ADDRESS ID; as an alternative, an import block in configuration lets terraform apply import resources, which suits CI/CD.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c18",
+   "title": "Use input variables",
+   "url": "https://developer.hashicorp.com/terraform/language/values/variables",
+   "publisher": "HashiCorp",
+   "supports": "Module 3 and 4: variables and secrets",
+   "key_fact": "Set sensitive = true on secret variables to hide them in CLI output; environment variables named TF_VAR_<name> set input variables, useful in CI/CD.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c19",
+   "title": "Manage sensitive data",
+   "url": "https://developer.hashicorp.com/terraform/language/manage-sensitive-data",
+   "publisher": "HashiCorp",
+   "supports": "Module 4 and 7: why secrets in config end up in state",
+   "key_fact": "If you add secret values directly to configuration, Terraform stores them in state and plan files; state and plan files contain detailed infrastructure information that may include sensitive values.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c20",
+   "title": "State: Locking",
+   "url": "https://developer.hashicorp.com/terraform/language/state/locking",
+   "publisher": "HashiCorp",
+   "supports": "Module 3 and 6: state locking",
+   "key_fact": "If the backend supports it, Terraform locks state automatically for all operations that could write state; not all backends support locking; force-unlock should be used only to release your own lock when automatic unlocking failed; the documentation version selector lists v1.17.x as latest at verification.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c21",
+   "title": "Managing workspaces",
+   "url": "https://developer.hashicorp.com/terraform/cli/workspaces",
+   "publisher": "HashiCorp",
+   "supports": "Module 3: workspaces versus separate directories",
+   "key_fact": "Every initialized directory starts with a default workspace, managed with terraform workspace list/new/delete; HashiCorp recommends other approaches for complex deployments that need separate credentials and access controls.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c22",
+   "title": "terraform state mv command reference",
+   "url": "https://developer.hashicorp.com/terraform/cli/commands/state/mv",
+   "publisher": "HashiCorp",
+   "supports": "Module 3: moving state",
+   "key_fact": "terraform state mv [options] SOURCE DESTINATION retains an existing remote object but tracks it at a different address; the moved block is the configuration-based alternative.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c23",
+   "title": "terraform show command reference",
+   "url": "https://developer.hashicorp.com/terraform/cli/commands/show",
+   "publisher": "HashiCorp",
+   "supports": "Module 2 and 8: JSON plan output",
+   "key_fact": "terraform show -json on a plan file prints the plan, configuration and current state as JSON; with -json, sensitive values in state are displayed in plain text.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c24",
+   "title": "Running Terraform in automation",
+   "url": "https://developer.hashicorp.com/terraform/tutorials/automation/automate-terraform",
+   "publisher": "HashiCorp",
+   "supports": "Module 6: non-interactive plan and apply",
+   "key_fact": "Use terraform init -input=false, terraform plan -out=tfplan -input=false and terraform apply -input=false tfplan; TF_IN_AUTOMATION adjusts output for wrappers; when plan and apply run on different machines, archive the whole working directory including .terraform after plan.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c25",
+   "title": "hashicorp/setup-terraform",
+   "url": "https://github.com/hashicorp/setup-terraform",
+   "publisher": "HashiCorp (GitHub)",
+   "supports": "Module 6: installing Terraform in Actions",
+   "key_fact": "Inputs include terraform_version, cli_config_credentials_token and terraform_wrapper (default true); the wrapper exposes stdout, stderr and exitcode outputs; the README shows posting plan output as a PR comment with actions/github-script and warns GitHub comments are limited to 65535 characters; examples use hashicorp/setup-terraform@v4.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c26",
+   "title": "TFLint",
+   "url": "https://github.com/terraform-linters/tflint",
+   "publisher": "terraform-linters (GitHub)",
+   "supports": "Module 4: linting",
+   "key_fact": "TFLint is a pluggable linter that flags possible errors, deprecated syntax and unused declarations and enforces best practices; it is configured in .tflint.hcl, plugins install with tflint --init, the Terraform language ruleset is bundled, output formats include json, junit and sarif.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c27",
+   "title": "Deployments and environments",
+   "url": "https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments",
+   "publisher": "GitHub Docs",
+   "supports": "Module 6 and 7: environment approvals",
+   "key_fact": "Required reviewers (up to six users or teams, one approval needed) gate jobs that reference an environment; prevent self-review stops the initiator from approving; wait timers range 1 to 43,200 minutes; on Free, Pro and Team plans required reviewers are only available for public repositories.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c28",
+   "title": "OpenID Connect",
+   "url": "https://docs.github.com/en/actions/concepts/security/openid-connect",
+   "publisher": "GitHub Docs",
+   "supports": "Module 5 and 7: short-lived cloud credentials",
+   "key_fact": "With OIDC you do not store cloud credentials as long-lived GitHub secrets; the workflow requests a short-lived access token from the cloud provider through a configured trust.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c29",
+   "title": "Control the concurrency of workflows and jobs",
+   "url": "https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency",
+   "publisher": "GitHub Docs",
+   "supports": "Module 6: no parallel applies",
+   "key_fact": "At most one job or workflow runs in a concurrency group; a new queued run makes the existing pending run cancel by default; cancel-in-progress: true also cancels the running one.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c30",
+   "title": "REST API endpoints for check runs",
+   "url": "https://docs.github.com/en/rest/checks/runs",
+   "publisher": "GitHub Docs",
+   "supports": "Module 8: posting the verdict as a check run",
+   "key_fact": "Only GitHub Apps can create check runs; conclusion values include action_required, cancelled, failure, neutral, success, skipped and timed_out; at most 50 annotations per request; Actions steps are limited to 10 warning and 10 error annotations.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c31",
+   "title": "Workflow syntax for GitHub Actions: permissions",
+   "url": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax",
+   "publisher": "GitHub Docs",
+   "supports": "Module 7 and 8: least-privilege GITHUB_TOKEN",
+   "key_fact": "The permissions key sets read, write or none per scope (for example checks, contents, id-token, pull-requests); unspecified scopes become none; checks: write permits creating a check run; permissions: {} disables all.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c32",
+   "title": "GITHUB_TOKEN",
+   "url": "https://docs.github.com/en/actions/concepts/security/github_token",
+   "publisher": "GitHub Docs",
+   "supports": "Module 7 and 8: what the workflow token is",
+   "key_fact": "GITHUB_TOKEN is a GitHub App installation token limited to the repository, created per job and expiring when the job ends (at most 24 hours on self-hosted runners); events it triggers do not start new workflow runs except listed cases such as pull_request opened, which wait for approval.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c33",
+   "title": "Store and share data with workflow artifacts",
+   "url": "https://docs.github.com/en/actions/tutorials/store-and-share-data",
+   "publisher": "GitHub Docs",
+   "supports": "Module 6: carrying the reviewed plan to apply",
+   "key_fact": "actions/upload-artifact@v4 uploads files with an optional retention-days that cannot exceed the repository or organization limit; actions/download-artifact downloads them, and cross-run downloads need a token and run ID.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c34",
+   "title": "Using secrets in GitHub Actions",
+   "url": "https://docs.github.com/en/actions/concepts/security/secrets",
+   "publisher": "GitHub Docs",
+   "supports": "Module 5 and 7: environment secrets",
+   "key_fact": "For environment secrets you can enable required reviewers; a job cannot access environment secrets until required approvers grant approval.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c35",
+   "title": "github/gitignore: Terraform.gitignore",
+   "url": "https://raw.githubusercontent.com/github/gitignore/main/Terraform.gitignore",
+   "publisher": "GitHub (github/gitignore)",
+   "supports": "Module 4 and 5: what to keep out of Git",
+   "key_fact": "The template ignores .terraform/, *.tfstate, *.tfstate.*, crash logs, *.tfvars, *.tfvars.json, override files, .terraform.tfstate.lock.info and .terraformrc; ignoring tfplan files is left commented out, so *.tfplan must be added explicitly.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c36",
+   "title": "Conftest",
+   "url": "https://www.conftest.dev/",
+   "publisher": "Open Policy Agent project",
+   "supports": "Module 7: policy checks on plan JSON",
+   "key_fact": "Conftest tests structured configuration data, including Terraform, with policies written in Rego; policies live in a policy directory by default, overridable with --policy.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c37",
+   "title": "pre-commit",
+   "url": "https://pre-commit.com/",
+   "publisher": "pre-commit project",
+   "supports": "Module 4: local hooks",
+   "key_fact": "Hooks are declared in .pre-commit-config.yaml at the repository root and installed with pre-commit install, after which they run on every git commit; the same hooks can run in CI.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c38",
+   "title": "F5 BIG-IP provider documentation (index)",
+   "url": "https://raw.githubusercontent.com/F5Networks/terraform-provider-bigip/master/docs/index.md",
+   "publisher": "F5 Networks (GitHub)",
+   "supports": "Module 9: F5 provider configuration",
+   "key_fact": "The provider manages LTM, network and system objects and supports AS3/DO; address, username and password can be set with BIGIP_HOST, BIGIP_USER and BIGIP_PASSWORD; token_auth defaults to true.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c39",
+   "title": "bigip_ltm_virtual_server resource documentation",
+   "url": "https://raw.githubusercontent.com/F5Networks/terraform-provider-bigip/master/docs/resources/bigip_ltm_virtual_server.md",
+   "publisher": "F5 Networks (GitHub)",
+   "supports": "Module 3 and 9: F5 virtual server resource",
+   "key_fact": "Required arguments are name, destination and port, with optional pool; an existing virtual server is imported by full path, for example terraform import bigip_ltm_virtual_server.http /Common/terraform_vs_http.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c40",
+   "title": "bigip_ltm_pool_attachment resource documentation",
+   "url": "https://raw.githubusercontent.com/F5Networks/terraform-provider-bigip/master/docs/resources/bigip_ltm_pool_attachment.md",
+   "publisher": "F5 Networks (GitHub)",
+   "supports": "Module 4 and 9: pool members",
+   "key_fact": "pool (full path such as /Common/my-pool) and node (address or FQDN with port, for example 1.1.1.1:80) are required; imports take the pool full path and the node full path with port.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c41",
+   "title": "citrixadc_lbvserver resource documentation",
+   "url": "https://raw.githubusercontent.com/citrix/terraform-provider-citrixadc/master/docs/resources/lbvserver.md",
+   "publisher": "Citrix / NetScaler (GitHub)",
+   "supports": "Module 9: NetScaler virtual server",
+   "key_fact": "Arguments include name, servicetype, ipv46, port and lbmethod (default LEASTCONNECTION); import with terraform import citrixadc_lbvserver.tf_lbvserver tf_lbvserver.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c42",
+   "title": "citrixadc_lbvserver_servicegroup_binding resource documentation",
+   "url": "https://raw.githubusercontent.com/citrix/terraform-provider-citrixadc/master/docs/resources/lbvserver_servicegroup_binding.md",
+   "publisher": "Citrix / NetScaler (GitHub)",
+   "supports": "Module 9: binding a service group",
+   "key_fact": "name and servicegroupname are required; import uses the composite ID vserver,servicegroup, for example tf_lbvserver,tf_servicegroupname.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c43",
+   "title": "aci_tenant resource documentation",
+   "url": "https://raw.githubusercontent.com/CiscoDevNet/terraform-provider-aci/master/docs/resources/tenant.md",
+   "publisher": "Cisco DevNet (GitHub)",
+   "supports": "Module 9: ACI tenant",
+   "key_fact": "aci_tenant maps to class fvTenant with DN format uni/tn-{name}; import with terraform import aci_tenant.example uni/tn-{name}.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c44",
+   "title": "aci_bridge_domain resource documentation",
+   "url": "https://raw.githubusercontent.com/CiscoDevNet/terraform-provider-aci/master/docs/resources/bridge_domain.md",
+   "publisher": "Cisco DevNet (GitHub)",
+   "supports": "Module 9: ACI bridge domain",
+   "key_fact": "aci_bridge_domain maps to class fvBD with DN uni/tn-{name}/BD-{name} and a parent_dn argument; import by DN, for example terraform import aci_bridge_domain.example_tenant uni/tn-{name}/BD-{name}.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c58",
+   "title": "aci_application_profile resource documentation",
+   "url": "https://raw.githubusercontent.com/CiscoDevNet/terraform-provider-aci/master/docs/resources/application_profile.md",
+   "publisher": "Cisco DevNet (GitHub)",
+   "supports": "Module 9: ACI application profile",
+   "key_fact": "aci_application_profile maps to class fvAp with DN uni/tn-{name}/ap-{name} and a parent_dn argument; import by DN.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c45",
+   "title": "ACI provider documentation (index)",
+   "url": "https://raw.githubusercontent.com/CiscoDevNet/terraform-provider-aci/master/docs/index.md",
+   "publisher": "Cisco DevNet (GitHub)",
+   "supports": "Module 9: ACI provider authentication",
+   "key_fact": "The provider takes url and either password or private_key with cert_name (certificate-based login).",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c46",
+   "title": "Terraform Registry API: F5Networks/bigip provider",
+   "url": "https://registry.terraform.io/v1/providers/F5Networks/bigip",
+   "publisher": "HashiCorp (Terraform Registry)",
+   "supports": "Lab environment and promo check: current provider versions",
+   "key_fact": "On 2026-10-30 the registry lists F5Networks/bigip 1.29.0 (published 2026-10-06); the same API lists citrix/citrixadc 3.0.3 and CiscoDevNet/aci 2.20.0.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c47",
+   "title": "Configure permissions - Claude Code Docs",
+   "url": "https://code.claude.com/docs/en/permissions",
+   "publisher": "Anthropic (code.claude.com)",
+   "supports": "Module 2: keeping apply off the allowed list",
+   "key_fact": "Rules are evaluated deny, then ask, then allow; a broad deny such as Bash(aws *) blocks calls even if a narrower allow matches; Bash rules match the command text Claude writes and are not a security boundary around a program, so pair them with the sandbox or remove the tool when a restriction must hold.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c48",
+   "title": "How Claude remembers your project - Claude Code Docs",
+   "url": "https://code.claude.com/docs/en/memory",
+   "publisher": "Anthropic (code.claude.com)",
+   "supports": "Module 2: CLAUDE.md",
+   "key_fact": "Project instructions live in ./CLAUDE.md or ./.claude/CLAUDE.md; /init generates a starting file; CLAUDE.md is context, not enforced configuration, so blocking needs a PreToolUse hook.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c49",
+   "title": "Connect Claude Code to tools via MCP - Claude Code Docs",
+   "url": "https://code.claude.com/docs/en/mcp",
+   "publisher": "Anthropic (code.claude.com)",
+   "supports": "Module 2: registering the Terraform MCP server",
+   "key_fact": "claude mcp add [options] <name> -- <command> [args...] adds a stdio server; --scope project stores it in .mcp.json for the team; project servers need approval on first use.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c50",
+   "title": "Give Claude custom tools - Claude Agent SDK",
+   "url": "https://code.claude.com/docs/en/agent-sdk/custom-tools",
+   "publisher": "Anthropic (code.claude.com)",
+   "supports": "Module 2 and 8: Terraform tools in the SDK",
+   "key_fact": "Use @tool and create_sdk_mcp_server; tools are named mcp__{server}__{tool}; tools=[] removes all built-ins; handlers can return is_error; annotations such as readOnlyHint are not enforcement.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c51",
+   "title": "Get structured output from agents - Claude Agent SDK",
+   "url": "https://code.claude.com/docs/en/agent-sdk/structured-outputs",
+   "publisher": "Anthropic (code.claude.com)",
+   "supports": "Module 8: the verdict schema",
+   "key_fact": "output_format={'type':'json_schema','schema':...} returns validated data in ResultMessage.structured_output; schemas are validated as draft-07; error_max_structured_output_retries means no valid output; success without structured_output is also a failure.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c52",
+   "title": "Intercept and control agent behavior with hooks - Claude Agent SDK",
+   "url": "https://code.claude.com/docs/en/agent-sdk/hooks",
+   "publisher": "Anthropic (code.claude.com)",
+   "supports": "Module 2 and 7: blocking and auditing tool calls",
+   "key_fact": "PreToolUse hooks can return permissionDecision 'deny' with a reason; matchers match tool names only; deny wins when hooks disagree; PostToolUse suits audit logging.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c53",
+   "title": "Tools - Model Context Protocol specification (2025-06-18)",
+   "url": "https://modelcontextprotocol.io/specification/2025-06-18/server/tools",
+   "publisher": "Model Context Protocol",
+   "supports": "Module 2: MCP tool contract",
+   "key_fact": "tools/list and tools/call; tools declare inputSchema and optional outputSchema; results carry content, structuredContent and isError; servers MUST validate inputs, enforce access controls, rate limit and sanitize outputs; clients SHOULD log tool use.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c54",
+   "title": "alteon-sdk (PyPI project metadata)",
+   "url": "https://pypi.org/pypi/alteon-sdk/json",
+   "publisher": "PyPI (package published by a Radware author)",
+   "supports": "Module 9: Radware Alteon where no Terraform provider is used",
+   "key_fact": "alteon-sdk provides a Python API to Alteon structures via a REST backend (for example SlbNewCfgEnhRealServerTable beans read through AlteonClient); minimum supported Alteon versions are 31.0.10.0 and 32.2.2.0; the latest PyPI release is a beta (0.16b2).",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c55",
+   "title": "ACI Sandboxes - Cisco DevNet",
+   "url": "https://developer.cisco.com/docs/aci/sandbox",
+   "publisher": "Cisco DevNet",
+   "supports": "Lab environment: APIC for Terraform labs",
+   "key_fact": "DevNet offers an Always-On ACI Simulator (shared, no reservation) and a reservable ACI Simulator (up to 5 consecutive days) for REST API work.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c56",
+   "title": "BIG-IP Virtual Edition free trial",
+   "url": "https://www.f5.com/trials/big-ip-virtual-edition",
+   "publisher": "F5",
+   "supports": "Lab environment: BIG-IP VE",
+   "key_fact": "F5 offers a 30-day free BIG-IP VE and BIG-IQ VE trial requested through MyF5.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c57",
+   "title": "NetScaler VPX FAQ (13.1)",
+   "url": "https://docs.netscaler.com/en-us/vpx/13-1/deploy-vpx-faq.html",
+   "publisher": "NetScaler (docs.netscaler.com)",
+   "supports": "Lab environment: NetScaler VPX Express",
+   "key_fact": "VPX Express is free with no license file and, in the newer version, no expiry; a retail license is needed for support cases.",
+   "verified": "2026-10-30"
+  }
+ ]
+}

@@ -1058,7 +1058,8 @@
      "points": [
       "PATCH /api/now/table/incident/{sys_id} with close_notes and close_code after approval; state change to Resolved is done by the engineer [c1].",
       "Write the template summary to work_notes as well for the audit trail [c1].",
-      "Use the instance's own close code choices; read them rather than hard-coding."
+      "Use the instance's own close code choices; read them rather than hard-coding.",
+      "If the PATCH fails validation (for example a mandatory close field), surface the instance error to the engineer instead of retrying with guessed values [c1]."
      ]
     },
     {
@@ -1268,7 +1269,9 @@
      "points": [
       "A new incident lands in the PDI with a symptom the teams have not seen (for example an HA sync failure on the NetScaler pair after a change) [c23].",
       "Teams run intake, acknowledgement draft, evidence collection, suggestions, approvals, execution and template.",
-      "The instructor plays caller and senior approver."
+      "The instructor plays caller and senior approver.",
+      "The capstone incident deliberately omits two checklist details so the acknowledgement step is exercised.",
+      "Teams must use only the collectors and allowlist built during the course; no ad hoc device logins."
      ]
     },
     {
@@ -1285,7 +1288,8 @@
      "points": [
       "Five-minute demo of the run.",
       "Limitations statement: platforms covered, known gaps, false-positive and false-negative cases seen.",
-      "Next steps for production: credentials, change control, rollout."
+      "Next steps for production: credentials, change control, rollout.",
+      "Show the audit log and the matching approval records during the demo, not only the final note."
      ]
     }
    ],

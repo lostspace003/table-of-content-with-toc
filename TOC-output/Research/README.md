@@ -20,8 +20,11 @@ Each course has its own research document in `TOC-output/<course>/Research/` (wa
 |---|---|---|---|---|
 | Cisco ACI Upgrade Automation with Claude | 3 | 10 | 37 | [PDF](../Cisco%20ACI%20Upgrade%20Automation%20with%20Claude/Research/Cisco%20ACI%20Upgrade%20Automation%20with%20Claude%20-%20Research%20and%20Content%20Plan%20-%20Gennoor.pdf) |
 | Certificate Renewal Automation with Claude | 3 | 9 | 33 | [PDF](../Certificate%20Renewal%20Automation%20with%20Claude/Research/Certificate%20Renewal%20Automation%20with%20Claude%20-%20Research%20and%20Content%20Plan%20-%20Gennoor.pdf) |
+| Configuration Comparison Automation with Claude | 3 | 10 | 31 | [PDF](../Configuration%20Comparison%20Automation%20with%20Claude/Research/Configuration%20Comparison%20Automation%20with%20Claude%20-%20Research%20and%20Content%20Plan%20-%20Gennoor.pdf) |
 | Traffic and Flow Diagram Automation with Claude | 3 | 11 | 46 | [PDF](../Traffic%20and%20Flow%20Diagram%20Automation%20with%20Claude/Research/Traffic%20and%20Flow%20Diagram%20Automation%20with%20Claude%20-%20Research%20and%20Content%20Plan%20-%20Gennoor.pdf) |
+| Terraform and GitHub Automation with Claude | 3 | 10 | 58 | [PDF](../Terraform%20and%20GitHub%20Automation%20with%20Claude/Research/Terraform%20and%20GitHub%20Automation%20with%20Claude%20-%20Research%20and%20Content%20Plan%20-%20Gennoor.pdf) |
 | Troubleshooting Automation with Claude | 3 | 10 | 30 | [PDF](../Troubleshooting%20Automation%20with%20Claude/Research/Troubleshooting%20Automation%20with%20Claude%20-%20Research%20and%20Content%20Plan%20-%20Gennoor.pdf) |
+| Device Upgrade Automation with Claude | 3 | 11 | 42 | [PDF](../Device%20Upgrade%20Automation%20with%20Claude/Research/Device%20Upgrade%20Automation%20with%20Claude%20-%20Research%20and%20Content%20Plan%20-%20Gennoor.pdf) |
 
 ## Business Process Automation
 
