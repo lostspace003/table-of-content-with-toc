@@ -7,6 +7,7 @@ Each course has its own research document in `TOC-output/<course>/Research/` (wa
 
 | Course | Days | Modules | Sources | Document |
 |---|---|---|---|---|
+| Credential and Access Management Automation with Claude | 3 | 10 | 46 | [PDF](../Credential%20and%20Access%20Management%20Automation%20with%20Claude/Research/Credential%20and%20Access%20Management%20Automation%20with%20Claude%20-%20Research%20and%20Content%20Plan%20-%20Gennoor.pdf) |
 | Agentic Virtual Patching Platform | 3 | 9 | 23 | [PDF](../Agentic%20Virtual%20Patching%20Platform/Research/Agentic%20Virtual%20Patching%20Platform%20-%20Research%20and%20Content%20Plan%20-%20Gennoor.pdf) |
 | Agentic AI Vulnerability Management | 3 | 9 | 25 | [PDF](../Agentic%20AI%20Vulnerability%20Management/Research/Agentic%20AI%20Vulnerability%20Management%20-%20Research%20and%20Content%20Plan%20-%20Gennoor.pdf) |
 | Agentic Attack Surface Management | 3 | 9 | 25 | [PDF](../Agentic%20Attack%20Surface%20Management/Research/Agentic%20Attack%20Surface%20Management%20-%20Research%20and%20Content%20Plan%20-%20Gennoor.pdf) |
