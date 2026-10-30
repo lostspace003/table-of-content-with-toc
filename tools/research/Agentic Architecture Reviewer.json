@@ -1,0 +1,1505 @@
+{
+  "course": "Agentic Architecture Reviewer",
+  "domain": "Cybersecurity",
+  "source_input": "Course 5 of 'Agentic Cybersecurity Course Prototypes' (notes/agentic_cybersecurity_course_prototypes.docx): 'A tool that ingests architecture diagrams, structured models, requirements, and selected repository evidence; builds a system model; generates a threat model; and produces evidence-linked architecture review findings and recommendations.' Build sequence: (1) constrained input format: Mermaid flowcharts or a simple JSON architecture schema plus Markdown requirements, image extraction later; (2) system graph with components, data stores, identities, external systems, protocols, data classifications and trust boundaries, tracking which source supports each edge; (3) requirements with IDs, source references and verification status; (4) STRIDE or a threat library, LLM suggests candidates but each must link to a modeled component or flow; (5) review rules for authentication, authorization boundaries, secrets, logging, encryption, data minimization and failure handling; (6) evidence-graded findings that never label an unverified concern a confirmed vulnerability; (7) architect accept, reject, defer or more-evidence decisions with rationale and owner; (8) optional comparison with Terraform, Kubernetes or repository evidence reporting coverage and gaps; (9) evaluation with secure and intentionally flawed reference architectures. Safety: diagrams are often incomplete or stale; ask clarifying questions and do not present generated threats as confirmed findings.",
+  "why_this_course": [
+    "Design reviews are where security is cheapest to fix, yet they are usually done once, by a few experts, from diagrams that go stale. Microsoft positions threat modeling as a way to find issues early when they are cheap to resolve, and uses STRIDE to turn vague concerns into pointed questions [c1]. The Threat Modeling Manifesto asks teams to prefer continuous refinement over a single delivery [c3]. A tool that re-runs a structured review whenever the design changes directly serves that goal.",
+    "Language models are good at reading ADRs and proposing threats, and equally good at producing confident text about components that do not exist. OWASP lists misinformation and overreliance as a top LLM risk and recommends automatic validation and human oversight [c19]. This course teaches a pattern where the model only proposes: every threat must link to a modeled element, every finding separates observed facts from assumptions, and an architect makes every decision.",
+    "Finally, the design rarely matches the build. Defaults such as unencrypted RDS storage [c18], plain-text etcd storage [c15] or permissive mesh mTLS [c16] are exactly where 'the diagram said encrypted' goes wrong. The course closes the loop by comparing requirements with Terraform and Kubernetes evidence while refusing to claim more assurance than the evidence supports."
+  ],
+  "design_decisions": [
+    {
+      "decision": "Follow the client's nine-step build sequence as the module order, split over three days.",
+      "rationale": "The prototype document gives a tested, incremental sequence; each module ends in one of its increments, which keeps every day demonstrable. The document's four-week format was compressed into three days by making the implementation comparison and evaluation a single day-three block."
+    },
+    {
+      "decision": "Accept only Mermaid, a JSON schema and MADR-style Markdown as inputs; defer images.",
+      "rationale": "The client input says to start with constrained formats and avoid treating image parsing as reliable. Mermaid renders natively on GitHub [c6], and MADR gives predictable sections to parse [c13]."
+    },
+    {
+      "decision": "Use STRIDE with a deterministic threat library first, and the model second.",
+      "rationale": "STRIDE is widely understood [c1][c2]; a library modeled on pytm's rule shape [c12] gives a deterministic baseline, matching the client's milestone M1, and makes model contributions measurable."
+    },
+    {
+      "decision": "Make 'linked to the graph' a hard validation rule, not a prompt instruction.",
+      "rationale": "OWASP recommends validating output formats with deterministic code and implementing authorization outside the model [c20][c25]; the promo's rejected 'SQL injection in reporting service' example is the lab outcome."
+    },
+    {
+      "decision": "Grade findings without a 'confirmed vulnerability' level.",
+      "rationale": "The client input forbids labeling unverified concerns as confirmed, and design-stage evidence cannot confirm exploitability."
+    },
+    {
+      "decision": "Use Terraform plan JSON and Kubernetes manifests as the only implementation evidence, reported as coverage and gaps.",
+      "rationale": "Plan JSON is a documented, machine-readable format [c14]; the client input requires reporting gaps rather than proof of conformance."
+    }
+  ],
+  "audience_profile": [
+    {
+      "role": "Security architect",
+      "needs": "A repeatable, evidence-linked review they can run on every design revision.",
+      "starting_point": "Strong threat modeling, moderate Python."
+    },
+    {
+      "role": "Solution or platform architect",
+      "needs": "Understand what reviewers will ask and how to supply evidence in Terraform and Kubernetes.",
+      "starting_point": "Strong system design, some IaC, light security tooling."
+    },
+    {
+      "role": "Application security engineer",
+      "needs": "Automate first-pass design review and integrate it with pull requests.",
+      "starting_point": "Good Python and AppSec, varied architecture experience."
+    },
+    {
+      "role": "Engineering lead",
+      "needs": "Know where an agentic reviewer is safe to rely on and where human decisions are required.",
+      "starting_point": "Broad technical background; may pair with a hands-on learner in labs."
+    }
+  ],
+  "prerequisite_check": [
+    "Can you read a data flow diagram and point out trust boundaries?",
+    "Can you name the six STRIDE categories?",
+    "Can you write a Python function with type hints and a pytest test for it?",
+    "Can you read a Terraform resource block and a Kubernetes YAML manifest?",
+    "Have you used Git branches and pull requests?",
+    "Do you have a laptop where you can install Python 3.11+, Terraform and Node.js (for Claude Code)?"
+  ],
+  "lab_environment": {
+    "overview": "Each learner gets a Git repository (architecture-reviewer-lab) with fixtures for a secure and a flawed payments architecture, starter schemas and tests. Everything runs locally; Terraform is used only for plan with dummy or mocked provider credentials, and no cloud resources are created. Claude is accessed through Claude Code and the API with a course key.",
+    "components": [
+      {
+        "name": "Python",
+        "version": "3.11 or 3.12",
+        "purpose": "Parsers, graph, rules, evaluation",
+        "how_to_obtain": "python.org or the OS package manager",
+        "notes": "Use a virtual environment; requirements.txt pins networkx, pydantic v2, pyyaml, jsonschema, pytest, fastapi, anthropic."
+      },
+      {
+        "name": "NetworkX",
+        "version": "3.x (stable)",
+        "purpose": "MultiDiGraph system model [c22]",
+        "how_to_obtain": "pip install networkx",
+        "notes": "Pure Python; no system libraries needed."
+      },
+      {
+        "name": "Claude Code",
+        "version": "Current release",
+        "purpose": "AI-assisted build, CLAUDE.md conventions and hooks [c26][c27]",
+        "how_to_obtain": "Install per Anthropic docs; course organization account or API key",
+        "notes": "Hook configuration ships in .claude/settings.json in the lab repo."
+      },
+      {
+        "name": "Anthropic Python SDK",
+        "version": "1.x",
+        "purpose": "Structured-output calls for extraction, threat candidates and narrative [c21]",
+        "how_to_obtain": "pip install anthropic",
+        "notes": "Use output_config, not the deprecated output_format parameter, with raw schemas [c21]."
+      },
+      {
+        "name": "Terraform CLI",
+        "version": "Current 1.x release",
+        "purpose": "terraform plan and show -json on fixture infrastructure [c8][c14]",
+        "how_to_obtain": "developer.hashicorp.com install page or package manager",
+        "notes": "Plans run against fixtures with skip-credential settings or mocked providers; never apply."
+      },
+      {
+        "name": "Mermaid",
+        "version": "Version rendered by GitHub (check with an info block) and mermaid-cli for local rendering",
+        "purpose": "Input format and report diagrams [c6][c10]",
+        "how_to_obtain": "npm install -g @mermaid-js/mermaid-cli (optional)",
+        "notes": "GitHub rendering is enough for most labs."
+      },
+      {
+        "name": "FastAPI",
+        "version": "Current release",
+        "purpose": "Optional review API and decision endpoints",
+        "how_to_obtain": "pip install fastapi uvicorn",
+        "notes": "Used in capstone if learners expose the tool as a service."
+      },
+      {
+        "name": "GitHub",
+        "version": "github.com free organization",
+        "purpose": "Pull requests for decisions and rendered reports",
+        "how_to_obtain": "Instructor creates a throwaway organization",
+        "notes": "Repository per learner; delete after the course."
+      },
+      {
+        "name": "Kubernetes manifests (evidence only)",
+        "version": "YAML for a current Kubernetes release and Istio security.istio.io/v1",
+        "purpose": "Evidence for PSS labels, NetworkPolicy, PeerAuthentication [c9][c16][c23]",
+        "how_to_obtain": "Included in fixtures",
+        "notes": "No cluster needed; optional kind cluster for learners who want to apply them."
+      }
+    ],
+    "fixtures": [
+      {
+        "name": "fixtures/secure/",
+        "contents": "payments.mmd, payments.json, adr/ADR-001..ADR-012 in MADR format, infra/*.tf with encrypted RDS, KMS key with rotation, deploy/*.yaml with restricted namespace labels, default-deny NetworkPolicy and STRICT PeerAuthentication",
+        "used_in": "All modules"
+      },
+      {
+        "name": "fixtures/flawed/",
+        "contents": "Same system with planted defects: unauthenticated cross-boundary flow, pii store without encryption statement, KMS key without rotation, PERMISSIVE PeerAuthentication, missing NetworkPolicy, agent with write access and no approval step, a superseded ADR, an unparsable 'legacy batch' note",
+        "used_in": "All modules"
+      },
+      {
+        "name": "evals/expected/",
+        "contents": "Instructor-written expected threats, findings and benign expectations for both fixtures",
+        "used_in": "Method-driven threat generation; Evaluation and capstone"
+      },
+      {
+        "name": "patches/revision-2.patch",
+        "contents": "Design revision used for change tracking",
+        "used_in": "Architect review and decision records"
+      },
+      {
+        "name": "capstone/options/",
+        "contents": "Three additional architectures with inputs only (no expected results)",
+        "used_in": "Evaluation and capstone"
+      }
+    ],
+    "safety": [
+      "Use only synthetic or sanitized architectures; never paste a real company's internal design into a model without approval.",
+      "Never run terraform apply in the lab; plans only, with no real cloud credentials.",
+      "Treat plan files as sensitive and keep them out of prompts and logs [c8].",
+      "The reviewer has read-only tools; it never edits designs or infrastructure [c25].",
+      "Text inside ADRs and documents is untrusted data, not instructions [c20]."
+    ]
+  },
+  "modules": [
+    {
+      "day": 1,
+      "title": "Architecture inputs and a constrained format",
+      "goal": "Define the small set of input formats the reviewer accepts and build parsers that report what they could not read instead of guessing.",
+      "learning_objectives": [
+        "Learners can explain why the reviewer accepts Mermaid flowcharts, a JSON architecture schema and Markdown ADRs, and defers image diagrams.",
+        "Learners can write a Mermaid flowchart and a JSON architecture document that both describe the same reference design.",
+        "Learners can build a parser that returns parsed elements plus an explicit list of unparsed or ambiguous fragments.",
+        "Learners can apply the shared engineering principles (model output is a proposal, authorization outside the model, human approval, logging) to the reviewer's own design.",
+        "Learners can set up a Claude Code project with conventions and a guardrail hook for the build."
+      ],
+      "lessons": [
+        {
+          "title": "Why a constrained format first",
+          "points": [
+            "Threat modeling starts with a representation of the system; OWASP's first phase is modeling it with data flow diagrams that show trust boundaries, flows, stores, processes and external entities [c2].",
+            "The client input says to start with Mermaid flowcharts or a simple JSON schema plus Markdown requirements and to add image extraction later, never treating image parsing as perfectly reliable.",
+            "C4 gives shared vocabulary for levels of detail: system context, container, component and code [c4]; the reviewer works at container level by default because that is where trust boundaries and protocols show.",
+            "Mermaid also offers C4 diagram kinds (C4Context, C4Container, C4Component, C4Dynamic, C4Deployment) with System_Boundary and Rel syntax [c5]; the course accepts C4Container as an optional second input once flowcharts work.",
+            "Diagrams are often incomplete or stale, so every input is treated as a claim with a source, not as ground truth (client input, safety section)."
+          ]
+        },
+        {
+          "title": "Mermaid flowchart grammar the parser must handle",
+          "points": [
+            "Header: 'flowchart LR' (or TB, TD, BT, RL); 'graph' is an accepted alias [c10].",
+            "Node shapes carry meaning in our convention: id[Label] for a service, id[(Label)] cylinder for a data store, id((Label)) for an external actor [c10].",
+            "Edges: A-->B, A-->|HTTPS|B and A-- text -->B carry protocol labels; A-.->B dotted edges are reserved for 'assumed' or 'planned' flows in our convention [c10].",
+            "subgraph id [title] ... end blocks map to trust boundaries; a lowercase 'end' inside a label breaks the flowchart, which is a real parsing failure to test [c10].",
+            "Anything the grammar does not cover (click handlers, style lines, comments with free text such as 'legacy batch') goes to the unparsed list with line numbers."
+          ]
+        },
+        {
+          "title": "The JSON architecture schema",
+          "points": [
+            "Top level: components, data_stores, identities, external_systems, flows, boundaries, each an array of objects with a stable id.",
+            "Use required for id, kind and source; remember a null does not satisfy required, so 'unknown' must be an explicit value, not null [c11].",
+            "Set additionalProperties: false so a typo such as 'protocl' fails validation instead of being silently ignored [c11].",
+            "Keep the schema flat (flows reference ids) rather than nested; Claude structured outputs do not support recursive schemas, numeric minimum/maximum or string length constraints, and require additionalProperties false [c21].",
+            "Markdown ADRs are the third input; an ADR records one decision and its rationale [c7], and MADR gives a predictable section layout for parsing [c13]."
+          ]
+        },
+        {
+          "title": "Treat every input as untrusted",
+          "points": [
+            "Architecture documents come from many authors; text inside an ADR can contain instructions aimed at the model, which is indirect prompt injection [c20].",
+            "Mitigations used in the build: mark document content as data in prompts, validate model output against the schema in code, and keep the model away from write tools [c20].",
+            "The reviewer's agent gets read-only tools only (read_file, list_inputs); open-ended tools such as arbitrary shell execution are excluded [c25].",
+            "Authorization is enforced by code, not by asking the model to behave; OWASP calls this complete mediation [c25]."
+          ]
+        },
+        {
+          "title": "The AI-assisted build workflow",
+          "points": [
+            "Write a one-page product brief first, then ask the coding assistant for repository structure and interface contracts before code (client shared workflow).",
+            "Put project conventions in ./CLAUDE.md (run /init for a starting file) and keep it short; CLAUDE.md is context, not enforcement [c27].",
+            "Add a PreToolUse hook in .claude/settings.json that blocks edits to evals/expected/ so the assistant cannot change the answer key; exit code 2 blocks the call [c26].",
+            "Build the deterministic baseline (parsers, schemas, tests) before any LLM call, then add one vertical slice at a time (client milestone M1)."
+          ]
+        }
+      ],
+      "instructor_demo": [
+        "Open the reference repository layout (ingestion/, system_model/, threat_model/, review_rules/, evidence/, evals/, fixtures/, tests/) and the product brief.",
+        "Show docs/payments.mmd rendered on GitHub inside a mermaid code fence, and run the 'info' block to show the Mermaid version GitHub uses [c6].",
+        "Run the Mermaid parser on payments.mmd and show the parsed nodes, edges and subgraphs as JSON.",
+        "Introduce a deliberate break (a node labelled 'end of day batch') and show the parser reporting the failure with a line number instead of crashing [c10].",
+        "Validate docs/payments.json against the schema, then add an undeclared key and show the additionalProperties: false rejection [c11].",
+        "Show a CLAUDE.md for the project and a PreToolUse hook that refuses edits under evals/expected/, then ask Claude Code to 'fix the failing eval' and show the block [c26][c27]."
+      ],
+      "lab": {
+        "brief": "Parse the reference architecture inputs and report what could not be parsed.",
+        "steps": [
+          "Clone the lab repository and run the setup command from the README; confirm pytest runs with zero tests failing.",
+          "Read fixtures/secure/payments.mmd, fixtures/secure/payments.json and fixtures/secure/adr/*.md.",
+          "Ask Claude Code to propose the parser interface (parse_mermaid(path) -> ParseResult with elements, unparsed, warnings) and review it before any code is written.",
+          "Implement the Mermaid parser for flowchart headers, the three node shapes, labelled edges and subgraphs.",
+          "Implement JSON schema validation with additionalProperties: false and required ids.",
+          "Implement a Markdown ADR splitter that extracts title, status and sections by MADR heading names [c13].",
+          "Write pytest cases for each fixture, including the flawed fixture that contains an unsupported click directive and a lowercase 'end' label.",
+          "Run the ingestion CLI on both fixture sets and save the unparsed report to out/ingest_report.json."
+        ],
+        "success_criteria": [
+          "Every fixture file produces either parsed elements or an entry in the unparsed list; nothing is silently dropped.",
+          "The schema rejects an undeclared key and a missing id with a clear message.",
+          "Parser tests pass in one documented command.",
+          "The ingest report lists at least the known unparsed note ('legacy batch') with its source line."
+        ]
+      },
+      "common_pitfalls": [
+        "Writing a regex that 'mostly works' for Mermaid and silently drops lines it does not understand.",
+        "Allowing null for unknown values, which then passes 'required' checks inconsistently; use an explicit 'unknown' enum value.",
+        "Starting with screenshot or image diagram parsing because it demos well; the client input explicitly defers it.",
+        "Letting the coding assistant edit the expected eval results to make tests pass.",
+        "Treating text inside ADRs as instructions rather than data."
+      ],
+      "knowledge_check": [
+        {
+          "q": "Why does the course defer image-diagram extraction?",
+          "a": "Image parsing is not reliable enough to be trusted; the client input asks to start with Mermaid, JSON and Markdown and to make any later diagram parsing confidence-scored and reviewable."
+        },
+        {
+          "q": "What does additionalProperties: false buy you in the architecture schema?",
+          "a": "Any undeclared key, such as a misspelled field, makes the document invalid instead of being ignored [c11]."
+        },
+        {
+          "q": "A label in a Mermaid node reads 'end of day'. What happens and how should the parser respond?",
+          "a": "Lowercase 'end' can break a Mermaid flowchart [c10]; the parser should record the failure with its line number in the unparsed list, not guess."
+        },
+        {
+          "q": "Where should the rule 'never edit expected eval results' live so it is enforced?",
+          "a": "In a PreToolUse hook, because CLAUDE.md is context and not enforced configuration [c26][c27]."
+        }
+      ],
+      "slides_and_assets": [
+        "Diagram of the reviewer pipeline: inputs, ingestion, system graph, threat model, review rules, findings, architect decisions, cross-check, report.",
+        "One-page cheat sheet of the supported Mermaid subset and the course's shape conventions.",
+        "The JSON architecture schema file with annotated required fields.",
+        "Two fixture sets (secure and flawed) with a README describing the planted defects, for instructors only.",
+        "Sample .claude/settings.json with the eval-protection hook and a starter CLAUDE.md."
+      ],
+      "sources": [
+        "c2",
+        "c4",
+        "c5",
+        "c6",
+        "c7",
+        "c10",
+        "c11",
+        "c13",
+        "c20",
+        "c21",
+        "c25",
+        "c26",
+        "c27"
+      ]
+    },
+    {
+      "day": 1,
+      "title": "The system graph with provenance",
+      "goal": "Turn parsed inputs into one typed graph where every node and edge carries its source, confidence and any ambiguity.",
+      "learning_objectives": [
+        "Learners can define node types for components, data stores, identities, external systems and trust boundaries, and edge attributes for protocol, data classification and authentication.",
+        "Learners can attach provenance (file, line, input type) to every node and edge.",
+        "Learners can represent unknown and ambiguous relationships as first-class graph elements.",
+        "Learners can merge evidence from the diagram and ADRs without losing which source said what."
+      ],
+      "lessons": [
+        {
+          "title": "What goes in the graph",
+          "points": [
+            "OWASP's modeling phase lists the element types a DFD needs: external entities, processes, data stores, data flows and trust boundaries [c2].",
+            "pytm is a useful reference for element classes (Server, Datastore, Dataflow, Boundary, Actor, ExternalEntity, and newer LLM and Agent elements) and for boundary helpers such as crosses() and inside() [c12].",
+            "Course node kinds: component, data_store, identity, external_system; boundaries are separate objects that nodes belong to.",
+            "Edge attributes: protocol (e.g. HTTPS, gRPC, AMQP, unknown), data_classification (public, internal, confidential, pii, unknown), authn (mtls, oauth2, api_key, none, unknown), direction."
+          ]
+        },
+        {
+          "title": "Provenance on every element",
+          "points": [
+            "Every node and edge has a sources list: {input: 'payments.mmd', line: 14} or {input: 'ADR-012', section: 'Decision Outcome'}.",
+            "Use a NetworkX MultiDiGraph so two different sources can each assert an edge between the same nodes as separate keyed edges [c22].",
+            "Store attributes in the edge's dictionary and update them with the key, e.g. G.edges[u, v, key]['confidence'] = 'low' [c22].",
+            "The promo's '27 edges from diagram, 4 from ADR-012' line is the kind of summary provenance makes possible; it is illustrative fixture output, not a benchmark."
+          ]
+        },
+        {
+          "title": "Unknown and ambiguous are first-class",
+          "points": [
+            "An edge drawn without a label gets protocol 'unknown', not a default of HTTPS.",
+            "An ambiguous edge is one where sources disagree (diagram says HTTPS, ADR says message queue) or a node name matches two components; both get flagged, not resolved silently.",
+            "Ambiguities produce questions for the architect, which feed the findings module later.",
+            "Diagram parsing should be confidence-scored and reviewable (client safety section)."
+          ]
+        },
+        {
+          "title": "Using the model for extraction, safely",
+          "points": [
+            "Claude can propose graph elements from prose ADRs, but the output must match a JSON schema; request it with output_config.format of type json_schema [c21].",
+            "Keep the schema flat (nodes array, edges array referencing ids) because recursive schemas are unsupported [c21].",
+            "Every model-proposed element must cite a source span; code rejects elements whose cited text is not found in the input.",
+            "Model-proposed elements are marked origin: 'llm_extracted' so reviewers can filter them."
+          ]
+        }
+      ],
+      "instructor_demo": [
+        "Load the parsed payments inputs and build the MultiDiGraph; print node and edge counts by kind.",
+        "Show one edge with two keyed entries, one from the diagram and one from an ADR, with different protocol values [c22].",
+        "Run the ambiguity detector and show the two flagged edges and the generated architect questions.",
+        "Ask Claude to extract flows from ADR-012 prose with a json_schema output format, then show code rejecting one element whose source quote does not appear in the ADR [c21].",
+        "Export the graph as JSON and render a Mermaid view with trust boundaries as subgraphs and unknown edges dotted."
+      ],
+      "lab": {
+        "brief": "Define the typed system graph schema and build the graph for the reference design.",
+        "steps": [
+          "Use Claude Code to draft a Pydantic model set for Node, Edge, Boundary and Source, with enums including 'unknown'.",
+          "Generate the JSON schema from the models and check it against the structured-output limits (no recursion, no numeric bounds) [c21].",
+          "Write the builder that converts ParseResult objects into a MultiDiGraph with source lists on every element [c22].",
+          "Add the ambiguity detector: conflicting attributes across sources, unlabeled edges, nodes outside any boundary.",
+          "Add an LLM extraction step for ADR prose that returns schema-valid elements with a quoted source span.",
+          "Write a check that rejects any LLM element whose quote is not in the source document.",
+          "Build graphs for both secure and flawed fixtures and save out/graph_secure.json and out/graph_flawed.json.",
+          "Render both as Mermaid and compare them by eye with the original diagrams."
+        ],
+        "success_criteria": [
+          "100 percent of nodes and edges have at least one source entry.",
+          "Unknown protocol, classification or authentication values are explicit, never null or defaulted.",
+          "The flawed design produces at least the planted ambiguous edges in the ambiguity list.",
+          "LLM-extracted elements without a verifiable quote are rejected and logged."
+        ]
+      },
+      "common_pitfalls": [
+        "Using a simple DiGraph, so a second source overwrites the first edge's attributes.",
+        "Resolving conflicts automatically (latest source wins) instead of surfacing them.",
+        "Defaulting missing protocols to HTTPS, which hides exactly the gaps a reviewer should find.",
+        "Accepting model-extracted elements without checking the cited text exists."
+      ],
+      "knowledge_check": [
+        {
+          "q": "Why a MultiDiGraph rather than a DiGraph?",
+          "a": "It keeps parallel edges between the same nodes as separate keyed entries, so each source's claim survives with its own attributes [c22]."
+        },
+        {
+          "q": "An edge in the diagram has no label. What protocol does the graph record?",
+          "a": "'unknown', with the diagram as its source, and it becomes a candidate question for the architect."
+        },
+        {
+          "q": "Why must the extraction schema be flat?",
+          "a": "Claude structured outputs do not support recursive schemas, so nodes and edges are separate arrays linked by id [c21]."
+        }
+      ],
+      "slides_and_assets": [
+        "Graph schema reference card (node kinds, edge attributes, enum values including unknown).",
+        "Before/after picture: the payments diagram and the rendered provenance graph with dotted unknown edges.",
+        "Worked example of an ambiguous edge with the two source excerpts side by side.",
+        "Starter Pydantic models file for learners who fall behind."
+      ],
+      "sources": [
+        "c2",
+        "c12",
+        "c21",
+        "c22"
+      ]
+    },
+    {
+      "day": 1,
+      "title": "Requirements extraction",
+      "goal": "Extract security requirements and decisions from ADRs into a register with IDs, source references, verification status and links to graph nodes.",
+      "learning_objectives": [
+        "Learners can define a requirement record with ID, statement, source, type, linked nodes and verification status.",
+        "Learners can extract requirements from MADR-style ADRs and keep the exact source wording.",
+        "Learners can map a requirement to an external standard identifier such as an ASVS requirement where useful.",
+        "Learners can distinguish a stated requirement from an observed fact."
+      ],
+      "lessons": [
+        {
+          "title": "Where requirements hide in ADRs",
+          "points": [
+            "An ADR records one decision and its rationale; the project's set of ADRs is its decision log [c7].",
+            "MADR places the chosen option and justification under Decision Outcome, consequences under it, and how compliance is checked under Confirmation [c13].",
+            "Status matters: an ADR marked rejected or 'superseded by ADR-0123' should not produce active requirements [c13].",
+            "Requirements also appear as plain sentences ('PII must be encrypted at rest'), which is where Claude extraction helps."
+          ]
+        },
+        {
+          "title": "The requirement record",
+          "points": [
+            "Fields: id (REQ-07), statement (verbatim), normalized_statement, source {adr: 'ADR-004', section, line}, category (encryption, authn, authz, logging, secrets, availability, privacy), linked_nodes, verification_status.",
+            "verification_status values: unverified, design_supported (graph shows it), evidence_found (implementation evidence), contradicted, not_applicable.",
+            "Every newly extracted requirement starts as 'unverified', as in the promo's 'REQ-07 PII encrypted at rest, status: unverified'.",
+            "Where useful, map to a standard: ASVS 5.0.0 requirements should be cited with the version prefix, e.g. v5.0.0-1.2.5 [c24]."
+          ]
+        },
+        {
+          "title": "Linking requirements to the graph",
+          "points": [
+            "A requirement about 'ledger data' must link to the ledger-db node; unmatched requirements are flagged, not dropped.",
+            "Use exact id matches first, then aliases declared in the JSON schema, then a model suggestion that a person confirms.",
+            "Requirements with no linked node are themselves findings: the design does not show where the requirement applies.",
+            "Keep 'what the ADR says' separate from 'what the system does'; the register never upgrades status on the basis of a diagram label alone."
+          ]
+        },
+        {
+          "title": "Extraction with Claude and deterministic checks",
+          "points": [
+            "Ask for a JSON array of requirement candidates with the verbatim source sentence, using a json_schema output format [c21].",
+            "Code checks that each verbatim sentence appears in the ADR and rejects any that does not, which catches paraphrased or invented requirements [c19].",
+            "Duplicates across ADRs are merged with both sources kept.",
+            "A person reviews the register before it drives threat generation."
+          ]
+        }
+      ],
+      "instructor_demo": [
+        "Open ADR-004 and ADR-009 from the payments fixture and highlight requirement-bearing sentences.",
+        "Run the extractor and show REQ-07 'PII encrypted at rest' created with status unverified and source ADR-004.",
+        "Show a superseded ADR being skipped and the log line explaining why [c13].",
+        "Show one model candidate rejected because its quoted sentence is not in the ADR.",
+        "Link requirements to graph nodes and show the one requirement that matches no node."
+      ],
+      "lab": {
+        "brief": "Extract requirements from the ADRs and link them to graph nodes.",
+        "steps": [
+          "Define the Requirement Pydantic model and verification_status enum.",
+          "Implement a deterministic pass that picks sentences containing must, shall, required or never under Decision Outcome and Confirmation.",
+          "Add a Claude pass that proposes additional requirements with verbatim quotes, using structured output.",
+          "Reject candidates whose quote is not found verbatim; log each rejection.",
+          "Skip ADRs with status rejected, deprecated or superseded.",
+          "Link each requirement to graph nodes by id or alias, and flag unlinked ones.",
+          "Write the register to out/requirements.json and a Markdown table for reviewers."
+        ],
+        "success_criteria": [
+          "Every requirement has an ID, a verbatim source sentence and a source reference.",
+          "All requirements start as unverified.",
+          "No requirement comes from a superseded ADR.",
+          "Unlinked requirements appear in a separate list with a suggested question."
+        ]
+      },
+      "common_pitfalls": [
+        "Letting the model paraphrase requirements so the register no longer matches the ADR wording.",
+        "Marking a requirement as met because the diagram has a label such as 'encrypted'.",
+        "Ignoring ADR status and extracting requirements from rejected decisions.",
+        "Dropping requirements that do not link to a node instead of flagging them."
+      ],
+      "knowledge_check": [
+        {
+          "q": "A diagram node is labelled 'ledger-db (encrypted)'. What status does REQ-07 get?",
+          "a": "It can at most be design_supported; it stays short of evidence_found until implementation evidence is checked, and the label itself is recorded as a source."
+        },
+        {
+          "q": "How do you catch an invented requirement from the model?",
+          "a": "Require a verbatim quote and reject any candidate whose quote does not appear in the source ADR [c19][c21]."
+        },
+        {
+          "q": "Which MADR status values should stop extraction?",
+          "a": "rejected, deprecated and 'superseded by ...' [c13]."
+        }
+      ],
+      "slides_and_assets": [
+        "Annotated MADR template showing where requirements usually appear.",
+        "Requirement register example (Markdown table and JSON).",
+        "Verification status ladder graphic: unverified, design_supported, evidence_found, contradicted.",
+        "Optional ASVS mapping sheet for the categories used in the course."
+      ],
+      "sources": [
+        "c7",
+        "c13",
+        "c19",
+        "c21",
+        "c24"
+      ]
+    },
+    {
+      "day": 2,
+      "title": "Method-driven threat generation",
+      "goal": "Generate STRIDE threat candidates per modeled element, accept only those linked to real nodes or flows, and give each one assumptions, evidence and a validation question.",
+      "learning_objectives": [
+        "Learners can state the six STRIDE categories and turn each into pointed questions for a component or flow.",
+        "Learners can build a threat library that maps categories and conditions to element types.",
+        "Learners can use Claude to propose candidates and reject any that do not reference a modeled element.",
+        "Learners can write the assumption, evidence reference and validation question for each threat."
+      ],
+      "lessons": [
+        {
+          "title": "STRIDE as the method",
+          "points": [
+            "Spoofing (using another identity's credentials), Tampering (unauthorized modification of data at rest or in transit), Repudiation (denying an action without proof otherwise), Information Disclosure, Denial of Service and Elevation of Privilege [c1].",
+            "Microsoft uses STRIDE to formulate pointed questions such as 'How can an attacker change the authentication data?' [c1].",
+            "OWASP uses STRIDE for illustration and notes other methods exist; the course uses STRIDE because it is widely understood by architects [c2].",
+            "The Manifesto's second question, 'What can go wrong?', is what this module answers [c3]."
+          ]
+        },
+        {
+          "title": "A threat library before any model call",
+          "points": [
+            "Write rules like pytm's: each threat has an ID, target element types, a condition over attributes and a description [c12].",
+            "Examples: tampering on a flow where authn is none or unknown and it crosses a boundary; information disclosure on a data store with classification pii and encryption unknown.",
+            "Boundary-aware conditions matter; pytm offers helpers such as target.crosses(Boundary) and target.inside(Boundary) [c12].",
+            "Do not copy pytm's eval() approach for conditions; its own README warns threats.json strings run through eval() [c12]. Use Python predicates instead."
+          ]
+        },
+        {
+          "title": "Claude as a candidate generator",
+          "points": [
+            "Prompt with the graph JSON and the library, ask for candidates as structured output with fields threat_id, category, target_ref, assumption, evidence_refs, validation_question [c21].",
+            "Code validates that target_ref is an existing node id or edge key; anything else is rejected and logged, as the promo shows for 'SQL injection in reporting service (component not in model)'.",
+            "This is the defense against confident but fabricated output that OWASP calls misinformation [c19].",
+            "Candidates are proposals; the deterministic library output and model output are merged and de-duplicated by (category, target)."
+          ]
+        },
+        {
+          "title": "Writing a good threat record",
+          "points": [
+            "Assumption: what must be true for the threat to apply, e.g. 'mTLS not enforced at ingress (ADR-009 silent)'.",
+            "Evidence: edge or node ids and source lines that justify the candidate, e.g. edge#12 from payments.mmd.",
+            "Validation question: what the architect must answer, e.g. 'Is mTLS enforced at the ingress?'",
+            "Context for that example: in Istio, PERMISSIVE mode accepts plaintext or mTLS and only STRICT requires client certificates, so 'we use a mesh' does not settle the question [c16].",
+            "Response options later are mitigate, eliminate, transfer or accept [c2]."
+          ]
+        }
+      ],
+      "instructor_demo": [
+        "Walk the payments graph and run the deterministic library; show threats produced per element.",
+        "Prompt Claude for extra candidates with the structured-output schema and show the raw response [c21].",
+        "Run the validator and show one plausible candidate rejected because its target is not in the graph.",
+        "Open T-031 (Tampering, web -> payments-api) and read its assumption, evidence and validation question aloud.",
+        "Show how the same flow in the secure fixture, which has a STRICT PeerAuthentication in the evidence, produces no T-031 [c16]."
+      ],
+      "lab": {
+        "brief": "Generate STRIDE candidates with the agent and reject every one that does not map to the graph.",
+        "steps": [
+          "Write at least eight library rules covering all six STRIDE categories.",
+          "Implement rule evaluation as Python predicates over node and edge attributes, including boundary crossing.",
+          "Define the ThreatCandidate schema and call Claude with the graph and library as context.",
+          "Implement the link validator and the rejection log.",
+          "Merge library and model candidates, de-duplicate and assign T-IDs.",
+          "Fill assumption, evidence_refs and validation_question for every accepted threat; reject threats missing any of the three.",
+          "Run on secure and flawed fixtures and save the threat registers."
+        ],
+        "success_criteria": [
+          "Every accepted threat links to an existing node or edge.",
+          "Every accepted threat has an assumption, at least one evidence reference and a validation question.",
+          "The rejection log contains every model candidate that failed validation, with the reason.",
+          "The flawed fixture produces threats for the planted unauthenticated cross-boundary flow."
+        ]
+      },
+      "common_pitfalls": [
+        "Asking the model for 'all threats' without a graph, which produces generic lists that cannot be linked.",
+        "Evaluating library conditions with eval() on strings.",
+        "Treating a threat candidate as a finding; at this stage it is a hypothesis.",
+        "Writing validation questions that cannot be answered yes or no."
+      ],
+      "knowledge_check": [
+        {
+          "q": "Name the six STRIDE categories.",
+          "a": "Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege [c1]."
+        },
+        {
+          "q": "The model proposes 'SQL injection in the reporting service', but no such component exists. What happens?",
+          "a": "The validator rejects it because its target is not in the graph, and logs the rejection."
+        },
+        {
+          "q": "Why is 'the services run in a mesh' not enough to close a tampering threat on a flow?",
+          "a": "Mesh mTLS can be PERMISSIVE, which accepts plaintext; only STRICT requires client certificates, so the evidence must show the mode [c16]."
+        }
+      ],
+      "slides_and_assets": [
+        "STRIDE card deck: one card per category with definition and two example questions.",
+        "Threat library starter file with eight rules.",
+        "Threat record template with a filled example (T-031).",
+        "Rejection log example showing fabricated candidates."
+      ],
+      "sources": [
+        "c1",
+        "c2",
+        "c3",
+        "c12",
+        "c16",
+        "c19",
+        "c21"
+      ]
+    },
+    {
+      "day": 2,
+      "title": "Architecture review rules",
+      "goal": "Implement deterministic review rules for authentication, authorization boundaries, secrets, logging, encryption, data minimization and failure handling, and run them on secure and flawed designs.",
+      "learning_objectives": [
+        "Learners can express each review area as a rule over graph attributes and requirements.",
+        "Learners can distinguish 'missing' from 'ambiguous' in rule results.",
+        "Learners can extend review rules to agentic components in a design.",
+        "Learners can run the rule engine and compare results between secure and flawed fixtures."
+      ],
+      "lessons": [
+        {
+          "title": "Rule shape and results",
+          "points": [
+            "Each rule: id, area, applies_to, check function, result (pass, missing, ambiguous, not_applicable), evidence refs.",
+            "Missing means the design states nothing; ambiguous means sources disagree or a value is unknown.",
+            "Rules are deterministic, so the same graph always gives the same result, which makes regression testing possible.",
+            "Rule results feed findings; they never become 'confirmed vulnerabilities' on their own."
+          ]
+        },
+        {
+          "title": "Authentication, authorization and boundaries",
+          "points": [
+            "Every flow crossing a trust boundary needs an authn value other than none or unknown.",
+            "Service-to-service authentication claims that rely on a mesh should name the mode; PERMISSIVE accepts plaintext [c16].",
+            "Kubernetes pods accept all ingress and egress unless a NetworkPolicy selects them, and a policy has no effect without a plugin that enforces it [c23].",
+            "Identity nodes must link to the components they can access; an identity with access to every data store is an authorization-boundary finding."
+          ]
+        },
+        {
+          "title": "Secrets, encryption and data minimization",
+          "points": [
+            "Data stores with confidential or pii classification need an encryption-at-rest statement and a key owner.",
+            "Do not infer encryption from platform: Kubernetes stores API data in etcd as plain text unless an encryption provider other than identity is first in the EncryptionConfiguration [c15].",
+            "AWS RDS storage_encrypted defaults to false in Terraform, so absence of a statement is a real gap [c18].",
+            "Data minimization: flows carrying pii to components with no stated need are flagged for a question."
+          ]
+        },
+        {
+          "title": "Logging, failure handling and resilience",
+          "points": [
+            "Repudiation threats need audit logging of security-relevant actions on the component that performs them [c1].",
+            "Every external dependency should have a stated failure behavior (fail closed, queue, degrade); none stated is 'missing'.",
+            "Single data stores without a backup or replica statement are flagged under resilience.",
+            "Rate limiting or quota statements on internet-facing entry points address denial of service [c1]."
+          ]
+        },
+        {
+          "title": "Rules for agentic components",
+          "points": [
+            "Many new designs include an LLM agent; pytm already models LLM and Agent elements [c12].",
+            "Rule: an agent node with write access to a data store or external system must show an approval step and least-privilege identity [c25].",
+            "Rule: an agent consuming external content (web, email, files) needs a stated prompt-injection control [c20].",
+            "Rule: authorization for agent actions must be enforced downstream, not by the model [c25]."
+          ]
+        }
+      ],
+      "instructor_demo": [
+        "Show the rule registry and run all rules on the secure fixture: mostly pass, a few not_applicable.",
+        "Run on the flawed fixture and walk through three results: an unauthenticated cross-boundary flow, a pii store with no encryption statement, and an agent with write access and no approval step.",
+        "Show the difference between 'missing' (no statement) and 'ambiguous' (diagram says encrypted, ADR silent on keys).",
+        "Edit the flawed design to add the missing statement and rerun to show the result changes.",
+        "Show the pytest suite that pins rule outputs for both fixtures [c28]."
+      ],
+      "lab": {
+        "brief": "Implement the review rules and run them on secure and flawed reference designs.",
+        "steps": [
+          "Implement at least two rules for each of the seven review areas.",
+          "Add the three agentic-component rules.",
+          "Write a result model with pass, missing, ambiguous and not_applicable, plus evidence refs.",
+          "Run the engine on both fixtures and write out/rules_secure.json and out/rules_flawed.json.",
+          "Write parametrized pytest cases asserting expected results for selected rules on both fixtures [c28].",
+          "Ask Claude Code to review the rules for false positives against the secure fixture, then inspect and accept or reject its suggestions by hand."
+        ],
+        "success_criteria": [
+          "The secure fixture produces no 'missing' results for authn, encryption or secrets.",
+          "The flawed fixture triggers every planted defect in the instructor key.",
+          "Each result carries evidence refs to graph elements or requirements.",
+          "Rule tests run in one command and pass."
+        ]
+      },
+      "common_pitfalls": [
+        "Writing rules that look for keywords in labels instead of typed attributes.",
+        "Assuming cloud or platform defaults are secure without evidence.",
+        "Collapsing 'missing' and 'ambiguous' into one fail state, which loses the question to ask.",
+        "Forgetting agentic components because they do not fit the classic DFD types."
+      ],
+      "knowledge_check": [
+        {
+          "q": "A design shows a Kubernetes namespace and no NetworkPolicy. What is the default pod network behavior?",
+          "a": "Pods are non-isolated: all ingress and egress connections are allowed [c23]."
+        },
+        {
+          "q": "Why is 'Secrets are in Kubernetes' not an encryption statement?",
+          "a": "By default the API server stores resources in etcd as plain text; encryption needs a configured provider other than identity [c15]."
+        },
+        {
+          "q": "What rule applies to an agent that can write to a payments database?",
+          "a": "It must show an approval step, least-privilege identity and downstream authorization [c25]."
+        }
+      ],
+      "slides_and_assets": [
+        "Review area matrix: area, rule ids, attributes checked, typical questions.",
+        "Planted-defect key for the flawed fixture (instructor only).",
+        "Rule result JSON example with evidence refs.",
+        "Short handout on platform defaults that commonly surprise reviewers (Kubernetes etcd, NetworkPolicy, RDS encryption flag)."
+      ],
+      "sources": [
+        "c1",
+        "c12",
+        "c15",
+        "c16",
+        "c18",
+        "c20",
+        "c23",
+        "c25",
+        "c28"
+      ]
+    },
+    {
+      "day": 2,
+      "title": "Evidence-graded findings",
+      "goal": "Combine threats and rule results into findings that keep observed facts, assumptions, missing information and recommended questions separate, and audit the report for unsupported claims.",
+      "learning_objectives": [
+        "Learners can define a finding schema with separate fields for observed, assumption, missing and question.",
+        "Learners can assign an evidence grade and avoid calling any unverified concern a confirmed vulnerability.",
+        "Learners can generate the narrative with Claude while code controls which facts appear.",
+        "Learners can run an unsupported-claim audit on the generated report."
+      ],
+      "lessons": [
+        {
+          "title": "The finding schema",
+          "points": [
+            "Fields: id, title, linked_threats, linked_rules, linked_requirements, observed[], assumptions[], missing[], questions[], impact, recommendation, grade.",
+            "Grades: design_fact (the design states it), inferred_risk (follows from facts plus an assumption), information_gap (cannot assess), never 'confirmed vulnerability' at design stage.",
+            "The promo's F-12 shows the shape: observed 'REQ-07 exists (ADR-004)', assumption 'KMS-backed volume (not in diagram)', missing 'storage class, key policy'.",
+            "The client input states it directly: do not label an unverified concern as a confirmed vulnerability."
+          ]
+        },
+        {
+          "title": "Writing the narrative without inventing facts",
+          "points": [
+            "Claude drafts title, impact and recommendation from the structured finding; the observed and missing lists are filled by code only.",
+            "Every sentence in the narrative that states a fact must cite an evidence id; sentences without one are flagged.",
+            "This is a direct mitigation of misinformation and overreliance: automatic validation plus human review [c19].",
+            "State limitations in the report itself, as OWASP recommends communicating risks and limitations of generated content [c19]."
+          ]
+        },
+        {
+          "title": "Unsupported-claim audit",
+          "points": [
+            "Parse the report, extract each factual claim, and check that its evidence id resolves to a graph element, requirement or source line.",
+            "Unsupported-claim rate = claims without resolvable evidence / all claims (client evaluation metric).",
+            "Evidence coverage = findings with a traceable source or modeled component / all findings (client metric).",
+            "The promo's '100% findings linked to evidence' is this course's acceptance target, enforced by the schema; it is not an industry statistic."
+          ]
+        },
+        {
+          "title": "Report format and recommendations",
+          "points": [
+            "Sections: scope and inputs, method, system summary, findings by grade, open questions, limitations, appendix of evidence.",
+            "Recommendations follow the four responses: mitigate, eliminate, transfer or accept [c2].",
+            "Render a Mermaid diagram of the affected subgraph inside the Markdown report so it shows in GitHub [c6].",
+            "Use ASVS identifiers with version for recommendations that map to a verification requirement, e.g. v5.0.0-x.y.z [c24]."
+          ]
+        }
+      ],
+      "instructor_demo": [
+        "Build F-12 from T-032, the encryption rule result and REQ-07, and show each field's source.",
+        "Ask Claude to write the narrative; then run the claim audit and show one sentence flagged ('the ledger uses AES-256') because no evidence supports it.",
+        "Fix the narrative by removing the claim and rerun the audit to zero unsupported claims.",
+        "Render the report in a GitHub pull request with the Mermaid subgraph [c6].",
+        "Show the limitations section and discuss why it is mandatory."
+      ],
+      "lab": {
+        "brief": "Produce the review report and audit it for unsupported claims.",
+        "steps": [
+          "Define the Finding model and grade enum with no 'confirmed' value.",
+          "Write the correlator that groups threats, rule results and requirements into findings by target element.",
+          "Fill observed, assumptions and missing from structured data in code.",
+          "Call Claude with structured output to draft title, impact, recommendation and questions.",
+          "Implement the claim audit and compute unsupported-claim rate and evidence coverage.",
+          "Render the report as Markdown with an embedded Mermaid subgraph per finding.",
+          "Run on both fixtures and fix any unsupported claims."
+        ],
+        "success_criteria": [
+          "No finding uses the word 'confirmed' or a confirmed grade.",
+          "Unsupported-claim rate is zero after fixes, and the audit output is saved.",
+          "Every finding has at least one question or recommendation.",
+          "The report has a limitations section listing input gaps."
+        ]
+      },
+      "common_pitfalls": [
+        "Letting the model write the observed facts section.",
+        "Severity inflation: grading information gaps as high-severity vulnerabilities.",
+        "Reports with no limitations section, which invite overreliance.",
+        "Counting a citation to a whole document as evidence; it must point to an element or line."
+      ],
+      "knowledge_check": [
+        {
+          "q": "What is the difference between an inferred risk and an information gap?",
+          "a": "An inferred risk follows from stated facts plus a named assumption; an information gap means the design does not contain enough to assess the concern at all."
+        },
+        {
+          "q": "How is unsupported-claim rate calculated?",
+          "a": "Claims without resolvable evidence divided by all factual claims in the report."
+        },
+        {
+          "q": "Which four responses can a recommendation take?",
+          "a": "Mitigate, eliminate, transfer or accept [c2]."
+        }
+      ],
+      "slides_and_assets": [
+        "Finding anatomy slide using F-12.",
+        "Report template in Markdown.",
+        "Claim audit output example.",
+        "Grade definitions card for architects."
+      ],
+      "sources": [
+        "c2",
+        "c6",
+        "c19",
+        "c24"
+      ]
+    },
+    {
+      "day": 3,
+      "title": "Architect review and decision records",
+      "goal": "Let architects accept, reject, defer or request more evidence on each finding, capture rationale and owner, and track changes across design revisions.",
+      "learning_objectives": [
+        "Learners can implement a decision workflow with four outcomes, rationale, owner and due date.",
+        "Learners can store decisions in a reviewable form in the repository.",
+        "Learners can re-run the review on a revised design and carry decisions forward where findings still match.",
+        "Learners can run a review session that answers validation questions."
+      ],
+      "lessons": [
+        {
+          "title": "The decision model",
+          "points": [
+            "Outcomes: accept (the finding is valid and will be addressed or risk accepted), reject (not valid, with reason), defer (valid, later), more_evidence (cannot decide yet).",
+            "Required fields: decision, rationale, owner, decided_by, date, and due date for defer and more_evidence, as in the promo's 'MORE EVIDENCE owner: platform-lead due: 2026-11-05'.",
+            "The Manifesto values people and collaboration over tools; the tool records the architect's call, it does not make it [c3].",
+            "Accepting risk is a legitimate response alongside mitigate, eliminate and transfer [c2]."
+          ]
+        },
+        {
+          "title": "Decisions as records in Git",
+          "points": [
+            "Store decisions as YAML or JSON next to the design, one file per finding, reviewed in pull requests.",
+            "Significant decisions become ADRs; MADR's Decision Outcome and Consequences sections fit them [c13].",
+            "When a decision changes an earlier ADR, mark the old one 'superseded by ADR-00NN' [c13].",
+            "GitHub renders Mermaid in the pull request so reviewers see the affected subgraph [c6]."
+          ]
+        },
+        {
+          "title": "Change tracking across revisions",
+          "points": [
+            "Finding identity is a fingerprint of (category, target element id, rule id), not the text, so it survives wording changes.",
+            "On re-run: matched findings keep their decision; new findings are 'new'; missing findings are 'resolved in revision N' with the diff that removed them.",
+            "Graph diffs (added, removed, changed edges and attributes) are part of the review record.",
+            "Continuous refinement over a single delivery is a Manifesto value; the workflow is built to be re-run [c3]."
+          ]
+        },
+        {
+          "title": "Running the review session",
+          "points": [
+            "Group findings by owner and go through validation questions first; answers become new sources in the graph.",
+            "An answer such as 'mTLS is STRICT mesh-wide' becomes a source that a later cross-check can test [c16].",
+            "Time-box: decisions not reached go to more_evidence with an owner.",
+            "Close with the fourth Manifesto question: did we do a good enough job? [c3]"
+          ]
+        }
+      ],
+      "instructor_demo": [
+        "Open the flawed design report and run a mock review with two learners playing architect and platform lead.",
+        "Record accept, reject, defer and more_evidence decisions through the CLI and show the generated YAML files.",
+        "Open a pull request with the decisions and show the rendered Mermaid subgraph [c6].",
+        "Apply a design revision (add mTLS STRICT statement, remove a flow) and re-run the review.",
+        "Show the change report: decisions carried forward, one finding resolved, one new finding."
+      ],
+      "lab": {
+        "brief": "Run a review session and record decisions against the findings.",
+        "steps": [
+          "Implement the Decision model with validation (due date required for defer and more_evidence).",
+          "Implement the fingerprint function for finding identity.",
+          "Build the CLI: archreview decide F-12 --decision more_evidence --owner platform-lead --due 2026-11-05 --rationale '...'.",
+          "In pairs, review the flawed design report and record a decision for every finding.",
+          "Write one MADR ADR for the most significant accepted change [c13].",
+          "Apply the provided revision patch to the design and re-run the review.",
+          "Generate the change report and commit decisions in a pull request."
+        ],
+        "success_criteria": [
+          "Every finding has a decision with rationale and owner.",
+          "Decisions survive a re-run on the revised design where the finding still exists.",
+          "The change report lists new, carried-forward and resolved findings correctly.",
+          "At least one ADR is written in MADR format with a status."
+        ]
+      },
+      "common_pitfalls": [
+        "Using finding text as identity, so every rewording loses the decision.",
+        "Accepting risk without an owner or rationale.",
+        "Letting 'more evidence' items stay open forever without a due date.",
+        "Allowing the tool to auto-decide based on severity."
+      ],
+      "knowledge_check": [
+        {
+          "q": "What must a 'more_evidence' decision include?",
+          "a": "Rationale, owner and due date."
+        },
+        {
+          "q": "How does a decision survive a re-run?",
+          "a": "Findings are matched by a fingerprint of category, target element and rule, not by text."
+        },
+        {
+          "q": "When should an earlier ADR be marked superseded?",
+          "a": "When a new decision replaces it; MADR status 'superseded by ADR-0123' records the link [c13]."
+        }
+      ],
+      "slides_and_assets": [
+        "Decision outcome flowchart.",
+        "Decision YAML example and MADR ADR example.",
+        "Revision patch for the flawed design.",
+        "Review session facilitation script with timing cues per finding group."
+      ],
+      "sources": [
+        "c2",
+        "c3",
+        "c6",
+        "c13",
+        "c16"
+      ]
+    },
+    {
+      "day": 3,
+      "title": "Design-to-implementation comparison",
+      "goal": "Compare modeled requirements with Terraform, Kubernetes and repository evidence, and report coverage and gaps without claiming proof of conformance.",
+      "learning_objectives": [
+        "Learners can produce and parse Terraform plan JSON safely as evidence.",
+        "Learners can read Kubernetes manifests for security-relevant settings such as Pod Security labels, NetworkPolicy, mesh mTLS and encryption configuration.",
+        "Learners can map a requirement to evidence checks and report covered, gap or contradicted.",
+        "Learners can write a coverage report that states what was not checked."
+      ],
+      "lessons": [
+        {
+          "title": "Terraform as evidence",
+          "points": [
+            "Run terraform plan -out=tfplan then terraform show -json tfplan; the JSON has resource_changes with address, type and change.after [c14].",
+            "Saved plan files contain sensitive values in cleartext; treat them as sensitive artifacts and do not hand them to the model raw [c8].",
+            "Mask values marked in after_sensitive before any display or model call [c14].",
+            "Use -detailed-exitcode in CI: 0 no changes, 1 error, 2 changes present [c8]."
+          ]
+        },
+        {
+          "title": "Encryption evidence for REQ-07",
+          "points": [
+            "aws_db_instance.storage_encrypted defaults to false; evidence must show true and a kms_key_id [c18].",
+            "aws_kms_key.enable_key_rotation is optional and must be set explicitly; if it is not in the configuration, rotation is 'unknown' or a gap, as in the promo's 'gap: key rotation unknown' [c17].",
+            "Record the file and line (infra/db.tf:22) as the evidence reference.",
+            "A plan shows intended configuration, not the running account; say so in the report."
+          ]
+        },
+        {
+          "title": "Kubernetes evidence",
+          "points": [
+            "Pod Security Standards levels: privileged, baseline, restricted [c9]; check namespace labels against the requirement.",
+            "NetworkPolicy objects show intended isolation, but only if the cluster's network plugin enforces them [c23].",
+            "Istio PeerAuthentication with mode STRICT in the root namespace is mesh-wide evidence for an mTLS requirement; PERMISSIVE is a gap [c16].",
+            "Secrets encryption at rest is set on kube-apiserver via --encryption-provider-config, usually outside application repositories; absence in the repo is 'not found', not 'failed' [c15]."
+          ]
+        },
+        {
+          "title": "Reporting coverage honestly",
+          "points": [
+            "Each requirement gets covered (evidence found, with refs), gap (evidence not found where expected), contradicted (evidence shows the opposite) or out_of_scope.",
+            "The promo line 'REQ-11 not found in evidence (reported as GAP, not failure)' is the rule.",
+            "The report ends with 'conformance claimed: none beyond listed evidence'.",
+            "OWASP's validation phase asks whether the model matches the real system; this module answers part of that with evidence, not all of it [c2]."
+          ]
+        }
+      ],
+      "instructor_demo": [
+        "Run terraform plan -out and terraform show -json on the lab infra/ folder and show resource_changes for the database and key [c8][c14].",
+        "Show after_sensitive masking before the evidence goes into any prompt.",
+        "Run archreview crosscheck --tf infra/ --k8s deploy/ and show REQ-07 covered with a rotation gap [c17][c18].",
+        "Show the PeerAuthentication manifest in PERMISSIVE mode in the flawed fixture and the resulting contradiction for the mTLS requirement [c16].",
+        "Open the coverage report and read the 'not checked' section."
+      ],
+      "lab": {
+        "brief": "Cross-check three requirements against infrastructure code and report the evidence gaps.",
+        "steps": [
+          "Run terraform init and terraform plan -out=tfplan in fixtures/flawed/infra with the provided dummy provider settings, then terraform show -json tfplan > plan.json.",
+          "Write a parser for plan.json that masks after_sensitive values.",
+          "Implement checks for REQ-07 (encryption at rest with KMS and rotation), REQ-09 (mTLS STRICT) and REQ-11 (network isolation via NetworkPolicy).",
+          "Parse deploy/*.yaml with a YAML loader and extract PeerAuthentication, NetworkPolicy and namespace labels.",
+          "Produce out/coverage.json with status and evidence refs per requirement.",
+          "Render the coverage report with a 'not checked' section and the no-conformance statement.",
+          "Repeat on the secure fixture and compare."
+        ],
+        "success_criteria": [
+          "Three requirements each have a status and evidence references or a stated reason.",
+          "No sensitive plan value appears in logs, prompts or the report.",
+          "At least one gap is reported as a gap, not a failure.",
+          "The report states that no conformance is claimed beyond listed evidence."
+        ]
+      },
+      "common_pitfalls": [
+        "Treating absence of evidence in the repository as proof the control is missing in production.",
+        "Passing raw plan files to the model and leaking secrets.",
+        "Equating a NetworkPolicy object with enforced isolation without checking the network plugin.",
+        "Reporting 'compliant' instead of 'covered by listed evidence'."
+      ],
+      "knowledge_check": [
+        {
+          "q": "Why must a saved plan file be handled as sensitive?",
+          "a": "It stores sensitive values in cleartext even when terminal output hides them [c8]."
+        },
+        {
+          "q": "The Terraform has aws_kms_key with no enable_key_rotation. What do you report?",
+          "a": "Encryption key present, rotation not set in configuration: a gap with the file reference [c17]."
+        },
+        {
+          "q": "Is a PeerAuthentication in PERMISSIVE mode evidence for an mTLS requirement?",
+          "a": "No; PERMISSIVE accepts plaintext, so it is a contradiction or gap; STRICT is required [c16]."
+        }
+      ],
+      "slides_and_assets": [
+        "Evidence mapping table: requirement category, evidence source, check, typical gaps.",
+        "Annotated plan.json excerpt showing resource_changes and after_sensitive.",
+        "Kubernetes evidence cheat sheet (PSS labels, NetworkPolicy, PeerAuthentication, EncryptionConfiguration).",
+        "Coverage report template with the no-conformance statement."
+      ],
+      "sources": [
+        "c2",
+        "c8",
+        "c9",
+        "c14",
+        "c15",
+        "c16",
+        "c17",
+        "c18",
+        "c23"
+      ]
+    },
+    {
+      "day": 3,
+      "title": "Evaluation and capstone",
+      "goal": "Measure the reviewer against secure and intentionally flawed reference architectures, document its audit trail and limitations, and demo the end-to-end tool.",
+      "learning_objectives": [
+        "Learners can build a golden evaluation set of expected threats, findings and benign cases.",
+        "Learners can compute threat coverage, unsupported-claim rate, evidence linkage and false positives.",
+        "Learners can run evaluations before and after prompt or model changes.",
+        "Learners can present the tool with its limitations and audit trail."
+      ],
+      "lessons": [
+        {
+          "title": "Golden sets and metrics",
+          "points": [
+            "Expected threats per fixture in evals/expected/, written by the instructor and protected from edits by the hook from day one [c26].",
+            "Threat coverage (recall) = expected threats found / expected threats; precision = found threats in expected set / all found (client metrics).",
+            "Unsupported-claim rate and evidence linkage come from the day-two audit.",
+            "Benign cases matter: the secure design should produce few findings; measuring only recall rewards noisy reviewers."
+          ]
+        },
+        {
+          "title": "Test harness",
+          "points": [
+            "Use @pytest.mark.parametrize over fixtures and metrics so each design and threshold is its own test [c28].",
+            "Mark known model weaknesses with pytest.param(..., marks=pytest.mark.xfail) so they are tracked, not hidden [c28].",
+            "Record the prompt version, model setting and library version with each run, since the client principles require logging tool and model versions.",
+            "The promo's 'threat coverage 0.89, unsupported claims 0.02' line is an illustrative run, not a promised result."
+          ]
+        },
+        {
+          "title": "Audit trail and limitations",
+          "points": [
+            "Log inputs read, graph version, rules run, model calls with prompt hash, rejections, decisions and evidence checked.",
+            "Do not log secrets or sensitive plan values (client principles).",
+            "Limitations to state: diagram-only inputs, stale designs, evidence limited to repositories provided, no runtime verification.",
+            "Answer the Manifesto's last question for the tool itself: did we do a good enough job? [c3]"
+          ]
+        },
+        {
+          "title": "Capstone acceptance",
+          "points": [
+            "Graph preserves provenance and marks ambiguous edges.",
+            "Threats link to modeled elements and state assumptions.",
+            "Reports separate facts from questions and hypotheses.",
+            "Architects can record decisions; evaluation covers secure and flawed designs; any implementation comparison reports gaps and implies no full assurance (client acceptance criteria)."
+          ]
+        }
+      ],
+      "instructor_demo": [
+        "Run the full eval suite on both fixtures and show the metric table.",
+        "Change one prompt instruction and rerun to show a regression in unsupported-claim rate.",
+        "Revert and show the metrics restored, with both runs logged with versions.",
+        "Walk the audit trail for one finding from input line to decision.",
+        "Show a sample capstone limitations slide."
+      ],
+      "lab": {
+        "brief": "Capstone build and demo.",
+        "steps": [
+          "Choose a third architecture (provided options: internal HR portal, event-driven order system, or the learner's own sanitized design).",
+          "Write Mermaid or JSON inputs and two ADRs for it.",
+          "Create expected threats and benign expectations with a partner who did not write the design.",
+          "Run the full pipeline: ingest, graph, requirements, threats, rules, findings, decisions, optional cross-check.",
+          "Run the eval suite on all three designs and record metrics.",
+          "Prepare a ten-minute demo covering one finding end to end, metrics and limitations."
+        ],
+        "success_criteria": [
+          "End-to-end run completes without manual code edits between steps.",
+          "Metrics reported for secure, flawed and the new design.",
+          "Zero unsupported claims in the final report.",
+          "Limitations and audit trail presented."
+        ]
+      },
+      "common_pitfalls": [
+        "Writing expected results after seeing tool output.",
+        "Reporting only recall.",
+        "Demos that skip the limitations slide.",
+        "Using real company designs without sanitizing names, addresses and secrets."
+      ],
+      "knowledge_check": [
+        {
+          "q": "Why include a secure reference design in the evaluation?",
+          "a": "To measure false positives and unsupported claims; a reviewer that flags everything would score high recall on the flawed design alone."
+        },
+        {
+          "q": "How do you track a known weakness without hiding it?",
+          "a": "Mark that case as xfail with pytest.param so it is visible in every run [c28]."
+        },
+        {
+          "q": "What must the audit trail never contain?",
+          "a": "Secrets and sensitive plan values."
+        }
+      ],
+      "slides_and_assets": [
+        "Metric definitions slide.",
+        "Capstone rubric (functionality, safety controls, testing and evaluation, engineering quality, evidence and explainability, documentation).",
+        "Third-design option packs.",
+        "Demo script template."
+      ],
+      "sources": [
+        "c3",
+        "c26",
+        "c28"
+      ]
+    }
+  ],
+  "capstone_plan": {
+    "brief": "Build and demo an end-to-end architecture reviewer that ingests structured inputs, builds a provenance-aware graph, generates a linked threat model, produces evidence-graded findings, records architect decisions and, optionally, cross-checks implementation evidence while reporting gaps rather than proof. Learners run it on the secure, flawed and a third design.",
+    "milestones": [
+      "M1: deterministic baseline (parsers, schemas, graph, rules, tests) passes without any model call.",
+      "M2: model-assisted extraction and threat candidates with validation and rejection logs.",
+      "M3: findings report with zero unsupported claims and a limitations section.",
+      "M4: decision workflow with change tracking across one revision.",
+      "M5: implementation cross-check on at least three requirements.",
+      "M6: evaluation metrics on three designs and a ten-minute demo."
+    ],
+    "evaluation_notes": [
+      "Weighting follows the client rubric: working functionality 25%, security and safety controls 20%, testing and evaluation 20%, engineering quality 15%, evidence and explainability 10%, documentation and presentation 10%.",
+      "Automatic fail on any finding graded or worded as a confirmed vulnerability, or any claim of full conformance.",
+      "Reviewers check one finding end to end from input line to decision during the demo.",
+      "Metrics must include false positives on the secure design, not only coverage on the flawed one."
+    ]
+  },
+  "promo_video_research": {
+    "hook_basis": "The 'diagram said encrypted, implementation said otherwise' opening is a teaching scenario, not a reported incident. It is realistic because common defaults diverge from what diagrams imply: aws_db_instance.storage_encrypted defaults to false [c18], Kubernetes stores API data in etcd as plain text unless encryption is configured [c15], and Istio's PERMISSIVE mode accepts plaintext connections [c16]. Microsoft frames threat modeling as early design work [c1], which is why a review done months before implementation can miss later drift.",
+    "claims_check": [
+      {
+        "claim": "6 STRIDE categories: spoofing, tampering, repudiation, information disclosure, denial of service, elevation of privilege.",
+        "basis": "Matches Microsoft's STRIDE table [c1]."
+      },
+      {
+        "claim": "'Applied only to components that really exist in the model.'",
+        "basis": "Course design rule from the client input (every candidate must link to a modeled component or flow); enforced by the validator in the threat-generation lab. It mitigates the misinformation risk OWASP describes [c19]."
+      },
+      {
+        "claim": "'STRIDE categories, every flow.'",
+        "basis": "Teaching simplification. The course runs all six categories as prompts over every element and flow, but the library keeps only candidates whose conditions apply, so not every category yields a threat for every flow."
+      },
+      {
+        "claim": "Constrained inputs: Mermaid, JSON schema, Markdown ADRs.",
+        "basis": "From the client build sequence; Mermaid flowchart syntax [c10], JSON Schema object validation [c11] and ADRs [c7]."
+      },
+      {
+        "claim": "Terminal output: 'components: 14 ... edges: 31 (27 from diagram, 4 from ADR-012) ambiguous: 2 ... REQ-07 ... unverified ... unparsed: 1 note (legacy batch)'.",
+        "basis": "Illustrative output from the course's payments fixture, designed to match the flawed fixture contents; not measured data."
+      },
+      {
+        "claim": "T-031 'assumes mTLS not enforced' with validation question 'Is mTLS enforced at the ingress?'",
+        "basis": "Scenario from the fixtures; realistic because mesh mTLS can be PERMISSIVE rather than STRICT [c16]."
+      },
+      {
+        "claim": "'rejected: SQL injection in reporting service (component not in model)'.",
+        "basis": "Lab outcome of the link validator; a planted model candidate in the instructor demo."
+      },
+      {
+        "claim": "Finding F-12: 'Ledger encryption at rest is a requirement, not an observed fact'; decision MORE EVIDENCE with owner and due date.",
+        "basis": "Illustrates the client's evidence-grading and decision rules; the due date is fictional fixture data."
+      },
+      {
+        "claim": "'REQ-07 covered: aws_kms_key + encrypted volume (infra/db.tf:22) gap: key rotation unknown'.",
+        "basis": "Illustrative cross-check output; rotation must be set explicitly via enable_key_rotation [c17], and storage encryption via storage_encrypted [c18]."
+      },
+      {
+        "claim": "'REQ-11 not found in evidence (reported as GAP, not failure)' and 'conformance claimed: NONE beyond listed evidence'.",
+        "basis": "Client requirement to report coverage and gaps, never proof of conformance."
+      },
+      {
+        "claim": "'eval: threat coverage 0.89 unsupported claims 0.02 evidence linkage 1.00'.",
+        "basis": "Illustrative numbers; the metric names come from the client's evaluation metrics table. Not a promised result."
+      },
+      {
+        "claim": "Stats: 3 days hands-on; 2 reference designs, secure and flawed; 100% findings linked to evidence.",
+        "basis": "Course format and acceptance criteria. '100% linked' is enforced by the finding schema and audit in the labs; it is a design target, not an industry statistic."
+      },
+      {
+        "claim": "'Review the architecture, not the slide.'",
+        "basis": "Tagline; consistent with the Manifesto value of finding and fixing design issues over checkbox compliance [c3]."
+      }
+    ]
+  },
+  "citations": [
+    {
+      "id": "c1",
+      "title": "Threats - Microsoft Threat Modeling Tool - Azure | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/security/develop/threat-modeling-tool-threats",
+      "publisher": "Microsoft Learn",
+      "supports": "Method-driven threat generation; promo STRIDE claim",
+      "key_fact": "Microsoft's Threat Modeling Tool, a core element of the SDL, uses the STRIDE model of six categories (Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege) to help architects find and mitigate issues early, when they are relatively easy and cost-effective to resolve, and to turn vague worries into pointed questions such as 'How can an attacker change the authentication data?' and 'What happens if access is denied to the user profile database?'",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c2",
+      "title": "Threat Modeling - OWASP Cheat Sheet Series",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html",
+      "publisher": "OWASP",
+      "supports": "Course method; modeling, threat identification, response, validation",
+      "key_fact": "OWASP structures threat modeling around the Manifesto's four questions as phases: model the system (data flow diagrams showing trust boundaries, data flows, data stores, processes and external entities), identify and rank threats (STRIDE used 'for illustration purposes'), choose a response per threat (mitigate, eliminate, transfer or accept), then review and validate the model and mitigations.",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c3",
+      "title": "Threat Modeling Manifesto",
+      "url": "https://www.threatmodelingmanifesto.org/",
+      "publisher": "Threat Modeling Manifesto working group",
+      "supports": "Why this course; architect review values",
+      "key_fact": "The Manifesto's four questions are 'What are we working on?', 'What can go wrong?', 'What are we going to do about it?' and 'Did we do a good enough job?'; it values finding and fixing design issues over checkbox compliance, people and collaboration over processes and tools, and continuous refinement over a single delivery.",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c4",
+      "title": "Home | C4 model",
+      "url": "https://c4model.com/",
+      "publisher": "C4 model (Simon Brown)",
+      "supports": "Architecture inputs: abstraction levels",
+      "key_fact": "The C4 model is a set of hierarchical abstractions (software systems, containers, components and code) with a matching set of hierarchical diagrams: system context, container, component and code diagrams.",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c5",
+      "title": "C4 Diagrams | Mermaid",
+      "url": "https://mermaid.js.org/syntax/c4.html",
+      "publisher": "Mermaid",
+      "supports": "Architecture inputs: C4 in Mermaid",
+      "key_fact": "Mermaid supports five C4 diagram kinds (C4Context, C4Container, C4Component, C4Dynamic, C4Deployment) with C4-PlantUML-compatible syntax such as System_Boundary(b2, \"BankBoundary2\") { ... } and Rel(SystemAA, SystemC, \"Sends e-mails\", \"SMTP\"); some features such as sprites, tags, links and legends are not implemented.",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c6",
+      "title": "Creating diagrams - GitHub Docs",
+      "url": "https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-diagrams",
+      "publisher": "GitHub Docs",
+      "supports": "Architect review: rendering diagrams in pull requests",
+      "key_fact": "GitHub renders Mermaid written inside a fenced code block tagged with the mermaid language identifier, and documents placing 'info' inside a mermaid block to check which Mermaid version GitHub is running.",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c7",
+      "title": "Architectural Decision Records (ADRs)",
+      "url": "https://adr.github.io/",
+      "publisher": "adr.github.io",
+      "supports": "Requirements extraction; decision records",
+      "key_fact": "An Architectural Decision Record captures a single architectural decision and its rationale, and the collection of ADRs created and maintained in a project constitutes its decision log.",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c8",
+      "title": "terraform plan command reference | HashiCorp Developer",
+      "url": "https://developer.hashicorp.com/terraform/cli/commands/plan",
+      "publisher": "HashiCorp Developer",
+      "supports": "Design-to-implementation comparison",
+      "key_fact": "terraform plan previews changes without applying them; -out saves a plan file that stores sensitive values in cleartext and must be treated as a potentially sensitive artifact; -json emits machine-readable output and implies -input=false; -detailed-exitcode returns 0 for no changes, 1 for error and 2 for a non-empty diff.",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c9",
+      "title": "Pod Security Standards | Kubernetes",
+      "url": "https://kubernetes.io/docs/concepts/security/pod-security-standards/",
+      "publisher": "Kubernetes",
+      "supports": "Design-to-implementation comparison: Kubernetes evidence",
+      "key_fact": "Kubernetes defines three cumulative Pod Security Standards: Privileged (entirely unrestricted, for trusted infrastructure workloads), Baseline (prevents known privilege escalations such as host namespaces, privileged containers and hostPath volumes) and Restricted (follows current pod hardening best practices).",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c10",
+      "title": "Flowcharts Syntax | Mermaid",
+      "url": "https://mermaid.js.org/syntax/flowchart.html",
+      "publisher": "Mermaid",
+      "supports": "Architecture inputs: Mermaid flowchart grammar",
+      "key_fact": "A Mermaid flowchart starts with 'flowchart' plus a direction (TB, TD, BT, RL, LR); node shapes are set by brackets, e.g. id1[(Database)] for a cylinder; links include A-->B, A-->|text|B, dotted A-.->B and thick A==>B; groups use 'subgraph id [title] ... end'; a lowercase word 'end' inside a node breaks the flowchart.",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c11",
+      "title": "Object - Understanding JSON Schema",
+      "url": "https://json-schema.org/understanding-json-schema/reference/object",
+      "publisher": "JSON Schema",
+      "supports": "Architecture inputs and system graph schema",
+      "key_fact": "In JSON Schema, properties listed under 'properties' are optional unless named in 'required'; a null value does not satisfy a required property; additionalProperties: false makes any undeclared key invalid; and additionalProperties only recognizes properties declared in the same subschema, so it can break allOf extension.",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c12",
+      "title": "OWASP pytm - A Pythonic framework for threat modeling",
+      "url": "https://github.com/OWASP/pytm",
+      "publisher": "OWASP (GitHub)",
+      "supports": "System graph and threat library design reference",
+      "key_fact": "pytm models a system in Python with elements such as TM, Server, ExternalEntity, Datastore, Actor, Process, Dataflow, Boundary, Lambda, LLM and Agent; it outputs a DFD (--dfd), a sequence diagram (--seq), a report (--report) or JSON (--json); threats are JSON entries with SID, target, description, severity, condition, mitigations and references, and conditions can use helpers such as target.crosses(Boundary). Its threats.json strings run through eval().",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c13",
+      "title": "MADR - Markdown Architectural Decision Records",
+      "url": "https://adr.github.io/madr/",
+      "publisher": "adr.github.io (MADR)",
+      "supports": "Requirements extraction; architect decision records",
+      "key_fact": "MADR 4.0.0 (released 2024-09-17) defines sections Context and Problem Statement, Decision Drivers, Considered Options, Decision Outcome (with Consequences), Confirmation, Pros and Cons of the Options and More Information; optional front matter status values include proposed, rejected, accepted, deprecated and 'superseded by ADR-0123'; files are named NNNN-title-with-dashes.md, typically in docs/decisions.",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c14",
+      "title": "JSON Output Format | Terraform | HashiCorp Developer",
+      "url": "https://developer.hashicorp.com/terraform/internals/json-format",
+      "publisher": "HashiCorp Developer",
+      "supports": "Design-to-implementation comparison: parsing plan JSON",
+      "key_fact": "terraform show -json <FILE> renders a plan or state as JSON with format_version, prior_state, configuration, planned_values and resource_changes; each resource_changes entry has address, type and a change object with actions (e.g. [\"create\"], [\"update\"], [\"no-op\"]), before, after, after_unknown and before_sensitive/after_sensitive, which should be combined with before/after to avoid displaying sensitive values.",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c15",
+      "title": "Encrypting Confidential Data at Rest | Kubernetes",
+      "url": "https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/",
+      "publisher": "Kubernetes",
+      "supports": "Review rules and conformance: encryption at rest",
+      "key_fact": "By default the API server stores plain-text representations of resources in etcd with no at-rest encryption; kube-apiserver --encryption-provider-config points to an EncryptionConfiguration (apiVersion apiserver.config.k8s.io/v1) whose first provider encrypts writes; if the first provider is 'identity' there is no confidentiality protection, and the check does not prove earlier data was migrated.",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c16",
+      "title": "PeerAuthentication | Istio",
+      "url": "https://istio.io/latest/docs/reference/config/security/peer_authentication/",
+      "publisher": "Istio",
+      "supports": "Threat generation and conformance: mTLS evidence",
+      "key_fact": "Istio PeerAuthentication defines mTLS requirements for incoming connections; modes are UNSET (inherit, otherwise PERMISSIVE), DISABLE, PERMISSIVE (plaintext or mTLS accepted) and STRICT (TLS with client certificate required); a mesh-wide policy lives in the root namespace.",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c17",
+      "title": "aws_kms_key resource documentation (terraform-provider-aws)",
+      "url": "https://raw.githubusercontent.com/hashicorp/terraform-provider-aws/main/website/docs/r/kms_key.html.markdown",
+      "publisher": "HashiCorp (terraform-provider-aws on GitHub)",
+      "supports": "Design-to-implementation comparison; promo cross-check panel",
+      "key_fact": "aws_kms_key's enable_key_rotation is optional and must be enabled if rotation_period_in_days (90 to 2560) is set; deletion_window_in_days is 7 to 30 and defaults to 30; key_usage defaults to ENCRYPT_DECRYPT; policy takes a key policy JSON document.",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c18",
+      "title": "aws_db_instance resource documentation (terraform-provider-aws)",
+      "url": "https://raw.githubusercontent.com/hashicorp/terraform-provider-aws/main/website/docs/r/db_instance.html.markdown",
+      "publisher": "HashiCorp (terraform-provider-aws on GitHub)",
+      "supports": "Design-to-implementation comparison; promo hook",
+      "key_fact": "aws_db_instance's storage_encrypted defaults to false, kms_key_id takes the KMS key ARN, publicly_accessible defaults to false, iam_database_authentication_enabled maps IAM accounts to database accounts, and manage_master_user_password lets RDS manage the master password in Secrets Manager (not combinable with password).",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c19",
+      "title": "LLM09:2025 Misinformation - OWASP Top 10 for LLM Applications",
+      "url": "https://genai.owasp.org/llmrisk/llm092025-misinformation/",
+      "publisher": "OWASP GenAI Security Project",
+      "supports": "Method-driven threat generation; evidence-graded findings",
+      "key_fact": "OWASP describes misinformation as LLMs producing false or misleading information that appears credible, with hallucination as a major cause and overreliance as users failing to verify output; mitigations include grounding in trusted sources, cross-verification and human oversight, automatic validation of key outputs, and clear communication of limitations.",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c20",
+      "title": "LLM01:2025 Prompt Injection - OWASP Top 10 for LLM Applications",
+      "url": "https://genai.owasp.org/llmrisk/llm01-prompt-injection/",
+      "publisher": "OWASP GenAI Security Project",
+      "supports": "Architecture inputs: treating documents as untrusted",
+      "key_fact": "Indirect prompt injection occurs when an LLM accepts input from external sources such as websites or files; mitigations include constraining model behavior, defining and validating expected output formats with deterministic code, least privilege, human approval for high-risk actions, segregating and marking external content, and adversarial testing.",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c21",
+      "title": "Structured outputs - Claude API Docs",
+      "url": "https://platform.claude.com/docs/en/build-with-claude/structured-outputs",
+      "publisher": "Anthropic",
+      "supports": "System graph schema; threat candidate output",
+      "key_fact": "Claude returns schema-valid JSON when output_config.format has type json_schema and a schema; strict: true on a tool validates tool inputs; additionalProperties must be false for objects; recursive schemas, external $ref, numeric constraints (minimum, maximum), string length constraints and array constraints beyond minItems 0 or 1 are not supported; the Python SDK's client.messages.parse() accepts a Pydantic model and returns parsed_output.",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c22",
+      "title": "MultiDiGraph - NetworkX documentation",
+      "url": "https://networkx.org/documentation/stable/reference/classes/multidigraph.html",
+      "publisher": "NetworkX",
+      "supports": "System graph implementation",
+      "key_fact": "NetworkX MultiDiGraph is a directed graph that stores multiple parallel edges between the same nodes, each identified by a key (by default the lowest unused integer); graphs, nodes and edges each hold attribute dictionaries, and for multigraphs the edge key is required to update an edge attribute: MG.edges[u, v, key][name] = value.",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c23",
+      "title": "Network Policies | Kubernetes",
+      "url": "https://kubernetes.io/docs/concepts/services-networking/network-policies/",
+      "publisher": "Kubernetes",
+      "supports": "Review rules and conformance: network isolation evidence",
+      "key_fact": "By default a pod is non-isolated for ingress and egress (all connections allowed); a pod becomes isolated for a direction only when a NetworkPolicy selects it with that direction in policyTypes; NetworkPolicy is implemented by the network plugin, and creating one without a supporting controller has no effect.",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c24",
+      "title": "OWASP Application Security Verification Standard",
+      "url": "https://asvs.owasp.org/",
+      "publisher": "OWASP",
+      "supports": "Requirements extraction: requirement identifiers",
+      "key_fact": "ASVS is a framework of security requirements for designing, developing and testing web applications and services; version 5.0.0 was released on 30 May 2025; requirements are numbered chapter.section.requirement and OWASP recommends citing them with the version, e.g. v5.0.0-1.2.5.",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c25",
+      "title": "LLM06:2025 Excessive Agency - OWASP Top 10 for LLM Applications",
+      "url": "https://genai.owasp.org/llmrisk/llm062025-excessive-agency/",
+      "publisher": "OWASP GenAI Security Project",
+      "supports": "Architecture inputs: agent tool design; review rules for agentic systems",
+      "key_fact": "Excessive Agency arises from excessive functionality, permissions or autonomy; OWASP recommends minimizing extensions and their functionality, avoiding open-ended tools such as arbitrary shell execution, minimizing permissions (e.g. read-only), requiring user approval for high-impact actions, and complete mediation: authorization implemented in downstream systems rather than relying on the LLM.",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c26",
+      "title": "Hooks reference - Claude Code Docs",
+      "url": "https://code.claude.com/docs/en/hooks",
+      "publisher": "Anthropic (Claude Code documentation)",
+      "supports": "Architecture inputs: AI-assisted workflow guardrails",
+      "key_fact": "Claude Code hooks are configured in ~/.claude/settings.json, .claude/settings.json or .claude/settings.local.json; a PreToolUse hook with a matcher such as \"Bash\" or \"Edit|Write\" can block a call by exiting with code 2 (stderr becomes the reason) or by returning hookSpecificOutput.permissionDecision \"deny\".",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c27",
+      "title": "How Claude remembers your project - Claude Code Docs",
+      "url": "https://code.claude.com/docs/en/memory",
+      "publisher": "Anthropic (Claude Code documentation)",
+      "supports": "Architecture inputs: project conventions for the AI-assisted build",
+      "key_fact": "Project instructions live in ./CLAUDE.md or ./.claude/CLAUDE.md, personal ones in ./CLAUDE.local.md and ~/.claude/CLAUDE.md; /init generates a starting CLAUDE.md; files can import others with @path syntax; .claude/rules/ holds topic files; CLAUDE.md is context, not enforced configuration, so a PreToolUse hook is needed to block an action.",
+      "verified": "2026-10-30"
+    },
+    {
+      "id": "c28",
+      "title": "How to parametrize fixtures and test functions - pytest documentation",
+      "url": "https://docs.pytest.org/en/stable/how-to/parametrize.html",
+      "publisher": "pytest",
+      "supports": "Evaluation and capstone: golden-set tests",
+      "key_fact": "@pytest.mark.parametrize(\"test_input,expected\", [...]) runs a test once per parameter tuple, stacked decorators produce every combination, and pytest.param(..., marks=pytest.mark.xfail) marks an individual case as expected to fail.",
+      "verified": "2026-10-30"
+    }
+  ]
+}
