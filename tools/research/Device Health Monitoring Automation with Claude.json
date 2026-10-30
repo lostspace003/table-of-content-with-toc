@@ -1,0 +1,1908 @@
+{
+ "course": "Device Health Monitoring Automation with Claude",
+ "domain": "Network and Infrastructure Automation",
+ "source_input": "Client use case 6, 'Device Health Monitoring Automation: Monitoring health status of devices by checking VIP status, uptime status, HA status, sync status if in HA, version, last change performed on devices, updating or creating SNOW ticket accordingly', with the client's aim 'to do automation using Claude for all these content'. Use case 1 names the load balancer fleet: F5, NetScaler, Radware and Anaya LB.",
+ "why_this_course": [
+  "Load balancer and fabric health is still checked by hand in many NOCs: someone logs in to each pair, looks at VIPs, failover and sync, and raises a ticket if something looks wrong. The signals are well defined on every platform, from F5 failover and sync states to NetScaler HA node statistics and APIC fabric health [c11][c14][c2][c26], but reading them consistently across vendors, every few minutes, is the part people skip.",
+  "The hard failures are often quiet. An HA pair with mismatched versions keeps passing traffic while config sync is disabled [c21][c14]. A second ticket gets raised for a fault that already has one. Automation fixes collection and deduplication with plain code; Claude adds value by reading the evidence, linking it to the last change and writing a cited verdict and ticket text a NOC engineer can act on [c32].",
+  "The client asked for exactly this: the six signals, and updating or creating the ServiceNow ticket accordingly. The course builds that platform with read-only device access, approvals for consequential ticket actions, and an audit trail."
+ ],
+ "design_decisions": [
+  {
+   "decision": "Use the client's six signals as the data model.",
+   "rationale": "The client input lists VIP status, uptime, HA, sync if in HA, version and last change; making those the schema keeps every module tied to the request."
+  },
+  {
+   "decision": "Collectors are deterministic code; Claude only analyses.",
+   "rationale": "Up or down must not depend on a model; Claude receives readings and returns a schema-validated verdict [c32]."
+  },
+  {
+   "decision": "Unknown is never healthy.",
+   "rationale": "Partial data is common with mixed vendors and SNMP-only devices; marking it unknown prevents false calm."
+  },
+  {
+   "decision": "Update or create, never duplicate.",
+   "rationale": "The client said 'updating or creating SNOW ticket accordingly'; a correlation key and query-before-create through the Table API make that testable [c5]."
+  },
+  {
+   "decision": "Cover Anaya LB through a generic adapter.",
+   "rationale": "We found no public API documentation for a product named Anaya LB, so the course teaches an adapter interface any CLI, SNMP or REST device can implement."
+  },
+  {
+   "decision": "Run on GitHub Actions with a self-hosted runner.",
+   "rationale": "Gives scheduling, reviewed changes and secrets with tools the audience already uses, while devices stay on private networks [c7][c37]."
+  }
+ ],
+ "audience_profile": [
+  {
+   "role": "Load balancer engineer",
+   "needs": "Automated, trustworthy health checks across vendors",
+   "starting_point": "Strong F5 or NetScaler CLI, basic Python"
+  },
+  {
+   "role": "NOC lead",
+   "needs": "Fewer duplicate tickets and clear verdicts",
+   "starting_point": "Knows ServiceNow and escalation, light coding"
+  },
+  {
+   "role": "Data center network engineer (ACI)",
+   "needs": "Fabric health in the same pipeline",
+   "starting_point": "ACI operations, some REST"
+  },
+  {
+   "role": "ITSM or automation engineer",
+   "needs": "Reliable Table API and Flow Designer integration",
+   "starting_point": "ServiceNow admin skills, Python"
+  }
+ ],
+ "prerequisite_check": [
+  "Can you explain active/standby and config sync on an F5 or NetScaler pair?",
+  "Can you call a REST API with curl and read the JSON?",
+  "Can you write and run a small Python script and use Git?",
+  "Do you know what an incident and a change request are in ServiceNow?"
+ ],
+ "lab_environment": {
+  "overview": "A lab fleet per cohort with fictional hostnames: an F5 BIG-IP VE pair (lb-f5-01/02), a NetScaler VPX pair (lb-ns-01/02), a Radware Alteon VA (lb-alt-01), a generic Linux-based load balancer standing in for Anaya LB, and an APIC (lab APIC or DevNet simulator), plus a ServiceNow PDI, GitHub organization with a self-hosted runner, and Prometheus and Grafana.",
+  "components": [
+   {
+    "name": "F5 BIG-IP VE",
+    "version": "17.x (two instances)",
+    "purpose": "F5 HA pair",
+    "how_to_obtain": "30-day trial from MyF5 Trials, or a lab license from a reseller",
+    "notes": "Trial limited to 1 Mbps; confirm two trial instances are allowed or use lab licenses [c45]."
+   },
+   {
+    "name": "NetScaler VPX Express",
+    "version": "14.1 (and one 13.1 image for the mismatch lab)",
+    "purpose": "NetScaler HA pair",
+    "how_to_obtain": "Free VPX Express, no license file",
+    "notes": "20 Mbps, 250 SSL sessions; confirm HA pair support on Express before the cohort [c41]."
+   },
+   {
+    "name": "Radware Alteon VA",
+    "version": "AlteonOS 35.0 (AWS listing) or the client's version",
+    "purpose": "Alteon collector",
+    "how_to_obtain": "AWS Marketplace 30-day free trial, then hourly",
+    "notes": "Stop instances after labs to control cost [c24]."
+   },
+   {
+    "name": "Generic load balancer (Anaya LB stand-in)",
+    "version": "HAProxy or Keepalived on Linux",
+    "purpose": "Generic adapter practice",
+    "how_to_obtain": "Open source packages",
+    "notes": "Replace with the client's Anaya LB if access is available."
+   },
+   {
+    "name": "Cisco APIC",
+    "version": "Lab APIC or DevNet ACI Simulator",
+    "purpose": "ACI health collector",
+    "how_to_obtain": "DevNet sandbox, free",
+    "notes": "Always-On is shared; reservable sandbox up to 5 days [c42]."
+   },
+   {
+    "name": "ServiceNow PDI",
+    "version": "Current release",
+    "purpose": "Incidents, changes and flows",
+    "how_to_obtain": "ServiceNow Developer Site",
+    "notes": "Request early [c43]."
+   },
+   {
+    "name": "Claude Code, Agent SDK and MCP Python SDK",
+    "version": "Current releases; Python 3.11+",
+    "purpose": "Agent and tools",
+    "how_to_obtain": "Native installer, pip install claude-agent-sdk, pip install \"mcp[cli]\"",
+    "notes": "Requires a Claude account with Claude Code access; MCP server built with the Python SDK [c31]."
+   },
+   {
+    "name": "GitHub with Actions and self-hosted runner",
+    "version": "GitHub.com",
+    "purpose": "Schedule and reviews",
+    "how_to_obtain": "Free organization",
+    "notes": "Runner needs outbound 443 only [c37]."
+   },
+   {
+    "name": "Prometheus and Grafana",
+    "version": "Current OSS releases",
+    "purpose": "Dashboards",
+    "how_to_obtain": "Docker images",
+    "notes": "Use textfile collector on the runner host [c39]."
+   }
+  ],
+  "fixtures": [
+   {
+    "name": "Recorded API responses",
+    "contents": "F5, NITRO, Alteon SNMP walks, APIC classes, including errors",
+    "used_in": "Collecting health from F5 and NetScaler; Collecting health from Radware, other load balancers (Anaya LB) and Cisco ACI"
+   },
+   {
+    "name": "Synthetic evidence bundles",
+    "contents": "Twenty bundles with expected severity",
+    "used_in": "Claude as the triage analyst: structured health verdicts"
+   },
+   {
+    "name": "ServiceNow seed data",
+    "contents": "CIs, an open incident, a closed change, a scheduled change",
+    "used_in": "Creating or updating ServiceNow tickets; Scheduling and running the workflow with GitHub Actions"
+   },
+   {
+    "name": "Fault scripts",
+    "contents": "Break sync, downgrade one NetScaler node, disable a VIP, revoke a credential",
+    "used_in": "Capstone: end-to-end device health monitoring for a mixed fleet"
+   }
+  ],
+  "safety": [
+   "Nothing touches production.",
+   "Device accounts used by collectors are read-only.",
+   "Fault scripts run only on lab devices by the instructor or under supervision.",
+   "Secrets only in environment variables and GitHub secrets.",
+   "Stop cloud instances after each day."
+  ]
+ },
+ "modules": [
+  {
+   "day": 1,
+   "title": "What device health means across the fleet",
+   "goal": "Learners define six platform-neutral health signals and record what healthy looks like on every platform in the lab fleet.",
+   "learning_objectives": [
+    "Learners can define VIP status, uptime, HA status, sync status, software version and last change as signals with allowed values.",
+    "Learners can find each signal on F5 BIG-IP, NetScaler, Radware Alteon, a generic load balancer and Cisco ACI [c3][c1][c23][c26].",
+    "Learners can explain why manual morning checks miss sync drift and create duplicate tickets.",
+    "Learners can state the course pattern: Claude explains, code collects and decides, a person approves, everything is logged."
+   ],
+   "lessons": [
+    {
+     "title": "Six signals and their allowed values",
+     "points": [
+      "VIP status: up, down, disabled, unknown, per virtual server, plus a count of up versus total.",
+      "Uptime: seconds since start, so a recent reboot stands out.",
+      "HA status: role (active/standby or primary/secondary) and health of the pair.",
+      "Sync status: only when the device is in HA; values normalised to in_sync, pending, failed, unknown.",
+      "Version: the running software version and whether both HA peers match; F5 requires all device group members on the same version and NetScaler disables HA sync on mismatched versions [c14][c21].",
+      "Last change: time, actor and source (device log, Git diff or change record)."
+     ]
+    },
+    {
+     "title": "How each platform shows the signals",
+     "points": [
+      "F5: virtual stats status.availabilityState, failoverState in cm/device, cm/sync-status, version and build in cm/device [c12][c11][c10].",
+      "F5 sync statuses: In Sync, Changes Pending, Awaiting Initial Sync, Not All Devices Synced, Disconnected [c14].",
+      "NetScaler: lbvserver state UP(7)/DOWN(1)/OFS(4), hanode master state and haerrsyncfailure, nsversion, system timesincestart [c1][c2][c17][c20].",
+      "Radware Alteon: SNMP MIBs for Layer 4 virtual services and HA state, plus the Alteon REST API documented in the Alteon REST API User Guide [c23][c9].",
+      "Cisco ACI: fabricHealthTotal, topSystem and fabricNode class queries, firmware from firmwareRunning [c26][c44]."
+     ]
+    },
+    {
+     "title": "Why manual checks fail",
+     "points": [
+      "Nobody reads sync status on the standby unit, so drift sits for days.",
+      "A ticket from yesterday is still open and a second one is raised for the same fault.",
+      "Version mismatch after half an upgrade looks healthy at a glance but breaks HA sync [c21].",
+      "Checks are not recorded, so nobody can prove what was looked at."
+     ]
+    },
+    {
+     "title": "The working pattern",
+     "points": [
+      "Collectors are deterministic Python; Claude never decides whether a reading is up or down.",
+      "Claude turns an evidence bundle into a cited verdict and a draft ticket text.",
+      "Consequential actions (P1/P2, reopen, paging) wait for a person.",
+      "Every run is written to an audit record; MCP itself expects tool use to be logged [c30]."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "On lb-f5-01 run tmsh show sys failover and tmsh show cm sync-status, then the REST equivalents [c13][c10].",
+    "On lb-ns-01 call /nitro/v1/stat/lbvserver and /nitro/v1/stat/hanode and point at state and haerrsyncfailure [c1][c2].",
+    "On the APIC open fabricHealthTotal and fabricNode class queries [c26].",
+    "Read an Alteon HA state over SNMP with snmpget against the lab VA [c23].",
+    "Fill the first row of the health signal matrix live."
+   ],
+   "lab": {
+    "brief": "Walk the lab fleet by hand with tmsh, NITRO and the APIC GUI and record what a healthy baseline looks like for each platform.",
+    "steps": [
+     "Log in to lb-f5-01 and lb-f5-02 and record failover state, sync status, version and uptime [c13][c14].",
+     "Call the F5 virtual stats endpoint for two VIPs and record availabilityState [c12].",
+     "On lb-ns-01 and lb-ns-02 record lbvserver states, show ha node output, nsversion and timesincestart [c1][c19][c17][c20].",
+     "On lb-alt-01 record virtual service state, HA state and uptime over SNMP [c23].",
+     "On the APIC record fabric health, node count and versions [c26][c44].",
+     "For the generic device record what is available by CLI or SNMP only.",
+     "Fill the health signal matrix with source, path and healthy value for each signal.",
+     "Mark any signal you could not read as unknown with the reason."
+    ],
+    "success_criteria": [
+     "The matrix has all six signals for all five platforms with the exact command or endpoint.",
+     "Every healthy value is written as the raw platform value and the normalised value.",
+     "Unknowns are explicit, never blank.",
+     "Sync status is marked not applicable for standalone devices."
+    ]
+   },
+   "common_pitfalls": [
+    "Reading sync on only one member of a pair.",
+    "Treating NetScaler OFS or F5 disabled as down.",
+    "Assuming the ACI health score maps directly to a device verdict.",
+    "Leaving a signal blank instead of unknown."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Which F5 sync status means at least one member lacks the latest configuration?",
+     "a": "Not All Devices Synced [c14]."
+    },
+    {
+     "q": "What happens to NetScaler HA config sync when peers run different versions?",
+     "a": "It is disabled, along with command propagation and connection mirroring [c21]."
+    },
+    {
+     "q": "Which NetScaler stat counts config sync failures since the last transition?",
+     "a": "haerrsyncfailure in /nitro/v1/stat/hanode [c2]."
+    },
+    {
+     "q": "Why is sync status conditional?",
+     "a": "It only applies when the device is in an HA pair; standalone devices report not applicable."
+    }
+   ],
+   "slides_and_assets": [
+    "Health signal matrix template (platform x signal).",
+    "Lab fleet diagram with fictional hostnames.",
+    "Raw-to-normalised value mapping table.",
+    "Command and endpoint cheat sheet per platform."
+   ],
+   "sources": [
+    "c1",
+    "c2",
+    "c3",
+    "c9",
+    "c10",
+    "c11",
+    "c12",
+    "c13",
+    "c14",
+    "c17",
+    "c19",
+    "c20",
+    "c21",
+    "c23",
+    "c26",
+    "c30",
+    "c44"
+   ]
+  },
+  {
+   "day": 1,
+   "title": "Setting up Claude Code, the Agent SDK and MCP for this workflow",
+   "goal": "Learners scaffold the project, run a read-only device MCP server and have the agent read a device version through a tool call, with credentials kept out of the model context.",
+   "learning_objectives": [
+    "Learners can create a project with CLAUDE.md conventions and confirm it loads [c28].",
+    "Learners can build a read-only MCP server with get_vip_status, get_ha_state and get_version [c30][c31].",
+    "Learners can define a HealthReading Pydantic schema used by both tools and agent.",
+    "Learners can keep device and ServiceNow credentials outside the model context [c29]."
+   ],
+   "lessons": [
+    {
+     "title": "Project and CLAUDE.md",
+     "points": [
+      "Install Claude Code, run claude doctor, and run /init in the repository [c28].",
+      "CLAUDE.md conventions: collectors are pure functions, no write calls to devices, unknown is never healthy, every verdict cites readings.",
+      "Import the severity rules file with @rules/severity.md so the agent sees the same rules the code enforces [c28].",
+      "CLAUDE.md guides; permissions and hooks enforce [c28][c33]."
+     ]
+    },
+    {
+     "title": "Read-only MCP server",
+     "points": [
+      "pip install \"mcp[cli]\" and register tools with @mcp.tool() [c31].",
+      "Tools take a device name from inventory, never a URL or credentials.",
+      "Each tool returns a HealthReading as structuredContent with an outputSchema [c30].",
+      "API failures return isError: true with a message, so the agent can mark the signal unknown [c30].",
+      "Rate limit and validate inputs in the server, as the spec requires [c30]."
+     ]
+    },
+    {
+     "title": "The HealthReading schema",
+     "points": [
+      "Fields: device, platform, signal, raw_value, normalised_value, source_path, collected_at, error.",
+      "Enums for normalised values so 'mostly up' cannot appear.",
+      "The same model is used by collectors, MCP tools and tests.",
+      "JSON Schema from model_json_schema() is reused for the agent's output schema [c32]."
+     ]
+    },
+    {
+     "title": "Secrets outside the model",
+     "points": [
+      "Credentials live in environment variables loaded by the MCP server process, referenced in .mcp.json with ${VAR} [c29].",
+      "F5 uses short-lived tokens from /mgmt/shared/authn/login in the X-F5-Auth-Token header [c16].",
+      "NetScaler uses X-NITRO-USER/X-NITRO-PASS or a session cookie, set inside the server only [c2].",
+      "Deny the agent Bash and file reads of .env with permission rules [c34]."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Scaffold with Claude Code and show CLAUDE.md and the rules import [c28].",
+    "Run the MCP server in the Inspector and call get_version for lb-f5-01 [c31].",
+    "Register with claude mcp add at project scope and show .mcp.json with ${F5_USER} [c29].",
+    "Ask the agent 'What version is lb-f5-01 running?' and show the tool call and answer.",
+    "Ask it to print the F5 password and show it has no way to reach it."
+   ],
+   "lab": {
+    "brief": "Scaffold the project with Claude Code, run the MCP server locally and have the agent read the version of lb-f5-01 through a tool call.",
+    "steps": [
+     "Create the repository and CLAUDE.md with the course conventions [c28].",
+     "Write the HealthReading model.",
+     "Implement get_version for F5 using cm/device version and build [c11].",
+     "Implement get_ha_state and get_vip_status for F5 [c11][c12].",
+     "Test in the MCP Inspector [c31].",
+     "Register the server with environment-variable credentials [c29].",
+     "Add deny rules for Bash and .env reads [c34].",
+     "Ask the agent for lb-f5-01's version and save the transcript."
+    ],
+    "success_criteria": [
+     "The agent answers with a tool call and cites the source path.",
+     "No credential appears in the repo, transcript or model context.",
+     "A broken credential produces an isError tool result, not a crash.",
+     "All tools return schema-valid HealthReading objects."
+    ]
+   },
+   "common_pitfalls": [
+    "Passing credentials as tool arguments.",
+    "Using basic auth for every F5 call instead of a token [c16].",
+    "Free-text tool results the agent has to parse.",
+    "Forgetting project-scoped servers need approval on first use [c29]."
+   ],
+   "knowledge_check": [
+    {
+     "q": "How do you keep the F5 password out of .mcp.json?",
+     "a": "Reference it as ${F5_PASS} and set the variable in the environment [c29]."
+    },
+    {
+     "q": "What header carries an F5 auth token?",
+     "a": "X-F5-Auth-Token [c16]."
+    },
+    {
+     "q": "What does a tool return when the device is unreachable?",
+     "a": "A result with isError: true and a message; the reading becomes unknown [c30]."
+    },
+    {
+     "q": "Why is the HealthReading model shared?",
+     "a": "So collectors, tools, agent output and tests all validate against one schema."
+    }
+   ],
+   "slides_and_assets": [
+    "Starter repository with CLAUDE.md and rules file.",
+    "HealthReading model and JSON Schema.",
+    ".mcp.json and settings.json examples.",
+    "Diagram of where secrets live."
+   ],
+   "sources": [
+    "c2",
+    "c11",
+    "c12",
+    "c16",
+    "c28",
+    "c29",
+    "c30",
+    "c31",
+    "c32",
+    "c33",
+    "c34"
+   ]
+  },
+  {
+   "day": 1,
+   "title": "Collecting health from F5 and NetScaler",
+   "goal": "Learners write F5 and NetScaler collectors that normalise every reading into HealthReading with retries, timeouts and recorded fixtures.",
+   "learning_objectives": [
+    "Learners can collect VIP, HA, sync, version and uptime from F5 through iControl REST with tmsh fallbacks [c10][c11][c12][c13].",
+    "Learners can collect the same signals from NetScaler through NITRO [c1][c2][c17][c18][c20].",
+    "Learners can normalise platform values and handle partial failures.",
+    "Learners can test collectors with pytest fixtures."
+   ],
+   "lessons": [
+    {
+     "title": "F5 iControl REST",
+     "points": [
+      "Authenticate with POST /mgmt/shared/authn/login and reuse the token for 20 minutes [c16].",
+      "VIPs: GET /mgmt/tm/ltm/virtual/<vs>/stats or the collection stats; read status.availabilityState and status.enabledState [c12].",
+      "HA: /mgmt/tm/cm/device gives failoverState, version and build per member [c11].",
+      "Sync: /mgmt/tm/cm/sync-status (read-only) [c10]; map In Sync, Changes Pending, Not All Devices Synced, Disconnected [c14].",
+      "Pool member state and monitor status explain why a VIP is down [c4].",
+      "Anything from the command line is available over REST, so fall back to tmsh only when REST is blocked [c3]."
+     ]
+    },
+    {
+     "title": "tmsh fallbacks",
+     "points": [
+      "tmsh show sys failover for state and time in state [c13].",
+      "tmsh show cm sync-status for sync [c10][c14].",
+      "tmsh show sys version for version, tmsh show ltm virtual for VIPs [c12].",
+      "Run over SSH with a read-only role and parse with tested regexes."
+     ]
+    },
+    {
+     "title": "NetScaler NITRO",
+     "points": [
+      "VIPs: GET /nitro/v1/stat/lbvserver with state UP(7), DOWN(1), OFS(4) and vslbhealth [c1].",
+      "HA: GET /nitro/v1/stat/hanode for hacurmasterstate, hacurstate and haerrsyncfailure [c2].",
+      "Config view: /nitro/v1/config/hanode gives state, hasync setting and hasyncfailurereason [c18].",
+      "Version from /nitro/v1/config/nsversion; uptime from timesincestart in /nitro/v1/stat/system [c17][c20].",
+      "CLI fallback: show ha node shows haSync (Sync State) and haSyncFailureReason [c19]."
+     ]
+    },
+    {
+     "title": "Normalising and resilience",
+     "points": [
+      "Map raw values to enums in one table per platform, unit-tested.",
+      "Timeout per call and two retries with backoff for reads.",
+      "A failed call yields unknown with the error, never a guess.",
+      "Record fixtures from the lab for every endpoint, including an error response."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "curl the F5 token endpoint and the virtual stats endpoint [c16][c12].",
+    "curl NITRO stat/hanode on both lab NetScalers and compare [c2].",
+    "Ask Claude Code to write the F5 collector and review the diff.",
+    "Run pytest against fixtures and show an unknown result from a 401 fixture.",
+    "Run both collectors against the lab HA pairs."
+   ],
+   "lab": {
+    "brief": "Write the F5 and NetScaler collectors with Claude Code, inspect every diff, and run them against the lab HA pairs.",
+    "steps": [
+     "Record fixtures from lb-f5-01/02 and lb-ns-01/02.",
+     "Write the F5 auth and session helper [c16].",
+     "Write F5 VIP, HA, sync and version functions [c10][c11][c12].",
+     "Write NetScaler VIP, HA, version and uptime functions [c1][c2][c17][c20].",
+     "Write mapping tables and unit tests.",
+     "Add timeouts and retries.",
+     "Run against the lab and compare with the morning's manual matrix.",
+     "Commit with fixtures."
+    ],
+    "success_criteria": [
+     "Both pairs produce six signals each, matching the manual baseline.",
+     "A 401 or timeout fixture yields unknown with the error recorded.",
+     "Tests run offline.",
+     "Every diff was reviewed and committed by a learner."
+    ]
+   },
+   "common_pitfalls": [
+    "Using vslbhealth alone; a vserver can be UP with some services down [c1].",
+    "Ignoring hacurstatus NO, which makes other HA stats invalid [c2].",
+    "Reading hasync as sync result; it is the enable setting, while failures show in hasyncfailurereason and haerrsyncfailure [c18][c2].",
+    "Token expiry mid-run [c16]."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Which NetScaler lbvserver state value means out of service?",
+     "a": "OFS(4) [c1]."
+    },
+    {
+     "q": "Where do you read F5 failover state over REST?",
+     "a": "failoverState in /mgmt/tm/cm/device [c11]."
+    },
+    {
+     "q": "What is the NetScaler hasync field?",
+     "a": "An ENABLED/DISABLED setting for HA sync, not the sync result [c18]."
+    },
+    {
+     "q": "What does the collector write when NITRO times out?",
+     "a": "An unknown reading with the error and source path."
+    }
+   ],
+   "slides_and_assets": [
+    "F5 and NITRO endpoint map.",
+    "Raw-to-normalised tables.",
+    "Fixture pack for both pairs.",
+    "Collector code skeletons."
+   ],
+   "sources": [
+    "c1",
+    "c2",
+    "c3",
+    "c4",
+    "c10",
+    "c11",
+    "c12",
+    "c13",
+    "c14",
+    "c16",
+    "c17",
+    "c18",
+    "c19",
+    "c20"
+   ]
+  },
+  {
+   "day": 1,
+   "title": "Collecting health from Radware, other load balancers (Anaya LB) and Cisco ACI",
+   "goal": "Learners complete the collector library with Alteon, a generic adapter and APIC, and prove that missing data surfaces as unknown.",
+   "learning_objectives": [
+    "Learners can read Alteon virtual service, HA and uptime signals over SNMP and identify the REST references for their version [c23][c9].",
+    "Learners can implement a generic adapter interface for devices with only CLI or SNMP.",
+    "Learners can collect APIC uptime, role, version and fabric health [c26][c27][c44].",
+    "Learners can show that partial data becomes unknown, never healthy."
+   ],
+   "lessons": [
+    {
+     "title": "Radware Alteon",
+     "points": [
+      "SNMP v2c/v3 with ALTEON-CHEETAH-LAYER4-MIB for virtual services and real server status, ALTEON-CHEETAH-SWITCH-MIB and HA group state [c23].",
+      "sysUpTime for uptime [c23].",
+      "The Alteon REST API is documented in Radware's Alteon REST API User Guide; confirm paths for the lab's AlteonOS version before coding [c9].",
+      "Cyber Controller is the multi-device management option; where the client uses it, query it instead of each device, after confirming its API in Radware's documentation.",
+      "Lab: Alteon VA from AWS Marketplace on a 30-day trial [c24]."
+     ]
+    },
+    {
+     "title": "Generic adapter (other load balancers, Anaya LB)",
+     "points": [
+      "Interface: get_vips(), get_ha(), get_sync(), get_version(), get_uptime(), each returning HealthReading.",
+      "Implementations: SNMP, SSH CLI with tested parsers, or vendor REST.",
+      "Capability flags so a device that cannot report sync says not_supported.",
+      "Contract tests run every adapter against the same expectations."
+     ]
+    },
+    {
+     "title": "Cisco APIC",
+     "points": [
+      "aaaLogin and aaaRefresh as in the REST guide [c27].",
+      "fabricNode for role and state, topSystem for uptime, fabricHealthTotal for fabric health [c26].",
+      "firmwareRunning and firmwareCtrlrRunning for versions [c44].",
+      "Faults from faultInst for context in verdicts [c26].",
+      "Practice on the DevNet ACI simulator when the lab APIC is busy [c42]."
+     ]
+    },
+    {
+     "title": "Partial data",
+     "points": [
+      "Every signal defaults to unknown until a reading proves otherwise.",
+      "A device with three of six signals is reported as partial, not healthy.",
+      "Unknown counts appear in run summaries and dashboards.",
+      "Tests feed fixtures with missing fields and assert unknown."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "snmpwalk the Alteon VA HA and virtual service tables [c23].",
+    "Show the generic adapter interface and one SSH implementation.",
+    "Query fabricHealthTotal and firmwareRunning on the APIC [c26][c44].",
+    "Remove a field from a fixture and show the reading becomes unknown."
+   ],
+   "lab": {
+    "brief": "Add the Alteon, generic and APIC collectors and prove a missing signal surfaces as unknown, not healthy.",
+    "steps": [
+     "Configure SNMPv3 on the lab Alteon VA and record a walk [c23].",
+     "Write the Alteon collector against the walk fixture.",
+     "Write the generic adapter interface and one implementation.",
+     "Write the APIC collector with aaaLogin and class queries [c26][c27].",
+     "Add contract tests for all adapters.",
+     "Add a fixture with no sync data for Alteon.",
+     "Run the whole library against the lab fleet.",
+     "Commit."
+    ],
+    "success_criteria": [
+     "Five platforms produce readings in one schema.",
+     "Alteon sync shows unknown when no data, not in_sync.",
+     "APIC readings include fabric health and versions.",
+     "Contract tests pass for every adapter."
+    ]
+   },
+   "common_pitfalls": [
+    "Hard-coding Alteon OIDs without checking the MIB for the version.",
+    "Using SNMPv2c community strings in the repository.",
+    "Treating ACI fabric health 97 as a device verdict.",
+    "Letting a not-supported signal count as healthy."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Which MIB holds Alteon Layer 4 virtual service data?",
+     "a": "ALTEON-CHEETAH-LAYER4-MIB [c23]."
+    },
+    {
+     "q": "Which APIC class gives fabric health?",
+     "a": "fabricHealthTotal at /api/node/class/fabricHealthTotal.json [c26]."
+    },
+    {
+     "q": "What does the generic adapter return for a signal the device cannot report?",
+     "a": "not_supported, which the verdict treats as unknown, never healthy."
+    },
+    {
+     "q": "Where do you confirm Alteon REST paths?",
+     "a": "In Radware's Alteon REST API User Guide for the version in use [c9]."
+    }
+   ],
+   "slides_and_assets": [
+    "Alteon MIB map.",
+    "Generic adapter interface spec.",
+    "APIC query card.",
+    "Partial-data test fixtures."
+   ],
+   "sources": [
+    "c9",
+    "c23",
+    "c24",
+    "c26",
+    "c27",
+    "c42",
+    "c44"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "Last change performed: correlating config history and change records",
+   "goal": "Learners build a per-device timeline that links a health change to the last change performed, from device logs, Git snapshots and ServiceNow change records.",
+   "learning_objectives": [
+    "Learners can extract config changes from F5 audit logs, NetScaler ns.log and APIC aaaModLR [c15][c22][c25].",
+    "Learners can pull change requests for a configuration item from ServiceNow [c35][c5].",
+    "Learners can store and diff configuration snapshots in Git.",
+    "Learners can merge sources into a timeline and link it to a health change."
+   ],
+   "lessons": [
+    {
+     "title": "Device-side change history",
+     "points": [
+      "F5: configuration audit messages go to /var/log/audit, logins to /var/log/secure; check that MCP audit logging is not at the default Disable [c15].",
+      "F5 sync problems are investigated in /var/log/ltm [c14].",
+      "NetScaler: ns.log in /var/log holds local logs; forward to syslog for longer history [c22].",
+      "APIC: aaaModLR tracks who changed what and when; a class query returns the whole fabric; no export policy exists by default [c25][c26]."
+     ]
+    },
+    {
+     "title": "ServiceNow change records",
+     "points": [
+      "Query change_request with sysparm_query on cmdb_ci and a date range, ordered by end date [c5].",
+      "Or use GET /sn_chg_rest/change with sysparm_query [c35].",
+      "Use sysparm_fields to fetch only number, state, start_date, end_date, short_description [c5].",
+      "Keep both closed and scheduled changes: closed ones explain, scheduled ones suppress."
+     ]
+    },
+    {
+     "title": "Git snapshots",
+     "points": [
+      "Nightly read-only export of running config into a Git repository per device.",
+      "Diffs between snapshots give exact changed lines.",
+      "Commit metadata records the collection time, not the change time.",
+      "Mask secrets before commit."
+     ]
+    },
+    {
+     "title": "The timeline",
+     "points": [
+      "Events from all sources normalised to time, device, actor, source, summary.",
+      "Link rule: the last change before the first unhealthy reading, within a window.",
+      "The NetScaler example: a change upgraded one node only; mismatched versions disable HA sync [c21].",
+      "Note the right order: NetScaler upgrades the secondary first, so a primary-only upgrade is a process deviation worth flagging [c21]."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Show a config change in F5 /var/log/audit after a tmsh modify [c15].",
+    "Query aaaModLR on the APIC for today [c25][c26].",
+    "Query ServiceNow for changes on lb-ns-02 [c5].",
+    "Show the merged timeline for lb-ns-02."
+   ],
+   "lab": {
+    "brief": "Make a controlled change on lb-ns-02, then watch the pipeline find it in the device log, the Git snapshot and the ServiceNow change record.",
+    "steps": [
+     "Raise a lab change in the PDI for lb-ns-02 [c43].",
+     "Make the approved config change on lb-ns-02.",
+     "Pull the change lines from ns.log [c22].",
+     "Take a Git snapshot and diff.",
+     "Query the change record by cmdb_ci [c5].",
+     "Merge into the timeline.",
+     "Run the collectors and link the reading to the change.",
+     "Save timeline.json."
+    ],
+    "success_criteria": [
+     "The change appears from all three sources with consistent times.",
+     "The timeline links it to the reading.",
+     "Secrets masked in Git.",
+     "Missing sources reported, not hidden."
+    ]
+   },
+   "common_pitfalls": [
+    "F5 MCP audit left at Disable so GUI changes are missing [c15].",
+    "ns.log rotated before the run [c22].",
+    "Time zone mismatch between device logs and ServiceNow.",
+    "Committing secrets in config snapshots."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Where does F5 write configuration audit messages?",
+     "a": "/var/log/audit [c15]."
+    },
+    {
+     "q": "Which APIC class tracks user changes?",
+     "a": "aaaModLR [c25]."
+    },
+    {
+     "q": "Which Table API parameter limits returned fields?",
+     "a": "sysparm_fields [c5]."
+    },
+    {
+     "q": "Why was the primary-only NetScaler upgrade a problem?",
+     "a": "Mismatched versions disable HA sync, and the documented order is secondary first [c21]."
+    }
+   ],
+   "slides_and_assets": [
+    "Timeline schema and example.",
+    "Log location table per platform.",
+    "ServiceNow query examples.",
+    "Git snapshot job."
+   ],
+   "sources": [
+    "c5",
+    "c14",
+    "c15",
+    "c21",
+    "c22",
+    "c25",
+    "c26",
+    "c35",
+    "c43"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "Claude as the triage analyst: structured health verdicts",
+   "goal": "Learners build a triage agent that turns evidence bundles into cited, severity-ranked HealthVerdicts, with severity rules enforced in code.",
+   "learning_objectives": [
+    "Learners can define a HealthVerdict schema and get it as structured output [c32].",
+    "Learners can write a prompt that forbids conclusions without cited readings.",
+    "Learners can implement severity rules as code that override the model.",
+    "Learners can test the agent with contradictory and missing evidence."
+   ],
+   "lessons": [
+    {
+     "title": "The verdict schema",
+     "points": [
+      "Fields: device, severity (info, minor, major, critical), affected_signals, evidence[] (reading ids), likely_cause, recommended_action, confidence, unknowns[].",
+      "Pass as output_format and read structured_output; treat error_max_structured_output_retries or a missing structured_output as failure [c32].",
+      "Draft-07 schema; enums for severity [c32].",
+      "Every evidence id must exist in the bundle, checked in code."
+     ]
+    },
+    {
+     "title": "Prompting with evidence bundles",
+     "points": [
+      "Bundle: readings, timeline, open tickets, maintenance windows.",
+      "Rule: no citation, no conclusion; unknowns listed explicitly.",
+      "Give platform facts the agent may use, for example that version mismatch disables NetScaler HA sync and F5 needs the same version in a device group [c21][c14].",
+      "Ask for recommended actions as steps a person takes, never commands the agent runs.",
+      "Build it with the Agent SDK in Python, which runs the same agent loop as Claude Code with hooks, permissions and MCP support, so the triage agent can call the read-only device tools when a reading needs refreshing [c8]."
+     ]
+    },
+    {
+     "title": "Severity rules in code",
+     "points": [
+      "Sync failed or pending in an HA pair: at least major.",
+      "A single VIP down on a standby: info.",
+      "Any signal unknown on an active unit: at least minor.",
+      "Code takes max(model severity, rule severity) and records both."
+     ]
+    },
+    {
+     "title": "Testing the analyst",
+     "points": [
+      "Twenty synthetic bundles with expected severity and required citations.",
+      "Contradictions: REST says in sync, CLI says pending.",
+      "Missing: no sync data on an HA pair.",
+      "Score: rule agreement, citation validity, unknown handling."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Show the lb-ns-02 bundle and run the agent.",
+    "Show the verdict citing hanode and nsversion readings [c2][c17].",
+    "Feed a bundle where the agent says minor for sync failure and show code raising to major.",
+    "Run the test suite and show the score."
+   ],
+   "lab": {
+    "brief": "Build the triage agent with the Agent SDK, feed it twenty synthetic evidence bundles and score its verdicts against the rules.",
+    "steps": [
+     "Write HealthVerdict model.",
+     "Write the prompt and bundle builder.",
+     "Call the agent with output_format [c32].",
+     "Implement citation checks.",
+     "Implement severity rules.",
+     "Run twenty bundles.",
+     "Score and inspect failures.",
+     "Tighten prompt or rules and re-run."
+    ],
+    "success_criteria": [
+     "All verdicts are schema-valid or recorded as failures.",
+     "Final severity always respects rules.",
+     "No verdict cites a reading that does not exist.",
+     "Missing evidence produces unknowns."
+    ]
+   },
+   "common_pitfalls": [
+    "Letting confidence text replace unknowns.",
+    "Not checking citation ids.",
+    "Rules in the prompt only.",
+    "Ignoring a success result with no structured_output [c32]."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Who sets final severity?",
+     "a": "Code: the higher of the rule severity and the model severity."
+    },
+    {
+     "q": "What severity is sync drift in an HA pair?",
+     "a": "Never below major."
+    },
+    {
+     "q": "What do you do with a success result that has no structured_output?",
+     "a": "Treat it as a failure [c32]."
+    },
+    {
+     "q": "Why must evidence ids be checked?",
+     "a": "To stop conclusions resting on invented readings."
+    }
+   ],
+   "slides_and_assets": [
+    "HealthVerdict schema.",
+    "Prompt template.",
+    "Twenty synthetic bundles with expected results.",
+    "Scoring script."
+   ],
+   "sources": [
+    "c2",
+    "c8",
+    "c14",
+    "c17",
+    "c21",
+    "c32"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "Creating or updating ServiceNow tickets",
+   "goal": "Learners build a ticket adapter that updates, reopens or creates incidents through the Table API without ever creating duplicates.",
+   "learning_objectives": [
+    "Learners can create, query and update incidents through the Table API [c5][c6].",
+    "Learners can implement the update, reopen or create decision with a correlation key.",
+    "Learners can use Flow Designer for assignment, notification and priority [c36].",
+    "Learners can run idempotently and in dry-run mode."
+   ],
+   "lessons": [
+    {
+     "title": "Table API basics",
+     "points": [
+      "POST /api/now/table/incident inserts one record and returns 201 with a Location header [c5].",
+      "The REST API Explorer walkthrough needs admin, web_service_admin or rest_api_explorer [c6].",
+      "GET with sysparm_query and sysparm_fields to find existing tickets [c5].",
+      "PATCH /api/now/table/incident/{sys_id} to add work_notes or change state [c5]."
+     ]
+    },
+    {
+     "title": "Correlation and decisions",
+     "points": [
+      "Correlation key: device:signal, for example lb-ns-02:ha-sync, stored on the incident (correlation_id is the usual field; confirm it in the PDI dictionary) and also in the adapter's own state.",
+      "Open ticket found: update work notes.",
+      "Resolved within reopen window: reopen, which needs approval.",
+      "None: create.",
+      "Always query before create, and lock per key during a run."
+     ]
+    },
+    {
+     "title": "Flow Designer",
+     "points": [
+      "Trigger on incident created or updated with the correlation prefix.",
+      "Assign by cmdb_ci support group, notify, and set priority from impact and urgency mapped from severity.",
+      "Use Ask for Approval with a Due Date where the process needs a human step [c36].",
+      "Keep business logic in one place; the adapter does not duplicate flow logic."
+     ]
+    },
+    {
+     "title": "Idempotence and dry run",
+     "points": [
+      "Same input twice gives one ticket and one extra work note.",
+      "Dry run prints the payload and decision without calling ServiceNow.",
+      "Every decision is written to the audit record.",
+      "Back off on 429 and 5xx responses."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Create an incident with curl and show the Location header [c5].",
+    "Query by correlation key and patch work notes [c5].",
+    "Run the adapter twice on the lb-ns-02 verdict.",
+    "Show the flow assigning and notifying."
+   ],
+   "lab": {
+    "brief": "Run the pipeline twice against a failing HA pair and prove it creates one incident, then updates it with new work notes.",
+    "steps": [
+     "Prepare the PDI user and roles [c6][c43].",
+     "Write the query, create and patch functions [c5].",
+     "Write the decision logic.",
+     "Add dry-run mode.",
+     "Build the flow [c36].",
+     "Break sync on the lab NetScaler pair.",
+     "Run twice and check the incident.",
+     "Resolve and run again to test reopen."
+    ],
+    "success_criteria": [
+     "One incident after two runs.",
+     "Second run added work notes.",
+     "Dry run sends nothing.",
+     "Reopen path routed for approval."
+    ]
+   },
+   "common_pitfalls": [
+    "Static correlation values that reopen unrelated closed incidents.",
+    "Creating before querying.",
+    "Priority set both in code and in flow.",
+    "Retrying POST after a timeout without checking."
+   ],
+   "knowledge_check": [
+    {
+     "q": "What does POST to the Table API return on success?",
+     "a": "201 with a Location header for the new record [c5]."
+    },
+    {
+     "q": "When does the adapter create a new ticket?",
+     "a": "Only when no open or recently resolved ticket matches the correlation key."
+    },
+    {
+     "q": "Why use a Due Date in Ask for Approval?",
+     "a": "To stop the flow waiting forever [c36]."
+    },
+    {
+     "q": "What does dry run do?",
+     "a": "Prints the payload and decision without calling ServiceNow."
+    }
+   ],
+   "slides_and_assets": [
+    "Decision table: update, reopen, create.",
+    "Incident payload mapping.",
+    "Flow export for the PDI.",
+    "Postman or curl collection."
+   ],
+   "sources": [
+    "c5",
+    "c6",
+    "c36",
+    "c43"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "Guardrails, approvals and audit for health monitoring",
+   "goal": "Learners add approval gates, an audit record and flood protection so nothing consequential happens without a person and every run is explainable.",
+   "learning_objectives": [
+    "Learners can show the MCP server has no write tools for devices [c30].",
+    "Learners can gate P1/P2, reopen and paging behind approval.",
+    "Learners can write a complete audit record per run in SQLite.",
+    "Learners can add rate limits, timeouts and circuit breakers."
+   ],
+   "lessons": [
+    {
+     "title": "Read-only by default",
+     "points": [
+      "Only get_* tools; tools/list proves it [c30].",
+      "Agent denied Bash and write tools; PreToolUse hook blocks any mcp__devices__set* names [c33][c34].",
+      "Device accounts are read-only roles.",
+      "The MCP spec expects confirmation for sensitive operations and human ability to deny [c30]."
+     ]
+    },
+    {
+     "title": "Approval gates",
+     "points": [
+      "Consequential: priority 1 or 2, reopening, paging on-call.",
+      "The run pauses with status PENDING APPROVAL and a request to the NOC lead.",
+      "Approval via ServiceNow Ask for Approval or a CLI approve command recorded in audit [c36].",
+      "Timeout leaves the ticket at priority 3 with a note."
+     ]
+    },
+    {
+     "title": "Audit record",
+     "points": [
+      "Tables: runs, readings, prompts, verdicts, ticket_actions, approvals.",
+      "Each row has run id, timestamps and hashes.",
+      "Never store secrets; store source paths.",
+      "Clients should log tool usage for audit [c30]."
+     ]
+    },
+    {
+     "title": "Flood protection",
+     "points": [
+      "Per-device rate limit on ticket actions.",
+      "Circuit breaker opens after N flaps in M minutes and writes one summary note.",
+      "Timeouts on every device and ServiceNow call; servers must rate limit tool calls [c30].",
+      "Back off on ServiceNow errors."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Show tools/list output.",
+    "Trigger a P1 verdict and show the pause.",
+    "Approve and show the audit rows.",
+    "Flap a VIP and show the circuit breaker."
+   ],
+   "lab": {
+    "brief": "Add the approval gate and audit log, then trigger a P1 verdict and watch the run pause until a person approves.",
+    "steps": [
+     "Add the SQLite schema.",
+     "Write audit calls in every stage.",
+     "Implement the approval gate.",
+     "Add the hook and deny rules [c33][c34].",
+     "Trigger a P1 bundle.",
+     "Approve and resume.",
+     "Flap a VIP to test the breaker.",
+     "Export the run report."
+    ],
+    "success_criteria": [
+     "P1 waits for approval.",
+     "Audit has every stage for the run.",
+     "Breaker limits ticket actions.",
+     "No write tools exposed."
+    ]
+   },
+   "common_pitfalls": [
+    "Approvals stored only in chat.",
+    "Secrets in audit rows.",
+    "Breaker that hides a real outage without a summary.",
+    "Gate bypass in dry-run code paths."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Which actions need approval?",
+     "a": "P1/P2 priority, reopening resolved tickets and paging on-call."
+    },
+    {
+     "q": "How do you prove the MCP server is read-only?",
+     "a": "tools/list shows only get_* tools [c30]."
+    },
+    {
+     "q": "What does the circuit breaker do?",
+     "a": "Stops repeated ticket actions for a flapping device and writes one summary."
+    },
+    {
+     "q": "Which hook event blocks a tool call?",
+     "a": "PreToolUse, with exit code 2 or permissionDecision deny [c33]."
+    }
+   ],
+   "slides_and_assets": [
+    "Gate flow diagram.",
+    "SQLite schema.",
+    "Hook script.",
+    "Run report template."
+   ],
+   "sources": [
+    "c30",
+    "c33",
+    "c34",
+    "c36"
+   ]
+  },
+  {
+   "day": 3,
+   "title": "Scheduling and running the workflow with GitHub Actions",
+   "goal": "Learners ship the pipeline through reviewed pull requests and run it on a schedule from a self-hosted runner, without false tickets during maintenance.",
+   "learning_objectives": [
+    "Learners can protect main with reviews and checks [c38].",
+    "Learners can schedule and dispatch the workflow [c7].",
+    "Learners can run on a self-hosted runner that reaches the devices [c37].",
+    "Learners can suppress alerts during declared maintenance windows."
+   ],
+   "lessons": [
+    {
+     "title": "Repository and reviews",
+     "points": [
+      "collectors/, rules/, ticketing/, agent/, tests/, .github/workflows/.",
+      "Every collector or rule change through a PR with required review and checks [c38].",
+      "Dismiss stale approvals and include administrators [c38].",
+      "CODEOWNERS for rules files."
+     ]
+    },
+    {
+     "title": "Schedule and dispatch",
+     "points": [
+      "on.schedule with cron, UTC by default, optional timezone; minimum every 5 minutes [c7].",
+      "Avoid :00, which can be delayed under load [c7].",
+      "Runs only from the default branch [c7].",
+      "workflow_dispatch for on-demand runs."
+     ]
+    },
+    {
+     "title": "Self-hosted runner and secrets",
+     "points": [
+      "Runner in the NOC network; outbound HTTPS 443 to GitHub only [c37].",
+      "runs-on labels route the job to that runner [c37].",
+      "Jobs not picked up fail after 24 hours queued [c37].",
+      "Agent runs headless with allowed_tools and dontAsk [c34]."
+     ]
+    },
+    {
+     "title": "Maintenance windows",
+     "points": [
+      "Pull scheduled changes for each device [c35].",
+      "Readings during a window are recorded but ticket actions are suppressed.",
+      "Suppression ends at window end; a still-unhealthy device then raises a ticket.",
+      "Daily digest posted to ServiceNow as a work note on a summary record."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Open a PR changing a rule and show required checks.",
+    "Show the workflow YAML with schedule and dispatch [c7].",
+    "Show the runner online and a run picking it up [c37].",
+    "Declare a window for lb-alt-01 and show suppression."
+   ],
+   "lab": {
+    "brief": "Ship the pipeline through a pull request, run it from Actions on a schedule and suppress alerts during a declared maintenance window.",
+    "steps": [
+     "Set branch protection [c38].",
+     "Register a self-hosted runner [c37].",
+     "Write the workflow with schedule and dispatch [c7].",
+     "Add repository secrets.",
+     "Merge via PR.",
+     "Declare a change window in the PDI [c35][c43].",
+     "Break a VIP on the device in the window.",
+     "Confirm no ticket, then end the window and confirm the ticket."
+    ],
+    "success_criteria": [
+     "Scheduled runs succeed on the runner.",
+     "No unreviewed change reaches main.",
+     "No ticket during the window.",
+     "Ticket after the window if still unhealthy."
+    ]
+   },
+   "common_pitfalls": [
+    "Cron at minute 0 [c7].",
+    "Workflow on a non-default branch never runs on schedule [c7].",
+    "Runner with inbound firewall holes it does not need [c37].",
+    "Window times without time zone."
+   ],
+   "knowledge_check": [
+    {
+     "q": "What is the shortest schedule interval?",
+     "a": "Every 5 minutes [c7]."
+    },
+    {
+     "q": "What network access does a self-hosted runner need?",
+     "a": "Outbound HTTPS on 443 to GitHub [c37]."
+    },
+    {
+     "q": "Which branch do scheduled workflows use?",
+     "a": "The default branch [c7]."
+    },
+    {
+     "q": "What happens to readings during a maintenance window?",
+     "a": "They are recorded but ticket actions are suppressed."
+    }
+   ],
+   "slides_and_assets": [
+    "Workflow YAML.",
+    "Runner setup guide.",
+    "Maintenance window logic diagram.",
+    "Branch protection checklist."
+   ],
+   "sources": [
+    "c7",
+    "c34",
+    "c35",
+    "c37",
+    "c38",
+    "c43"
+   ]
+  },
+  {
+   "day": 3,
+   "title": "Testing, dashboards and operations",
+   "goal": "Learners finish test suites, export readings to Prometheus and Grafana, write the operator runbook and measure outcomes.",
+   "learning_objectives": [
+    "Learners can run pytest suites for collectors, rules and ticket logic with fixtures.",
+    "Learners can expose readings to Prometheus correctly for a batch job [c39].",
+    "Learners can build a Grafana fleet dashboard [c40].",
+    "Learners can write runbook entries and measure time to ticket, duplicates and false positives."
+   ],
+   "lessons": [
+    {
+     "title": "Test suites",
+     "points": [
+      "Collectors: fixture per endpoint, including errors.",
+      "Rules: table-driven tests per severity rule.",
+      "Ticketing: decision table tests with a fake ServiceNow.",
+      "Agent: the twenty-bundle suite from day 2, run nightly."
+     ]
+    },
+    {
+     "title": "Prometheus export",
+     "points": [
+      "Health runs are batch jobs; the Pushgateway is only for service-level batch outcomes [c39].",
+      "Per-device readings fit the Node Exporter textfile collector on the runner host instead [c39].",
+      "Pushed series persist until deleted, so stale devices need cleanup [c39].",
+      "Metrics: device_health_signal{device,signal,value}, run_duration_seconds, tickets_actions_total."
+     ]
+    },
+    {
+     "title": "Grafana dashboard",
+     "points": [
+      "Add the Prometheus data source from Connections; local URL http://localhost:9090; Organization administrator role [c40].",
+      "Panels: fleet status grid, unknown count, sync failures, time to ticket.",
+      "Link panels to ServiceNow incidents by correlation key.",
+      "Dashboard JSON stored in the repository."
+     ]
+    },
+    {
+     "title": "Runbook and measures",
+     "points": [
+      "Collector fails: check credentials, reachability, API change; readings show unknown.",
+      "Verdict wrong: record case, add fixture, fix rule or prompt.",
+      "ServiceNow down: queue actions, retry, alert by another channel.",
+      "Measures: time to ticket, duplicate rate, false positive rate."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Run the full pytest suite.",
+    "Show the textfile collector output and Prometheus scrape [c39].",
+    "Build two Grafana panels [c40].",
+    "Break a collector and show dashboard, audit and runbook together."
+   ],
+   "lab": {
+    "brief": "Break a collector on purpose, watch the dashboard and the audit log explain it, and write the runbook entry.",
+    "steps": [
+     "Complete test suites.",
+     "Add metrics export [c39].",
+     "Set up Prometheus and Grafana [c40].",
+     "Build the dashboard.",
+     "Break the NetScaler collector credentials.",
+     "Watch unknown rise and audit errors.",
+     "Write the runbook entry.",
+     "Compute the three measures from audit data."
+    ],
+    "success_criteria": [
+     "Tests pass in CI.",
+     "Dashboard shows the broken collector as unknown.",
+     "Runbook entry is actionable.",
+     "Measures computed from data."
+    ]
+   },
+   "common_pitfalls": [
+    "Pushgateway for per-device metrics [c39].",
+    "Dashboards that hide unknown.",
+    "Tests that need live devices.",
+    "Measures computed by hand."
+   ],
+   "knowledge_check": [
+    {
+     "q": "When is the Pushgateway appropriate?",
+     "a": "For capturing the outcome of a service-level batch job [c39]."
+    },
+    {
+     "q": "What role do you need to add a Grafana data source?",
+     "a": "Organization administrator [c40]."
+    },
+    {
+     "q": "Name the three outcome measures.",
+     "a": "Time to ticket, duplicate rate and false positive rate."
+    },
+    {
+     "q": "What happens to pushed series for a removed device?",
+     "a": "They stay until deleted through the Pushgateway API [c39]."
+    }
+   ],
+   "slides_and_assets": [
+    "Grafana dashboard JSON.",
+    "Metrics naming guide.",
+    "Runbook template.",
+    "Measures query sheet."
+   ],
+   "sources": [
+    "c39",
+    "c40"
+   ]
+  },
+  {
+   "day": 3,
+   "title": "Capstone: end-to-end device health monitoring for a mixed fleet",
+   "goal": "Teams run the full platform on the lab fleet, compare dry run and live run, and hand over with a limitations statement.",
+   "learning_objectives": [
+    "Learners can run the scheduled pipeline end to end with gates and audit.",
+    "Learners can compare dry-run and live results against acceptance criteria.",
+    "Learners can hand over with a runbook and limitations statement."
+   ],
+   "lessons": [
+    {
+     "title": "Acceptance criteria",
+     "points": [
+      "All five platforms read; unknowns explained.",
+      "Correct ticket actions with zero duplicates.",
+      "No consequential action without approval.",
+      "Audit complete for every run."
+     ]
+    },
+    {
+     "title": "Dry run versus live",
+     "points": [
+      "Dry run first, compare decisions.",
+      "Live run, compare ServiceNow state.",
+      "Differences explained.",
+      "False positives logged."
+     ]
+    },
+    {
+     "title": "Handover",
+     "points": [
+      "Runbook, dashboard, repository, schedule.",
+      "Limitations: platforms, signals, APIs not covered.",
+      "Owner and review cadence.",
+      "Demo to the room."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Inject three faults into the fleet.",
+    "Show the acceptance checklist.",
+    "Show a model handover pack.",
+    "Explain scoring."
+   ],
+   "lab": {
+    "brief": "Capstone build and demo on the full lab fleet.",
+    "steps": [
+     "Reset fleet and PDI.",
+     "Run dry run and record.",
+     "Run live on schedule.",
+     "Handle approvals.",
+     "Check duplicates and false positives.",
+     "Write limitations.",
+     "Demo."
+    ],
+    "success_criteria": [
+     "Acceptance criteria met.",
+     "Zero duplicates.",
+     "Audit complete.",
+     "Clear limitations."
+    ]
+   },
+   "common_pitfalls": [
+    "Skipping the dry run.",
+    "Hiding unknowns.",
+    "Vague limitations."
+   ],
+   "knowledge_check": [
+    {
+     "q": "What proves zero duplicates?",
+     "a": "Audit ticket actions and ServiceNow records match one incident per correlation key."
+    },
+    {
+     "q": "Why compare dry run and live?",
+     "a": "To catch differences between intended and actual ticket actions."
+    },
+    {
+     "q": "Name one limitation to state.",
+     "a": "For example a platform whose sync status cannot be read."
+    }
+   ],
+   "slides_and_assets": [
+    "Capstone brief and rubric.",
+    "Acceptance checklist.",
+    "Handover pack template."
+   ],
+   "sources": [
+    "c5",
+    "c7",
+    "c30",
+    "c32"
+   ]
+  }
+ ],
+ "capstone_plan": {
+  "brief": "Teams run the scheduled platform against the full lab fleet with injected faults, compare dry run and live, and hand over.",
+  "milestones": [
+   "All collectors green or explained",
+   "Triage suite passing",
+   "Ticket adapter idempotent",
+   "Gates and audit working",
+   "Scheduled run on the runner",
+   "Dashboard and runbook",
+   "Demo and handover"
+  ],
+  "evaluation_notes": [
+   "Zero duplicate tickets and no ungated P1/P2.",
+   "Unknowns are explicit.",
+   "Verdicts cite readings.",
+   "Runbook and limitations are specific."
+  ]
+ },
+ "promo_video_research": {
+  "hook_basis": "The scenario of someone logging in to every device each morning is a teaching scenario drawn from the client's use case, not a measured statistic. It is realistic because sync and HA state need checking on each member [c14][c2], and version mismatches silently disable NetScaler HA sync [c21].",
+  "claims_check": [
+   {
+    "claim": "'Six signals. One verdict.'",
+    "basis": "The six signals come from the client input; the verdict is the course's HealthVerdict output [c32]."
+   },
+   {
+    "claim": "'11 build steps'",
+    "basis": "Matches the 11 modules in content.py."
+   },
+   {
+    "claim": "lb-f5-01/02 version 17.1.1, HA active/standby, sync IN-SYNC",
+    "basis": "Failover states and In Sync are real F5 values [c13][c14]; 17.1.1 is a lab fixture value not checked against F5 release notes."
+   },
+   {
+    "claim": "lb-ns-01 14.1 primary sync SUCCESS; lb-ns-02 13.1 secondary sync FAILED",
+    "basis": "Mismatched versions disable HA config sync [c21]. The NITRO hasync field is an enable setting; failure comes from hasyncfailurereason and haerrsyncfailure [c18][c2]. 'SUCCESS/FAILED' mirror the CLI Sync State shown by show ha node [c19]."
+   },
+   {
+    "claim": "'vips 22/23 up'",
+    "basis": "Derived from lbvserver states [c1]."
+   },
+   {
+    "claim": "apic-01 version 6.0(3), fabric health 97, nodes 12/12",
+    "basis": "fabricHealthTotal and fabricNode are the sources [c26]; values are illustrative."
+   },
+   {
+    "claim": "lb-alt-01 version 33.0, VRRP master, sync UNKNOWN",
+    "basis": "Course design: missing data shows unknown. AlteonOS 31.x-35.x lines exist [c9][c24]; values illustrative."
+   },
+   {
+    "claim": "'CHG0031877 NetScaler 14.1 upgrade closed 2d ago, primary only'",
+    "basis": "Teaching scenario. NetScaler documents upgrading the secondary first, so a primary-only upgrade is a deviation the course teaches learners to flag [c21]."
+   },
+   {
+    "claim": "'correlation_id=lb-ns-02:ha-sync found INC0048112'",
+    "basis": "Lookup uses Table API queries [c5]. We did not find official ServiceNow documentation of the incident correlation_id field; instructors should confirm it in the PDI dictionary. Numbers are fictional."
+   },
+   {
+    "claim": "'priority: 2 -> PENDING APPROVAL (noc-lead)'",
+    "basis": "Course design: P1/P2 wait for a person; MCP guidance calls for human confirmation of sensitive operations [c30]."
+   },
+   {
+    "claim": "'schedule: every 30 min, runner: noc-runner-01'",
+    "basis": "GitHub schedules allow intervals down to 5 minutes and self-hosted runners [c7][c37]."
+   },
+   {
+    "claim": "'maintenance window ... alerts suppressed'",
+    "basis": "Course design using scheduled change records [c35]."
+   },
+   {
+    "claim": "'tests: 64/64, time to ticket 4m 12s, duplicates 0'",
+    "basis": "Illustrative run output."
+   },
+   {
+    "claim": "'5 device platforms covered'",
+    "basis": "F5, NetScaler, Radware, other load balancers (Anaya LB, via the generic adapter) and Cisco ACI. Anaya LB itself could not be found in public documentation."
+   },
+   {
+    "claim": "'0 duplicate tickets'",
+    "basis": "Design target measured in the capstone through the correlation key logic [c5]."
+   },
+   {
+    "claim": "'Flow Designer handles assignment and notification'",
+    "basis": "Flow Designer actions such as Ask for Approval are documented by ServiceNow [c36]."
+   },
+   {
+    "claim": "'Export readings to Prometheus and a Grafana fleet dashboard'",
+    "basis": "Supported by Prometheus and Grafana docs [c39][c40]."
+   }
+  ]
+ },
+ "citations": [
+  {
+   "id": "c1",
+   "title": "lbvserver (Statistics for Load Balancing Virtual Server resource)",
+   "url": "https://developer-docs.netscaler.com/en-us/adc-nitro-api/current-release/statistics/lb/lbvserver",
+   "publisher": "NetScaler (Cloud Software Group) developer docs",
+   "supports": "Module: NetScaler virtual server health via NITRO stat API",
+   "key_fact": "GET /nitro/v1/stat/lbvserver (or /lbvserver/<name>) returns per-vserver state values such as UP(7), DOWN(1), OFS(4), TROFS(5), plus vslbhealth (percentage of bound services that are UP), actsvcs and totalrequests.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c2",
+   "title": "hanode (Statistics for HA node resource)",
+   "url": "https://developer-docs.netscaler.com/en-us/adc-nitro-api/13/statistics/ha/hanode",
+   "publisher": "NetScaler (Cloud Software Group) developer docs",
+   "supports": "Module: NetScaler HA pair and config-sync status checks",
+   "key_fact": "GET /nitro/v1/stat/hanode exposes hacurmasterstate (PRIMARY/SECONDARY/CLAIMING/FORCE CHANGE), hacurstate (UP, DISABLED, PARTIALFAIL, COMPLETEFAIL, etc.) and haerrsyncfailure, a counter of failed primary/secondary config syncs since the last transition, commonly caused by an RPC password mismatch. Requests authenticate with a NITRO_AUTH_TOKEN cookie or X-NITRO-USER/X-NITRO-PASS headers; hacurstatus NO means the other HA statistics are invalid.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c3",
+   "title": "iControlREST Home",
+   "url": "https://clouddocs.f5.com/api/icontrol-rest/",
+   "publisher": "F5 CloudDocs",
+   "supports": "Module: F5 BIG-IP polling via iControl REST",
+   "key_fact": "iControl REST is the REST successor to the SOAP iControl framework; anything doable from the BIG-IP command line can be done programmatically, with LTM objects such as pools reached under /mgmt/tm/ltm/ (example: POST to /mgmt/tm/ltm/pool with basic-auth credentials).",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c4",
+   "title": "APIRef_tm_ltm_pool_members",
+   "url": "https://clouddocs.f5.com/api/icontrol-rest/APIRef_tm_ltm_pool_members.html",
+   "publisher": "F5 CloudDocs",
+   "supports": "Module: interpreting F5 pool member state/session fields",
+   "key_fact": "Pool member objects expose a state field (user-down forces the member offline overriding monitors; user-up returns it to its monitor-derived state), a session field (default user-enabled, controlling new sessions) and a monitor field listing assigned health monitors and their status.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c5",
+   "title": "Table API (Table - POST /now/table/{tableName})",
+   "url": "https://www.servicenow.com/docs/r/api-reference/rest-apis/c_TableAPI.html",
+   "publisher": "ServiceNow product documentation",
+   "supports": "Module: ServiceNow incident creation via Table API",
+   "key_fact": "POST /now/table/{tableName} inserts exactly one record (bulk insert not supported), accepts JSON or XML bodies via Content-Type, returns 201 with a Location header for the new record, and the calling user must hold roles sufficient to access the target table; an example posts short_description, assignment_group, urgency and impact to incident. GET /now/table/{tableName} supports sysparm_query encoded queries (^ for AND, ^OR, ORDERBY/ORDERBYDESC), sysparm_fields, sysparm_limit (default 10000) and sysparm_display_value, and PATCH /now/table/{tableName}/{sys_id} updates the named fields.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c6",
+   "title": "Create an incident record",
+   "url": "https://www.servicenow.com/docs/r/api-reference/rest-api-explorer/t_GetStartedCreateInt.html",
+   "publisher": "ServiceNow product documentation",
+   "supports": "Module: hands-on lab creating an incident from a health-check failure",
+   "key_fact": "The walkthrough POSTs to https://instance.service-now.com/api/now/v1/table/incident with a body like {\"short_description\":\"...\",\"comments\":\"...\"}; it requires the admin, web_service_admin or rest_api_explorer role and the response includes a Location header pointing at the new incident.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c7",
+   "title": "Events that trigger workflows",
+   "url": "https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule",
+   "publisher": "GitHub Docs",
+   "supports": "Module: scheduling health checks with GitHub Actions cron",
+   "key_fact": "The schedule event uses five-field POSIX cron in UTC (a time zone can be set), minimum interval is every 5 minutes, runs only from the default branch, can be delayed at the top of the hour under load, and scheduled workflows in public repos are auto-disabled after 60 days of inactivity.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c8",
+   "title": "Agent SDK overview",
+   "url": "https://code.claude.com/docs/en/agent-sdk/overview",
+   "publisher": "Anthropic (Claude Code docs)",
+   "supports": "Module: orchestrating device checks and ticketing with a Claude agent",
+   "key_fact": "The Claude Agent SDK, available in Python and TypeScript, runs the same agent loop as Claude Code with built-in tools (file read/write, run commands, web search), hooks, subagents, permissions, sessions and MCP support for connecting external tools and data sources.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c9",
+   "title": "Related Documentation (AlteonOS 31.0.11.0 Release Notes)",
+   "url": "https://portals.radware.com/releasenotes/Alteon_Release_Notes_31.0.11.0/Alteon_Release_Notes/AlteonOS-31_0_11_0-RN.1.51.html",
+   "publisher": "Radware",
+   "supports": "Module: Radware Alteon monitoring and REST API reference pointer",
+   "key_fact": "Radware's official Alteon documentation set includes a dedicated 'Alteon REST API User Guide' alongside the Command Reference, CLI Application Guide and Troubleshooting Guide, which are the primary references for programmatic status and uptime checks on Alteon ADCs.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c10",
+   "title": "F5 iControl REST API reference: tm/cm/sync-status",
+   "url": "https://clouddocs.f5.com/api/icontrol-rest/APIRef_tm_cm_sync-status.html",
+   "publisher": "F5 CloudDocs",
+   "supports": "Collecting health from F5 and NetScaler",
+   "key_fact": "Config sync status is read from the collection /mgmt/tm/cm/sync-status (OPTIONS, GET) or a resource under it; the endpoint is read-only.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c11",
+   "title": "F5 iControl REST API reference: tm/cm/device",
+   "url": "https://clouddocs.f5.com/api/icontrol-rest/APIRef_tm_cm_device.html",
+   "publisher": "F5 CloudDocs",
+   "supports": "Collecting health from F5 and NetScaler",
+   "key_fact": "/mgmt/tm/cm/device returns each device-group member with failoverState (default unknown), haCapacity, version, build, selfDevice, managementIp and timeZone.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c12",
+   "title": "iControl REST Cookbook - Virtual Server (ltm virtual)",
+   "url": "https://community.f5.com/kb/technicalarticles/icontrol-rest-cookbook---virtual-server-ltm-virtual/287546",
+   "publisher": "F5 DevCentral",
+   "supports": "Collecting health from F5 and NetScaler",
+   "key_fact": "GET /mgmt/tm/ltm/virtual/<vs>/stats returns counters under entries/nestedStats including status.availabilityState (for example available), status.enabledState and status.statusReason; the tmsh equivalent is show ltm virtual.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c13",
+   "title": "tmsh reference: sys failover",
+   "url": "https://clouddocs.f5.com/cli/tmsh-reference/v16/modules/sys/sys_failover.html",
+   "publisher": "F5 CloudDocs",
+   "supports": "Collecting health from F5 and NetScaler; What device health means across the fleet",
+   "key_fact": "tmsh show sys failover displays the failover state (active, standby, offline, forced_offline) and how long the unit has been in that state.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c14",
+   "title": "Managing Configuration Synchronization (BIG-IP Device Service Clustering 14.1)",
+   "url": "https://techdocs.f5.com/kb/en-us/products/big-ip_ltm/manuals/product/big-ip-device-service-clustering-administration-14-1-0/05.html",
+   "publisher": "F5 TechDocs",
+   "supports": "What device health means across the fleet; Claude as the triage analyst",
+   "key_fact": "Sync statuses are In Sync, Changes Pending, Awaiting Initial Sync, Not All Devices Synced and Disconnected (iQuery channel down); sync failures are investigated in /var/log/ltm; all device group members must run the same BIG-IP software version; automatic sync still needs the config saved (save sys config or save-on-auto-sync).",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c15",
+   "title": "Auditing User Access (BIG-IP 17.0)",
+   "url": "https://techdocs.f5.com/en-us/bigip-17-0-0/big-ip-systems-user-account-administration/auditing-user-access.html",
+   "publisher": "F5 TechDocs",
+   "supports": "Last change performed: correlating config history and change records",
+   "key_fact": "Configuration change audit messages go to /var/log/audit and login/logout messages to /var/log/secure; MCP audit levels are Disable (default), Enable, Verbose and Debug, and the tmsh audit level Enable (default) logs every tmsh command.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c16",
+   "title": "Authentication (F5 BIG-IP Declarative Onboarding docs)",
+   "url": "https://clouddocs.f5.com/products/extensions/f5-declarative-onboarding/latest/authentication.html",
+   "publisher": "F5 CloudDocs",
+   "supports": "Collecting health from F5 and NetScaler; Setting up Claude Code, the Agent SDK and MCP for this workflow",
+   "key_fact": "Token auth is a POST to /mgmt/shared/authn/login with username, password and loginProviderName tmos; the token goes in the X-F5-Auth-Token header, lasts 20 minutes by default and can be extended with a PATCH to /mgmt/shared/authz/tokens/<token> up to 36000 seconds.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c17",
+   "title": "nsversion (NITRO configuration)",
+   "url": "https://developer-docs.netscaler.com/en-us/adc-nitro-api/current-release/configuration/ns/nsversion",
+   "publisher": "NetScaler developer docs",
+   "supports": "Collecting health from F5 and NetScaler",
+   "key_fact": "GET /nitro/v1/config/nsversion returns version (read-only), mode (kernel mode KMPE/VMPE) and installedversion.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c18",
+   "title": "hanode (NITRO configuration)",
+   "url": "https://developer-docs.netscaler.com/en-us/adc-nitro-api/current-release/configuration/ha/hanode",
+   "publisher": "NetScaler developer docs",
+   "supports": "Collecting health from F5 and NetScaler",
+   "key_fact": "The hanode configuration resource exposes state (Primary, Secondary, UNKNOWN), hastatus (ENABLED, STAYSECONDARY, DISABLED, STAYPRIMARY), hasync as an ENABLED/DISABLED setting, the read-only hasyncfailurereason, masterstatetime and routemonitorstate (UP, DOWN).",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c19",
+   "title": "ha node (NetScaler command reference)",
+   "url": "https://developer-docs.netscaler.com/en-us/adc-command-reference-int/13/ha/ha-node",
+   "publisher": "NetScaler developer docs",
+   "supports": "Collecting health from F5 and NetScaler; What device health means across the fleet",
+   "key_fact": "show HA node output includes name, IPAddress, haStatus, state (HA master state), haSync (HA Sync State), haProp, haSyncFailureReason, masterStateTime and routeMonitorState; master states are PRIMARY, SECONDARY and CLAIMING.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c20",
+   "title": "system (NITRO statistics)",
+   "url": "https://developer-docs.netscaler.com/en-us/adc-nitro-api/current-release/statistics/system/system",
+   "publisher": "NetScaler developer docs",
+   "supports": "Collecting health from F5 and NetScaler",
+   "key_fact": "GET /nitro/v1/stat/system returns starttime, starttimelocal and timesincestart (seconds since the appliance started) plus CPU and memory percentages such as cpuusagepcnt and memusagepcnt.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c21",
+   "title": "Upgrade a high availability pair (NetScaler)",
+   "url": "https://docs.netscaler.com/en-us/citrix-adc/current-release/upgrade-downgrade-citrix-adc-appliance/upgrade-downgrade-ha-pair",
+   "publisher": "NetScaler product documentation",
+   "supports": "Claude as the triage analyst; Last change performed",
+   "key_fact": "When the two HA nodes run different software versions, HA config synchronization, HA command propagation and connection mirroring are disabled (for builds of one release only when internal HA versions differ); upgrade the secondary node first and then the primary.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c22",
+   "title": "Audit logging (NetScaler)",
+   "url": "https://docs.netscaler.com/en-us/citrix-adc/current-release/system/audit-logging",
+   "publisher": "NetScaler product documentation",
+   "supports": "Last change performed: correlating config history and change records",
+   "key_fact": "Logs are stored locally in ns.log under /var/log/ by default with all levels except DEBUG enabled; NetScaler can also send audit messages up to 16 KB to external SYSLOG (UDP) or NSLOG (TCP) servers.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c23",
+   "title": "Radware Alteon Load Balancer extension",
+   "url": "https://docs.dynatrace.com/docs/observe/infrastructure-observability/extensions/radware-alteon-load-balancer",
+   "publisher": "Dynatrace documentation",
+   "supports": "Collecting health from Radware, other load balancers (Anaya LB) and Cisco ACI",
+   "key_fact": "SNMP v2c/v3 monitoring of Alteon uses IF-MIB, ALTEON-CHEETAH-LAYER4-MIB, ALTEON-CHEETAH-NETWORK-MIB, ALTEON-CHEETAH-SWITCH-MIB and ALTEON-ROOT-MIB, with metrics for real server status per virtual service, HA service group state, HA mode and sysUpTime.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c24",
+   "title": "Radware Alteon VA on AWS Marketplace",
+   "url": "https://aws.amazon.com/marketplace/pp/prodview-wknsymopbqpay",
+   "publisher": "Radware via AWS Marketplace",
+   "supports": "Lab environment",
+   "key_fact": "Radware sells Alteon VA as an AMI (listed version AlteonOS-U22-35.0.0.0-1374) with hourly usage pricing and a 30-day free trial; the listing names vDirect and Vision as automation tools that work with it.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c25",
+   "title": "User access, authentication and accounting (Cisco ACI Fundamentals 5.1(x))",
+   "url": "https://www.cisco.com/c/en/us/td/docs/dcn/aci/apic/5x/aci-fundamentals/cisco-aci-fundamentals-51x/m_aaa.html",
+   "publisher": "Cisco",
+   "supports": "Last change performed: correlating config history and change records",
+   "key_fact": "The aaaModLR object tracks the changes users make to objects and when they occurred, aaaSessionLR tracks logins and logouts; both can be queried by class or DN, a class query returns records for the whole fabric, and no export policy exists by default.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c26",
+   "title": "Operating Cisco ACI appendix: REST examples",
+   "url": "https://www.cisco.com/c/ja_jp/td/docs/switches/datacenter/aci/apic/sw/1-x/Operating_ACI/guide/b_Cisco_Operating_ACI/b_Cisco_Operating_ACI_appendix_011.html",
+   "publisher": "Cisco",
+   "supports": "Collecting health from Radware, other load balancers (Anaya LB) and Cisco ACI",
+   "key_fact": "The appendix lists class queries /api/node/class/fabricHealthTotal.json, /api/node/class/topSystem.json, /api/node/class/fabricNode.json, /api/node/class/aaaModLR.json and /api/node/class/faultInst.json (older release; class names unchanged).",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c27",
+   "title": "Cisco APIC REST API Configuration Guide, Release 4.2(x) and Later - Using the REST API",
+   "url": "https://www.cisco.com/c/en/us/td/docs/dcn/aci/apic/all/apic-rest-api-configuration-guide/cisco-apic-rest-api-configuration-guide-42x-and-later/m_using_the_rest_api.html",
+   "publisher": "Cisco",
+   "supports": "Collecting health from Radware, other load balancers (Anaya LB) and Cisco ACI",
+   "key_fact": "Clients POST aaaUser name/pwd to /api/aaaLogin.json, use the APIC-cookie token, refresh with aaaRefresh before the default 600-second timeout, and filter class queries with query-target-filter, rsp-subtree-include=faults,health and page/page-size.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c28",
+   "title": "How Claude remembers your project (CLAUDE.md)",
+   "url": "https://code.claude.com/docs/en/memory",
+   "publisher": "Anthropic (Claude Code docs)",
+   "supports": "Setting up Claude Code, the Agent SDK and MCP for this workflow",
+   "key_fact": "Project CLAUDE.md lives at ./CLAUDE.md or ./.claude/CLAUDE.md, /init drafts one, @path imports pull in other files, keep it under about 200 lines, and it is context rather than enforced configuration; use a PreToolUse hook to block actions.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c29",
+   "title": "Connect Claude Code to tools via MCP",
+   "url": "https://code.claude.com/docs/en/mcp",
+   "publisher": "Anthropic (Claude Code docs)",
+   "supports": "Setting up Claude Code, the Agent SDK and MCP for this workflow",
+   "key_fact": "claude mcp add [options] <name> -- <command> [args] with --env and --scope local|project|user; project scope writes .mcp.json, which supports ${VAR} and ${VAR:-default} expansion so secrets stay in the environment; /mcp shows server status.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c30",
+   "title": "Model Context Protocol specification: Tools",
+   "url": "https://modelcontextprotocol.io/specification/2025-06-18/server/tools",
+   "publisher": "Model Context Protocol",
+   "supports": "Setting up Claude Code, the Agent SDK and MCP for this workflow; Guardrails, approvals and audit for health monitoring",
+   "key_fact": "Tools are listed with tools/list and called with tools/call; definitions carry inputSchema, optional outputSchema and annotations that clients treat as untrusted; results can include structuredContent and isError; servers MUST validate inputs and rate limit, clients SHOULD confirm sensitive operations, apply timeouts and log tool usage for audit.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c31",
+   "title": "MCP Python SDK",
+   "url": "https://github.com/modelcontextprotocol/python-sdk",
+   "publisher": "Model Context Protocol",
+   "supports": "Setting up Claude Code, the Agent SDK and MCP for this workflow",
+   "key_fact": "Install with pip install \"mcp[cli]\" (Python 3.11+), register tools with @mcp.tool() using type hints and docstrings for the schema, run over stdio or Streamable HTTP, and test with uv run mcp dev server.py in the MCP Inspector.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c32",
+   "title": "Get structured output from agents",
+   "url": "https://code.claude.com/docs/en/agent-sdk/structured-outputs",
+   "publisher": "Anthropic (Claude Agent SDK docs)",
+   "supports": "Claude as the triage analyst: structured health verdicts",
+   "key_fact": "output_format={\"type\": \"json_schema\", \"schema\": Model.model_json_schema()} returns validated data in structured_output on the ResultMessage; the SDK validates with JSON Schema draft-07 and retries, failing with error_max_structured_output_retries; a success result without structured_output must also be treated as a failure.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c33",
+   "title": "Hooks reference",
+   "url": "https://code.claude.com/docs/en/hooks",
+   "publisher": "Anthropic (Claude Code docs)",
+   "supports": "Guardrails, approvals and audit for health monitoring",
+   "key_fact": "PreToolUse hooks run before a tool call and block it with exit code 2 or permissionDecision deny; MCP tools are matched as mcp__<server>__<tool> or mcp__<server>__.*; PostToolUse runs after success and cannot block.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c34",
+   "title": "Configure permissions (Agent SDK)",
+   "url": "https://code.claude.com/docs/en/agent-sdk/permissions",
+   "publisher": "Anthropic (Claude Agent SDK docs)",
+   "supports": "Setting up Claude Code, the Agent SDK and MCP for this workflow; Scheduling and running the workflow with GitHub Actions",
+   "key_fact": "Evaluation order is hooks, deny rules, ask rules, permission mode, allow rules, canUseTool; disallowed_tools removes tools; allowed_tools with permission_mode dontAsk gives a fixed tool surface for headless agents; allowed_tools does not constrain bypassPermissions.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c35",
+   "title": "Change Management API",
+   "url": "https://www.servicenow.com/docs/r/api-reference/rest-apis/change-management-api.html",
+   "publisher": "ServiceNow",
+   "supports": "Last change performed: correlating config history and change records",
+   "key_fact": "GET /sn_chg_rest/change retrieves change requests with sysparm_query, sysparm_offset and order; GET needs change_manager, itil, sn_change_read or admin; change model states include New, Scheduled, Implement, Review and Closed.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c36",
+   "title": "Ask for Approval action (Workflow Studio / Flow Designer)",
+   "url": "https://www.servicenow.com/docs/r/build-workflows/workflow-studio/ask-approval-flow-designer.html",
+   "publisher": "ServiceNow",
+   "supports": "Creating or updating ServiceNow tickets; Guardrails, approvals and audit for health monitoring",
+   "key_fact": "Ask for Approval takes Record, Table, Approval Reason, Approval Field, Journal Field, Rules and a Due Date to stop endless waiting; Approval State output values are Not Yet Requested, Requested, Approved, Rejected, Cancelled, No Longer Required and Skipped; flow_designer or admin role required.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c37",
+   "title": "Self-hosted runners reference",
+   "url": "https://docs.github.com/en/actions/reference/runners/self-hosted-runners",
+   "publisher": "GitHub Docs",
+   "supports": "Scheduling and running the workflow with GitHub Actions",
+   "key_fact": "Self-hosted runners connect to GitHub to receive jobs and need outbound HTTPS on port 443; a job not picked up is re-queued after 60 seconds and fails if queued for more than 24 hours; jobs are routed by runs-on labels and groups.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c38",
+   "title": "About protected branches",
+   "url": "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches",
+   "publisher": "GitHub Docs",
+   "supports": "Scheduling and running the workflow with GitHub Actions",
+   "key_fact": "Protected branches can require approving reviews, passing status checks, code owner review and dismissal of stale approvals, and can apply the rules to administrators.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c39",
+   "title": "When to use the Pushgateway",
+   "url": "https://prometheus.io/docs/practices/pushing/",
+   "publisher": "Prometheus",
+   "supports": "Testing, dashboards and operations",
+   "key_fact": "The Pushgateway's valid use is capturing the outcome of a service-level batch job; it is a single point of failure, loses the automatic up metric and never forgets pushed series unless deleted; machine-related batch jobs should use the Node Exporter textfile collector instead.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c40",
+   "title": "Configure the Prometheus data source (Grafana)",
+   "url": "https://grafana.com/docs/grafana/latest/datasources/prometheus/configure/",
+   "publisher": "Grafana Labs",
+   "supports": "Testing, dashboards and operations",
+   "key_fact": "Add the data source from Connections > Add new connection > Prometheus > Add new data source; a local server URL is http://localhost:9090; the Organization administrator role is required.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c41",
+   "title": "NetScaler licensing (VPX Express)",
+   "url": "https://docs.netscaler.com/en-us/citrix-adc/current-release/licensing",
+   "publisher": "NetScaler product documentation",
+   "supports": "Lab environment",
+   "key_fact": "VPX Express needs no license file, is limited to 20 Mbps throughput and 250 SSL sessions, and from 14.1 build 29.65 includes the Premium feature set.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c42",
+   "title": "ACI Sandboxes",
+   "url": "https://developer.cisco.com/docs/aci/sandbox",
+   "publisher": "Cisco DevNet",
+   "supports": "Lab environment",
+   "key_fact": "DevNet offers a shared, no-reservation ACI Simulator (Always-On) for APIC API requests and a reservable ACI Simulator for up to 5 consecutive days, at zero cost.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c43",
+   "title": "Get a development instance (ServiceNow PDI)",
+   "url": "https://www.servicenow.com/docs/r/9Lur8HBNLjdzEcjznSAFzA/HTEzwTEvNIUFLxGw~Sq_3A",
+   "publisher": "ServiceNow",
+   "supports": "Lab environment",
+   "key_fact": "A free personal developer instance is obtained from the ServiceNow Developer Site by following the Personal Developer Instance (PDI) guide.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c44",
+   "title": "Verify the firmware version and the upgrade status using the API",
+   "url": "https://www.cisco.com/c/en/us/td/docs/dcn/aci/apic/all/apic-installation-aci-upgrade-downgrade/Cisco-APIC-Installation-ACI-Upgrade-Downgrade-Guide/g-upgrading-the-software-using-the-rest-api/verifying-firmware-version-and-upgrade-status.html",
+   "publisher": "Cisco",
+   "supports": "Collecting health from Radware, other load balancers (Anaya LB) and Cisco ACI",
+   "key_fact": "Controller firmware is read from /api/node/class/firmwareCtrlrRunning, switch firmware from /api/node/class/firmwareRunning and upgrade jobs from /api/node/class/maintUpgJob.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c45",
+   "title": "Try BIG-IP and BIG-IQ Virtual Editions",
+   "url": "https://www.f5.com/trials/big-ip-virtual-edition",
+   "publisher": "F5",
+   "supports": "Lab environment",
+   "key_fact": "A free 30-day trial from MyF5 > My Products & Plans > Trials includes one BIG-IP VE with LTM and other modules, limited to 1 Mbps throughput, up to 4 vCPUs and 2 GB memory per vCPU.",
+   "verified": "2026-10-30"
+  }
+ ]
+}

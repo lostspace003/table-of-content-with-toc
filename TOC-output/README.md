@@ -10,6 +10,7 @@ One folder per course. Each folder contains:
 | `Promo Video/<title> - Promo.mp4` | 1920x1080, 30 fps, H.264 + AAC, 5+ minutes, motion graphics with narration, captions and an ambient bed | Course page hero video, YouTube, LinkedIn |
 | `Promo Video/<title> - Promo Captions.srt` | Subtitle file matching the narration | Upload with the video for closed captions |
 | `Promo Video/<title> - Promo Narration Script.md` | The full narration script | Re-voicing, translation, review |
+| `Research/<title> - Research and Content Plan - Gennoor.pdf` (+ .docx, .md, .html) | Research and module-by-module content plan with sources | Building the course content, labs and assessments |
 
 ## Courses
 
@@ -44,9 +45,12 @@ Every course runs 8 hours per day. The outlines group modules by day and do not 
 
 ## Research
 
-`Research/Research and Sources - Course Outlines` (PDF with the Gennoor watermark, Word, Markdown and JSON) lists every
-source consulted for each outline: 142 numbered citations with the URL that was opened, the publisher, the module it
-supports and the key fact taken from it. Every URL was re-opened by an independent reviewer before inclusion.
+Each course has its own research and content plan in `Research/<title> - Research and Content Plan` (PDF with the Gennoor
+watermark, Word, Markdown and HTML). It covers where the course came from, how the outline was shaped, the audience, the lab
+environment and fixtures, a module-by-module plan (lessons and teaching points, instructor demo, lab steps and success criteria,
+pitfalls, knowledge checks, slides and assets to prepare), the capstone, a claim-by-claim check of the promo video, and a
+verified reference list. `Research/README.md` indexes them by domain (Cybersecurity, Network and Infrastructure Automation,
+Business Process Automation).
 
 ## Sources
 

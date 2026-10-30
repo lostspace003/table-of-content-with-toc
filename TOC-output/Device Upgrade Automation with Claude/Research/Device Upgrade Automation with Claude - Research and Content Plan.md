@@ -21,7 +21,7 @@ This course teaches teams to let Claude read the fleet, draft plans and explain 
 | Decision | Rationale |
 |---|---|
 | One vendor-neutral lifecycle across F5, NetScaler, Alteon and ACI | The client asked for space clear, firmware upload, pre and post checks and a scheduler; a single lifecycle lets the same runner and guardrails cover every vendor. |
-| Fold the client's separate Cisco ACI use case into a dedicated module | Use case 10 asks for ACI upgrades 'as per process suggested by Cisco'; the module follows Cisco's pre-upgrade checklist and validator [20][21] rather than inventing a process. |
+| Include one Cisco ACI module in a multi-vendor course | Use case 10 asks for ACI upgrades 'as per process suggested by Cisco' and has its own dedicated course; here one module shows how ACI fits the same lifecycle, following Cisco's pre-upgrade checklist and validator [20][21] rather than inventing a process, and leaves depth to the dedicated ACI course. |
 | Space clear is its own module with allowlists and dry run | Disk space is the client's first named step and a top failure cause; vendor guidance lists exactly what can be cleared [15][10]. |
 | Golden snapshot and diff instead of ad hoc post-checks | A versioned snapshot makes the post-check objective and gives the change record clear evidence. |
 | Scheduler reads approved windows from ServiceNow | The client asked for a scheduler option; tying it to change windows [28] stops runs outside approval. |
