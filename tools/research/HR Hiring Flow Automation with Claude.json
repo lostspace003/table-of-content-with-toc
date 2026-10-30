@@ -51,17 +51,17 @@
   },
   {
    "role": "Data protection or compliance reviewers (optional attendees)",
-   "needs": "See how consent, retention, minimisation and fairness are implemented and evidenced.",
+   "needs": "See how consent, retention, minimization and fairness are implemented and evidenced.",
    "starting_point": "Know DPDP and GDPR; not developers."
   }
  ],
  "prerequisite_check": [
   "Can you create a Python virtual environment, install packages and run pytest?",
   "Can you read and write JSON and call a REST API with curl or Python requests?",
-  "Can you describe your organisation's hiring steps from requisition to offer, and which portal exports you can download?",
+  "Can you describe your organization's hiring steps from requisition to offer, and which portal exports you can download?",
   "Do you have a laptop that can run Docker Desktop or Docker Engine with Compose and at least 8 GB of free memory?",
-  "Can you obtain a Claude API key or Claude Code access through your organisation for the training days?",
-  "Has your organisation agreed that only synthetic candidate data will be used in the labs?"
+  "Can you obtain a Claude API key or Claude Code access through your organization for the training days?",
+  "Has your organization agreed that only synthetic candidate data will be used in the labs?"
  ],
  "lab_environment": {
   "overview": "Each learner runs a Docker Compose stack on a laptop or lab VM: PostgreSQL for the candidate store and audit log, the FastAPI pipeline service and the hiring MCP server. Claude Code and the Claude Agent SDK run on the host. Telephony uses a Twilio account with a sandbox number, ServiceNow uses a free developer instance, and CI runs on GitHub. All candidate data is synthetic.",
@@ -70,7 +70,7 @@
     "name": "Claude Code",
     "version": "Current release at course date",
     "purpose": "Agentic coding environment, CLAUDE.md, hooks and MCP client.",
-    "how_to_obtain": "Install using the official Claude Code documentation with an organisation account or API key.",
+    "how_to_obtain": "Install using the official Claude Code documentation with an organization account or API key.",
     "notes": "Hooks and project MCP scope are used from module 2 [c13] [c14]."
    },
    {
@@ -133,7 +133,7 @@
     "name": "GitHub repository and GitHub Actions",
     "version": "github.com",
     "purpose": "Pull requests, CI evaluation and branch protection.",
-    "how_to_obtain": "Organisation or personal GitHub account; the course template repository.",
+    "how_to_obtain": "Organization or personal GitHub account; the course template repository.",
     "notes": "Required status checks and code owners in module 9 [c26]."
    },
    {
@@ -224,7 +224,7 @@
       "Section 7(i) treats processing for the purposes of employment as a legitimate use [c5]; whether that covers people who are only applicants is a question for the client's counsel, so the course defaults to explicit consent for screening calls and recordings.",
       "Section 8(7) requires erasure when consent is withdrawn or the purpose is no longer served, unless the law requires retention [c5]: rejected candidates need a retention clock.",
       "The DPDP Rules were notified on 14 November 2025 with an eighteen-month phased compliance period and a separate, purpose-specific consent notice [c6].",
-      "For EU candidates, GDPR Article 5 adds purpose limitation, data minimisation and storage limitation, and makes the controller able to demonstrate compliance [c21]."
+      "For EU candidates, GDPR Article 5 adds purpose limitation, data minimization and storage limitation, and makes the controller able to demonstrate compliance [c21]."
      ]
     },
     {
@@ -240,7 +240,7 @@
    "instructor_demo": [
     "Open the synthetic portal export in a spreadsheet and show the messy reality: duplicate phones, blank salary fields, free-text locations.",
     "Draw the current flow live as a Mermaid flowchart with swimlanes for recruiter, hiring manager, candidate and systems.",
-    "Overlay the target flow and colour each node: model proposes, code executes, human approves.",
+    "Overlay the target flow and color each node: model proposes, code executes, human approves.",
     "Mark the three approval gates and name the approver role for each.",
     "Annotate the data each step touches and the DPDP and GDPR obligation that applies [c5] [c21].",
     "Show the empty audit log table that every later module will write to."
@@ -252,7 +252,7 @@
      "Run the seed script to load portal_export_sample.xlsx (synthetic) into a staging table.",
      "Interview a partner playing the recruiter for ten minutes and list every step and hand-off they describe.",
      "Draw the current flow in Mermaid in docs/flow_current.md.",
-     "Draw the target flow in docs/flow_target.md and colour each node by who acts.",
+     "Draw the target flow in docs/flow_target.md and color each node by who acts.",
      "Mark the shortlist, outreach and pitch gates with an approver role each.",
      "Add a data table listing the personal data each step touches and its lawful basis or consent requirement.",
      "Commit both diagrams and open a pull request for peer review."
@@ -290,7 +290,7 @@
    ],
    "slides_and_assets": [
     "Slide: the client request quoted verbatim, with implied steps highlighted.",
-    "Mermaid templates for current and target flows with a colour legend.",
+    "Mermaid templates for current and target flows with a color legend.",
     "Synthetic portal_export_sample.xlsx with seeded defects.",
     "One-page DPDP and GDPR obligations cheat sheet for hiring data [c5] [c6] [c21] [c22].",
     "Approval gate register template (gate, approver role, evidence required)."
@@ -440,7 +440,7 @@
    "learning_objectives": [
     "Learners can choose between file export and sanctioned API for a given portal and respect its access terms and limits.",
     "Learners can have Claude translate a requisition into a filter rule set that Python applies and explains.",
-    "Learners can deduplicate across portals by normalised email and phone and report every rejected row.",
+    "Learners can deduplicate across portals by normalized email and phone and report every rejected row.",
     "Learners can attach provenance (portal, file, row, timestamp) to every record."
    ],
    "lessons": [
@@ -468,7 +468,7 @@
     {
      "title": "Deduplication and rejected rows",
      "points": [
-      "Normalise phone numbers to E.164 and emails to lower case before matching.",
+      "Normalize phone numbers to E.164 and emails to lower case before matching.",
       "Merge on exact phone or email match; flag near matches (same name, different phone) for a person rather than merging.",
       "Rows missing both phone and email are rejected with a reason, not silently dropped.",
       "Report counts at every stage: parsed, rejected, matched, excluded, merged."
@@ -497,7 +497,7 @@
     "steps": [
      "Write an XLSX and CSV reader that maps portal column names to the PortalRow model.",
      "Reject rows with neither phone nor email and write them to rejected.csv with a reason.",
-     "Normalise phones and emails and implement exact-match deduplication with merge provenance.",
+     "Normalize phones and emails and implement exact-match deduplication with merge provenance.",
      "Have Claude propose a FilterRules JSON from the requisition text and validate it with Pydantic [c8] [c25].",
      "Implement the filter engine as pure functions that return (included, excluded_with_reason).",
      "Write table-driven pytest cases for each rule and for the deduplication edge cases.",
@@ -1015,7 +1015,7 @@
   {
    "day": 3,
    "title": "Guardrails, approvals and audit for hiring automation",
-   "goal": "Learners harden the pipeline with PII minimisation, consent and retention tracking, injection tests, named approval gates, bias monitoring and an append-only audit log.",
+   "goal": "Learners harden the pipeline with PII minimization, consent and retention tracking, injection tests, named approval gates, bias monitoring and an append-only audit log.",
    "learning_objectives": [
     "Learners can document what the model sees, what the database stores and how deletion works.",
     "Learners can write tests that inject instructions into resumes and transcripts and prove they are ignored.",
@@ -1024,9 +1024,9 @@
    ],
    "lessons": [
     {
-     "title": "PII minimisation, consent and retention",
+     "title": "PII minimization, consent and retention",
      "points": [
-      "Data minimisation and storage limitation are GDPR principles, and the controller must be able to demonstrate compliance [c21].",
+      "Data minimization and storage limitation are GDPR principles, and the controller must be able to demonstrate compliance [c21].",
       "The model sees only the fields a step needs: the scorer gets transcript and rubric, not name, phone or photo.",
       "Store consent records (notice version, timestamp, method) for screening and recording [c5] [c6].",
       "Erase on withdrawal or when the purpose ends unless law requires retention [c5]; implement as a scheduled job with a report.",
@@ -1112,7 +1112,7 @@
     },
     {
      "q": "Which GDPR principles drive what the model sees?",
-     "a": "Data minimisation and purpose limitation [c21]."
+     "a": "Data minimization and purpose limitation [c21]."
     }
    ],
    "slides_and_assets": [
@@ -1432,7 +1432,7 @@
     "basis": "Implemented with row and statement triggers and revoked privileges [c24]."
    },
    {
-    "claim": "PII minimisation, consent and retention tracking",
+    "claim": "PII minimization, consent and retention tracking",
     "basis": "DPDP Act consent, notice and erasure [c5], DPDP Rules consent notices [c6], GDPR Article 5 principles [c21]."
    },
    {

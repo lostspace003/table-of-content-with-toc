@@ -1,0 +1,1922 @@
+{
+ "course": "Traffic and Flow Diagram Automation with Claude",
+ "domain": "Network and Infrastructure Automation",
+ "source_input": "Client use case 9, \"Traffic and Flow Diagram Automation\": \"Creation for traffic and flow diagram with the help of traceroute and ping access.\" The client's stated aim for all use cases: \"Our Aim is to do automation using Claude for all these content\", with course titles of the form \"Automation of <> using Claude\". Related use cases name the device estate: F5, NetScaler, Radware and Anaya LB load balancers, Cisco ACI, and ServiceNow (SNOW) tickets.",
+ "why_this_course": [
+  "Network and load balancer teams are asked for traffic flow diagrams all the time: for change reviews, audits, incident bridges and application onboarding. In most teams the answer is a manual exercise of running ping and traceroute, reading the output, and drawing boxes in a diagram tool. The result has no link to the evidence, no timestamp, and goes stale the next time a route or pool member changes. Ping and traceroute are also easy to misread: hops that do not answer, routers that rate-limit ICMP, ECMP paths that create false loops, and load balancers that hide what is behind a VIP all show up in real output [c3] [c4] [c14].",
+  "The client asked for automation of this flow with Claude, starting from traceroute and ping access. This course treats Claude as a planner, reader and drafter, not as a probe. Deterministic Python runs the probes and returns typed records; read-only adapters add context from F5, NetScaler, Radware Alteon, other load balancers and Cisco ACI; Claude summarizes and drafts a Mermaid diagram where every node cites its evidence; and a named person approves before anything reaches ServiceNow or a shared repository [c18] [c19] [c21].",
+  "The result is a pipeline the team can run on every diagram request and on a schedule, with an audit trail a reviewer can follow. Learners leave with code, tests, a guardrail layer and a runbook they can adapt to their own estate, plus a clear understanding of what a probe-based diagram can and cannot prove."
+ ],
+ "design_decisions": [
+  {
+   "decision": "Start with probe limits before any automation.",
+   "rationale": "The client input is 'with the help of traceroute and ping access'. Automating misread output only produces wrong diagrams faster, so Module 1 teaches what ICMP, TTL expiry and probe types actually show, and every later module carries the 'unknown, not guessed' rule [c1] [c2] [c3]."
+  },
+  {
+   "decision": "Claude never gets a shell; probes run in deterministic code behind narrow MCP tools.",
+   "rationale": "Probing production networks from an agent with a shell is unsafe and unauditable. Custom tools with fixed schemas, tools=[] in the SDK and a denied Bash tool in Claude Code keep Claude to read-only probes, while hooks enforce scope [c15] [c18] [c20]."
+  },
+  {
+   "decision": "Enrich from the load balancers and ACI the client already runs.",
+   "rationale": "The client's other use cases name F5, NetScaler, Radware and Anaya LB, and Cisco ACI. Traceroute stops at a VIP and cannot see pool members or fabric placement, so read-only API adapters fill those gaps with evidence [c25] [c28] [c30] [c31]."
+  },
+  {
+   "decision": "Mermaid as the diagram source of truth.",
+   "rationale": "Mermaid is text, diffs cleanly in Git, renders natively in GitHub pull requests and can be validated by a command-line renderer, which makes drift detection and review practical. draw.io and Graphviz remain export options [c5] [c6] [c7] [c8] [c37]."
+  },
+  {
+   "decision": "Publish through ServiceNow and GitHub behind a named approval.",
+   "rationale": "Diagram requests arrive as tickets in ServiceNow in the client's environment, and teams keep diagrams in repositories. Writing the result back to the requesting record and to a reviewed pull request fits existing change practice [c39] [c40] [c42]."
+  },
+  {
+   "decision": "Add scheduled drift detection with a deterministic diff.",
+   "rationale": "The core complaint is that diagrams go stale. A scheduled job that re-probes within scope and opens a pull request only on a confirmed change keeps diagrams current without noise; Claude explains, code decides [c43] [c44]."
+  }
+ ],
+ "audience_profile": [
+  {
+   "role": "NOC and network operations engineer",
+   "needs": "Faster, defensible answers to 'what is the path' requests and incident questions.",
+   "starting_point": "Uses ping and traceroute daily; little Python or API experience."
+  },
+  {
+   "role": "Load balancer engineer (F5, NetScaler, Radware)",
+   "needs": "Show what sits behind VIPs in diagrams without manual screenshots.",
+   "starting_point": "Knows tmsh or the NetScaler CLI; some REST exposure."
+  },
+  {
+   "role": "Data center and ACI engineer",
+   "needs": "Place endpoints on tenants, EPGs and leaves automatically.",
+   "starting_point": "Knows the APIC GUI; limited REST query experience."
+  },
+  {
+   "role": "Cloud network engineer",
+   "needs": "Join on-premises paths to VPC or VNet routing evidence.",
+   "starting_point": "Familiar with cloud consoles and route tables."
+  },
+  {
+   "role": "Automation lead",
+   "needs": "A safe, auditable pattern for using Claude near production networks.",
+   "starting_point": "Comfortable with Python, Git and CI; wants governance patterns."
+  }
+ ],
+ "prerequisite_check": [
+  "Can you explain what TTL is and why traceroute increases it per hop?",
+  "Can you read a traceroute output and point to a hop that did not answer?",
+  "Can you write a Python function that runs a command and reads its output?",
+  "Can you clone a Git repository, create a branch, commit and push?",
+  "Do you know what a VIP and a pool member are on at least one load balancer?",
+  "Can you call a REST API with curl and read a JSON response?"
+ ],
+ "lab_environment": {
+  "overview": "Each learner gets a Linux lab VM with Python, Claude Code and the course repository, a small routed lab network with a firewall that drops ICMP, lab load balancers, an APIC (DevNet sandbox or simulator), a ServiceNow developer instance and a GitHub organization. All hostnames and addresses are fictional and no lab component can reach production.",
+  "components": [
+   {
+    "name": "Learner workstation",
+    "version": "Ubuntu 24.04 LTS VM with Python 3.12, Node.js 20 LTS, Git",
+    "purpose": "Runs Claude Code, the Agent SDK scripts, probe runners and adapters.",
+    "how_to_obtain": "Course image provided by the training team.",
+    "notes": "traceroute, mtr and iputils ping installed; a Windows Server jump host provides tracert captures."
+   },
+   {
+    "name": "Claude Code and Claude Agent SDK (Python)",
+    "version": "Current releases at delivery, pinned in requirements",
+    "purpose": "Workbench, tool use, hooks and structured outputs.",
+    "how_to_obtain": "Install per Anthropic documentation with an organization API key or seat.",
+    "notes": "Settings and hooks shipped in the course repository [c15] [c18] [c20]."
+   },
+   {
+    "name": "Routed lab network",
+    "version": "Containerlab or EVE-NG with open-source routers (for example FRRouting)",
+    "purpose": "Produces real traceroute behavior: ECMP, an ICMP-dropping firewall, a rate-limited router.",
+    "how_to_obtain": "Built by the lab team from course topology files.",
+    "notes": "Instructor can shut links to create drift."
+   },
+   {
+    "name": "F5 BIG-IP Virtual Edition",
+    "version": "BIG-IP VE 17.x with LTM",
+    "purpose": "VIP and pool member enrichment.",
+    "how_to_obtain": "30-day trial via MyF5, or a lab license [c45].",
+    "notes": "Read-only lab account for enrichment."
+   },
+   {
+    "name": "NetScaler VPX Express",
+    "version": "NetScaler VPX 14.1 Express",
+    "purpose": "lbvserver and service group enrichment.",
+    "how_to_obtain": "Free VPX Express download; no license file [c46].",
+    "notes": "No vendor support cases on Express."
+   },
+   {
+    "name": "Radware Alteon",
+    "version": "Alteon VA 32.x or recorded API responses",
+    "purpose": "Alteon enrichment through alteon-sdk.",
+    "how_to_obtain": "Customer or partner evaluation; otherwise use recorded responses [c30].",
+    "notes": "Anaya LB and other load balancers are taught through the common adapter using recorded or mocked responses."
+   },
+   {
+    "name": "Cisco APIC",
+    "version": "DevNet ACI Simulator (Always-On or reserved) or ACI Simulator VM",
+    "purpose": "Tenant, EPG, endpoint and L3Out enrichment.",
+    "how_to_obtain": "Cisco DevNet sandbox, free with a Cisco account [c33].",
+    "notes": "Always-On is shared; use reserved sandbox or recorded responses for consistent labs."
+   },
+   {
+    "name": "ServiceNow developer instance",
+    "version": "Current family release (personal developer instance)",
+    "purpose": "Request records, Table and Attachment API, Flow Designer.",
+    "how_to_obtain": "Free personal developer instance from the ServiceNow developer program.",
+    "notes": "REST step requires Integration Hub; polling fallback provided [c41]."
+   },
+   {
+    "name": "GitHub organization",
+    "version": "GitHub Team or Enterprise Cloud",
+    "purpose": "Diagram repository, pull requests, Actions schedule.",
+    "how_to_obtain": "Course organization created by the training team.",
+    "notes": "Self-hosted runner in the lab network for drift jobs."
+   },
+   {
+    "name": "mermaid-cli",
+    "version": "Pinned version in a container image",
+    "purpose": "Deterministic rendering and validation.",
+    "how_to_obtain": "npm or the minlag/mermaid-cli image [c37].",
+    "notes": "Same version on laptops and runners."
+   }
+  ],
+  "fixtures": [
+   {
+    "name": "Probe capture pack",
+    "contents": "Linux and Windows traceroute and ping captures: clean, firewall-dark, rate-limited, ECMP, MPLS-like.",
+    "used_in": "Deterministic probe runners in Python; Path evidence model and structured outputs"
+   },
+   {
+    "name": "Recorded device API responses",
+    "contents": "F5, NetScaler, Alteon and APIC JSON responses for the lab tenant and VIPs, with fictional addresses.",
+    "used_in": "Enriching hops with load balancer context; Data centre fabric and cloud path context"
+   },
+   {
+    "name": "Scope and budget files",
+    "contents": "Allowed prefixes, hostnames and probe budgets for the lab.",
+    "used_in": "Guardrails, approvals and audit for probing and publishing"
+   },
+   {
+    "name": "ServiceNow catalog item and flow",
+    "contents": "Diagram request item, record trigger flow and integration user role.",
+    "used_in": "Publishing to ServiceNow and GitHub"
+   },
+   {
+    "name": "Drift fixture pairs",
+    "contents": "Before and after path records for real change, ECMP noise and probe failure.",
+    "used_in": "Drift detection and scheduled re-mapping"
+   }
+  ],
+  "safety": [
+   "Labs probe only lab prefixes listed in the scope file; the lab network has no route to production or the internet except for package mirrors.",
+   "Device accounts used by Claude-driven tools are read-only; write accounts exist only for instructors.",
+   "Credentials live in a vault or environment variables and never in prompts, repositories or logs.",
+   "All hostnames, ticket numbers and addresses in materials are fictional.",
+   "Probe budgets are enforced on the lab MCP server to model production behavior."
+  ]
+ },
+ "modules": [
+  {
+   "day": 1,
+   "title": "What a flow diagram must prove, and what probes can tell you",
+   "goal": "Set the evidence standard for a traffic diagram and show exactly which parts of a path ping and traceroute can and cannot prove.",
+   "learning_objectives": [
+    "Learners can explain how TTL-based traceroute discovers hops and which ICMP messages it relies on.",
+    "Learners can list at least five reasons a hop shows as * or a path looks wrong, including filtering, rate limiting, ECMP and MPLS.",
+    "Learners can distinguish forward-path evidence from return-path assumptions.",
+    "Learners can state the course operating pattern: Claude plans and explains, code probes, a person approves, everything is logged.",
+    "Learners can write a one-page pipeline brief with scope, inputs, outputs and known evidence gaps."
+   ],
+   "lessons": [
+    {
+     "title": "Why diagrams go stale",
+     "points": [
+      "Walk the typical request-to-diagram cycle: a ticket asks for 'the flow from branch to the payments VIP', an engineer runs traceroute and ping, draws boxes in a drawing tool, and the result is never re-checked.",
+      "Show the cost: a diagram with no timestamp or probe reference cannot be trusted in a change review or an incident bridge.",
+      "Define the course evidence rule: every node and edge must point to a probe record or a device API record, and anything else is labeled unknown.",
+      "Frame what Claude adds: planning which probes to run, reading raw output, explaining gaps, and drafting the diagram, while deterministic code does the probing.",
+      "Classic traceroute needs about 2n probes for n hops and the path can change during the trace; RFC 1393 tried to fix this with an IP option that never became common, so we live with the limits [c1]."
+     ]
+    },
+    {
+     "title": "How ping and traceroute actually work",
+     "points": [
+      "ping sends ICMP Echo (type 8) and expects Echo Reply (type 0); the identifier and sequence fields match replies to requests [c2].",
+      "Each traceroute probe has a growing TTL; a router that decrements TTL to zero returns ICMP Time Exceeded (type 11, code 0) [c2].",
+      "Linux and Cisco IOS default to UDP probes starting at port 33434; the destination answers with ICMP Port Unreachable (type 3 code 3); Windows tracert uses ICMP Echo instead [c3].",
+      "Linux traceroute can also probe with ICMP (-I) or TCP SYN (-T, default port 80), which matters when firewalls filter UDP or ICMP [c10].",
+      "Default limits to remember: 30 hops, 3 probes per hop on Linux, a 5 second wait on Linux and 4000 ms on Windows [c10] [c12].",
+      "Output annotations such as !H, !N, !P and !X tell you the probe was rejected, which is evidence in itself [c10]."
+     ]
+    },
+    {
+     "title": "Where evidence goes dark",
+     "points": [
+      "Firewalls that drop ICMP or UDP make traceroute stop at the firewall; the hop after is not missing, it is unseen [c10].",
+      "Routers rate-limit ICMP; Cisco limits unreachables to one per 500 ms by default, so a final-hop * can be an artifact [c3].",
+      "Loss at an intermediate hop does not mean forwarded traffic is lost; mtr's own documentation warns about this [c4].",
+      "ECMP and per-flow load balancing create false loops and diamonds unless the probe header is held constant (Paris traceroute approach) [c14].",
+      "MPLS cores may hide hops or show them only if routers append the label stack per RFC 4950 [c13].",
+      "Load balancers terminate or proxy connections, so traceroute to a VIP shows the VIP, never the pool members behind it; that context must come from the device API (Module 5).",
+      "Traceroute only shows the forward path from the source; the return path can differ and must be marked as not observed."
+     ]
+    },
+    {
+     "title": "The course pattern and the pipeline brief",
+     "points": [
+      "Claude plans and explains; Python code runs the probes; device adapters read state; a named person approves publication; every step is logged.",
+      "Claude never receives a shell tool in this course; it gets narrow, read-only tools only (Module 2).",
+      "The pipeline brief records: requester, source, target, protocol and port of interest, allowed prefixes, probe budget, devices to enrich from, and where the result is published.",
+      "The brief also lists known blind spots for the target path, such as firewalls that drop ICMP or an MPLS core.",
+      "The capstone acceptance test is derived from this brief, so it must be specific."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Run traceroute -n to a lab VIP from the lab client and narrate each line, including a * * * hop behind the lab firewall.",
+    "Run the same trace with -I and then -T -p 443 and show how the visible hops change with probe type [c10].",
+    "Run tracert /d to the same target from the Windows jump host and compare the output format [c12].",
+    "Run mtr --report for 20 cycles and point out loss at an intermediate hop that does not appear at the destination [c4].",
+    "Trace to the VIP and show that the pool members never appear; open the F5 GUI to show what traceroute cannot see.",
+    "Write the hop table on a whiteboard with columns: hop, address, RTTs, evidence type, confidence, notes."
+   ],
+   "lab": {
+    "brief": "Trace the path from the lab client to the lab payments VIP by hand, record every hop and every gap, and write the brief for the pipeline you will build.",
+    "steps": [
+     "Log in to the lab client and confirm the target VIP and allowed prefix list from the lab handout.",
+     "Run ping -c 10 -W 2 to the VIP and record loss and average RTT [c11].",
+     "Run traceroute -n -q 3 -w 2 -m 30 to the VIP and save raw output to a text file with a timestamp [c10].",
+     "Repeat with -I and with -T -p 443 and save both outputs.",
+     "Run mtr --report -c 20 and save the report [c4].",
+     "Fill in the hop table: for each hop note address, RTTs, which probe types answered and a confidence of high, medium or unknown.",
+     "Mark every gap and write the most likely reason (filtering, rate limiting, ECMP, MPLS, load balancer).",
+     "Write a one-page pipeline brief using the course template, including scope, budget, enrichment sources and publication targets."
+    ],
+    "success_criteria": [
+     "All raw outputs are saved with timestamps and the command used.",
+     "Every hop in the table has a confidence value and every * has a stated likely reason.",
+     "The brief names allowed prefixes, probe budget, enrichment devices and an approver role.",
+     "The learner can explain why pool members do not appear in the trace."
+    ]
+   },
+   "common_pitfalls": [
+    "Treating a * hop as a broken link rather than a router that did not answer.",
+    "Reading intermediate-hop loss in mtr as packet loss on the forwarded path [c4].",
+    "Assuming the return path matches the forward path.",
+    "Running traceroute with name resolution on and blaming slow DNS for slow hops; use -n or /d [c10] [c12].",
+    "Forgetting that Windows and Linux use different probe protocols by default, so results differ through the same firewall [c3]."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Which ICMP message does a router send when a traceroute probe's TTL expires?",
+     "a": "ICMP Time Exceeded, type 11, code 0 [c2]."
+    },
+    {
+     "q": "Why might traceroute show a diamond or loop that does not exist?",
+     "a": "Per-flow load balancing (ECMP) sends probes with different header fields down different paths; holding the flow fields constant avoids it [c14]."
+    },
+    {
+     "q": "Why does a trace to a load balancer VIP never show the pool members?",
+     "a": "The load balancer owns the VIP and proxies or translates traffic to members, so probes terminate at the VIP; member context must come from the device API."
+    },
+    {
+     "q": "What does a final hop of * * * mean on a Cisco-routed path?",
+     "a": "Possibly that ICMP unreachables are rate limited (one per 500 ms by default) or filtered, not that the target is down [c3]."
+    }
+   ],
+   "slides_and_assets": [
+    "Diagram of TTL expiry with ICMP Time Exceeded and Port Unreachable responses.",
+    "Side-by-side capture of Linux traceroute (UDP, ICMP, TCP) and Windows tracert to the same lab target.",
+    "Slide of the 'where evidence goes dark' list with one lab capture per case.",
+    "Hop table template and pipeline brief template (Markdown).",
+    "One-slide summary of the course operating pattern."
+   ],
+   "sources": [
+    "c1",
+    "c2",
+    "c3",
+    "c4",
+    "c10",
+    "c11",
+    "c12",
+    "c13",
+    "c14"
+   ]
+  },
+  {
+   "day": 1,
+   "title": "Setting up Claude Code, the Agent SDK and MCP for this workflow",
+   "goal": "Build a Claude workbench where Claude can call read-only probe tools and nothing else, with credentials kept out of prompts.",
+   "learning_objectives": [
+    "Learners can write a CLAUDE.md and a .claude/settings.json that set project conventions and permission rules.",
+    "Learners can define custom tools in the Python Agent SDK and restrict Claude to those tools only.",
+    "Learners can register a stdio MCP server with Claude Code at project scope.",
+    "Learners can add a PreToolUse hook that blocks out-of-scope calls and a PostToolUse hook that logs every call.",
+    "Learners can keep device tokens in environment variables or a vault and out of the model context."
+   ],
+   "lessons": [
+    {
+     "title": "Claude Code project layout",
+     "points": [
+      "Repository layout: probes/ (runners), adapters/ (devices), schema/ (Pydantic models), diagrams/ (published .mmd), evidence/ (bundles), mcp_server/, tests/, and CLAUDE.md.",
+      "CLAUDE.md lives at ./CLAUDE.md or ./.claude/CLAUDE.md, is shared through Git, and can be started with /init [c16].",
+      "Teach clearly that CLAUDE.md is context, not enforcement; anything that must be blocked goes in permission rules or hooks [c16].",
+      "Permission rules are evaluated deny, then ask, then allow, and the first match wins, so a broad deny cannot be undone by a narrow allow [c15].",
+      "Put Bash in deny for the probe agent so the tool is removed from Claude's context entirely, and allow only mcp__probe__* [c15].",
+      "Remind learners that Bash rules match command text and are not a security boundary; the real control is not giving Claude a shell [c15]."
+     ]
+    },
+    {
+     "title": "Agent SDK sessions and custom tools",
+     "points": [
+      "Define tools with the @tool decorator: name, description, input schema and an async handler that returns content [c18].",
+      "Wrap tools with create_sdk_mcp_server(name='probe', version='1.0.0', tools=[...]) and pass it in mcp_servers [c18].",
+      "Set tools=[] so all built-in tools are removed and Claude can only use your MCP tools; list each tool as mcp__probe__<name> in allowed_tools [c18].",
+      "Use a full JSON Schema input with enums and ranges, for example count 1 to 10 and timeout 1 to 5 seconds, so bad arguments fail validation [c18].",
+      "Return is_error with a composed message when a probe fails so Claude can react sensibly instead of seeing a raw exception [c18].",
+      "Mark probe tools with readOnlyHint, but explain this is metadata only and does not enforce anything [c18]."
+     ]
+    },
+    {
+     "title": "The read-only probe MCP server",
+     "points": [
+      "Expose three tools only: ping, traceroute and dns_lookup; each wraps the deterministic runner from Module 3.",
+      "MCP clients discover tools with tools/list and call them with tools/call; results carry content, structuredContent and isError [c21].",
+      "The MCP specification says servers MUST validate inputs, implement access controls, rate limit invocations and sanitize outputs; clients SHOULD log tool usage and use timeouts [c21].",
+      "Register the server with claude mcp add --scope project probe -- python -m mcp_server; project scope writes .mcp.json and prompts for approval the first time [c17].",
+      "Every tool call writes an audit line: timestamp, tool, arguments, caller session, result status and probe ID."
+     ]
+    },
+    {
+     "title": "Hooks and secrets",
+     "points": [
+      "A PreToolUse hook with HookMatcher(matcher='^mcp__probe__') checks tool_input['target'] against the scope list and returns permissionDecision 'deny' with a reason [c20].",
+      "Matchers match tool names only, so argument checks must happen inside the hook body [c20].",
+      "A PostToolUse hook appends to the audit log; if hooks disagree, deny wins [c20].",
+      "Device API tokens are read by the adapter from environment variables or a vault at call time and never appear in tool arguments, results or prompts.",
+      "Add Read deny rules for .env and secrets/** so Claude Code cannot open them through file tools [c15]."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Show the repository tree and the CLAUDE.md with probe conventions and the evidence rule.",
+    "Open .claude/settings.json with deny: ['Bash'] and allow: ['mcp__probe__*'] and explain evaluation order [c15].",
+    "Run claude mcp add --scope project probe -- python -m mcp_server and show the generated .mcp.json [c17].",
+    "Start an Agent SDK script with tools=[] and the probe server, and ask Claude to trace the lab VIP [c18].",
+    "Ask Claude to run 'ls /' and show it has no tool to do so.",
+    "Ask Claude to ping 8.8.8.8 and show the PreToolUse hook denying it with a reason [c20].",
+    "Open the audit log and show one line per tool call."
+   ],
+   "lab": {
+    "brief": "Stand up the MCP server, connect it to Claude Code and the Agent SDK, and prove Claude can call a probe tool but cannot run an arbitrary shell command.",
+    "steps": [
+     "Clone the course repository and create a Python virtual environment with the pinned requirements.",
+     "Write CLAUDE.md with the evidence rule, repository layout and test command.",
+     "Create .claude/settings.json with Bash denied, Read deny rules for secrets, and the probe tools allowed.",
+     "Implement the MCP server with ping, traceroute and dns_lookup tools calling stub runners.",
+     "Register the server at project scope and confirm Claude Code lists the tools.",
+     "Write an Agent SDK script with tools=[], the in-process probe server and a PreToolUse scope hook.",
+     "Ask Claude to trace an in-scope target, an out-of-scope target and to run a shell command; record what happens.",
+     "Inspect the audit log for all three attempts."
+    ],
+    "success_criteria": [
+     "Claude successfully calls the in-scope probe and returns its result.",
+     "The out-of-scope probe is denied by the hook with a logged reason.",
+     "No shell command runs, and the transcript shows Claude had no shell tool.",
+     "No credential appears in any prompt, tool argument or log line."
+    ]
+   },
+   "common_pitfalls": [
+    "Relying on CLAUDE.md text to prevent shell use instead of removing the tool [c16].",
+    "Adding an allow rule and expecting it to override a broader deny [c15].",
+    "Writing a hook matcher that tries to match a target IP; matchers only see tool names [c20].",
+    "Forgetting that a project-scoped MCP server needs approval on first use, then assuming it is broken [c17].",
+    "Passing device passwords as tool arguments so they end up in transcripts."
+   ],
+   "knowledge_check": [
+    {
+     "q": "A deny rule says Bash and an allow rule says Bash(traceroute *). Can Claude run traceroute through Bash?",
+     "a": "No. Deny is evaluated first and a bare Bash deny removes the tool from context [c15]."
+    },
+    {
+     "q": "How do you make sure the Agent SDK session has no built-in tools at all?",
+     "a": "Pass tools=[] so only your MCP tools remain [c18]."
+    },
+    {
+     "q": "Where should an argument-level scope check live?",
+     "a": "Inside a PreToolUse hook body (and in the tool handler), because matchers only match tool names [c20]."
+    },
+    {
+     "q": "Name two duties the MCP specification places on servers.",
+     "a": "Any two of: validate inputs, implement access controls, rate limit invocations, sanitize outputs [c21]."
+    }
+   ],
+   "slides_and_assets": [
+    "Starter repository with folder layout, CLAUDE.md template and .claude/settings.json.",
+    "MCP server skeleton (Python) with three tool stubs and audit logging.",
+    "Agent SDK starter script with tools=[] and hook examples.",
+    "Diagram of the trust boundary: Claude, MCP server, runners, devices, vault.",
+    "Cheat sheet of permission rule syntax and evaluation order."
+   ],
+   "sources": [
+    "c15",
+    "c16",
+    "c17",
+    "c18",
+    "c20",
+    "c21"
+   ]
+  },
+  {
+   "day": 1,
+   "title": "Deterministic probe runners in Python",
+   "goal": "Wrap ping and traceroute in tested Python runners that always return a typed record, whatever the network does.",
+   "learning_objectives": [
+    "Learners can call ping and traceroute through subprocess with timeouts, fixed argument lists and exit-code handling.",
+    "Learners can parse Linux and Windows output into one typed hop list.",
+    "Learners can handle stars, duplicate hops, annotations and partial paths without guessing.",
+    "Learners can unit test parsers against saved captures.",
+    "Learners can expose runners to Claude as tools that return structured results."
+   ],
+   "lessons": [
+    {
+     "title": "Running probes safely",
+     "points": [
+      "Build the command as a list, never a shell string, and validate the target as an IP or allowed hostname before building it.",
+      "Use subprocess.run(..., timeout=N, capture_output=True); on timeout the child is killed and TimeoutExpired is raised, which the runner turns into a failed record [c22].",
+      "ping exit codes: 0 success, 1 no replies (or fewer than count by deadline), 2 other error; record the code rather than treating non-zero as a crash [c11].",
+      "Fix probe parameters per run: ping -c 5 -W 2 -w 15; traceroute -n -q 3 -w 2 -m 30 [c10] [c11].",
+      "Record the tool version (traceroute -V, ping -V) and the exact command in every record."
+     ]
+    },
+    {
+     "title": "Parsing Linux and Windows output",
+     "points": [
+      "Linux traceroute prints a hop number, then per-probe address and RTT or *; annotations such as !H or !X follow the RTT [c10].",
+      "Windows tracert prints three RTT columns then an address; 'Request timed out' rows are all asterisks [c12].",
+      "Normalize both into Hop(ttl, responders[], rtts_ms[], annotations[], status) with status of answered, partial or no_reply.",
+      "A hop can have several responders when probes take different ECMP paths; keep them all rather than picking one [c14].",
+      "Save each raw capture next to its parsed record so a reviewer can replay the parse."
+     ]
+    },
+    {
+     "title": "The ugly cases",
+     "points": [
+      "Stars: record no_reply with zero responders; never interpolate an address.",
+      "Duplicate addresses on consecutive hops can mean a router decrementing TTL oddly or a load balancer; flag them, do not merge them.",
+      "Rate-limited routers: with many simultaneous probes (default 16 on Linux) some routers throttle ICMP, so lower -N for consistent output [c10].",
+      "Partially answering paths: the destination may answer even when middle hops do not; mark reached_target independently of hop completeness.",
+      "Destination unreachable annotations are evidence of filtering and should be kept as such [c10]."
+     ]
+    },
+    {
+     "title": "Tests and tool exposure",
+     "points": [
+      "Build a fixtures folder of captures: clean path, firewall-dark hop, rate-limited final hop, ECMP split, Windows output.",
+      "Write pytest cases asserting hop count, statuses and RTT values for each capture.",
+      "Validate the parsed result with Pydantic model_validate so a parser bug fails loudly with ValidationError [c24].",
+      "The MCP tool handler calls the runner and returns the record as JSON content; on failure it returns is_error with a clear message [c18].",
+      "Claude requests a probe, code runs it, Claude receives only the structured record and the probe ID."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Open a raw Linux capture with a * hop and a !X annotation and walk through the parser.",
+    "Run the runner against a black-hole lab target and show TimeoutExpired being turned into a failed record [c22].",
+    "Show ping returning exit 1 for an unreachable target and the record capturing it [c11].",
+    "Parse a Windows tracert capture into the same record type [c12].",
+    "Ask Claude Code to add a parser test for a new capture, then review the diff line by line before accepting.",
+    "Call the probe tool from Claude and show the structured JSON that comes back."
+   ],
+   "lab": {
+    "brief": "Implement and test the probe runners with Claude Code, inspect every diff, and run them against three lab targets with different failure modes.",
+    "steps": [
+     "Review the provided capture fixtures and expected results.",
+     "Ask Claude Code to draft the ping runner with timeout and exit-code handling; review and correct the diff.",
+     "Draft the Linux traceroute parser and run the tests against the fixtures.",
+     "Add the Windows tracert parser and its tests.",
+     "Add handling for stars, duplicate hops, annotations and multiple responders.",
+     "Connect the runners to the MCP tools from Module 2.",
+     "Run probes against target A (clean), target B (behind a firewall dropping ICMP) and target C (rate-limited).",
+     "Compare the three records and note what each status means."
+    ],
+    "success_criteria": [
+     "All parser tests pass, including the ugly cases.",
+     "No runner path uses shell=True or string-built commands.",
+     "A timeout produces a failed record, not an unhandled exception.",
+     "The three lab targets produce three distinct, correctly labeled records."
+    ]
+   },
+   "common_pitfalls": [
+    "Building commands with f-strings and shell=True, opening an injection path.",
+    "Treating ping exit code 1 as a crash rather than a valid 'no reply' result [c11].",
+    "Collapsing multiple responders on one hop into a single address [c14].",
+    "Accepting Claude-drafted parsers without running them against real captures.",
+    "Leaving default 16 parallel probes and getting inconsistent results from throttled routers [c10]."
+   ],
+   "knowledge_check": [
+    {
+     "q": "What happens to the child process when subprocess.run times out?",
+     "a": "It is killed and waited for, then TimeoutExpired is raised [c22]."
+    },
+    {
+     "q": "Which ping exit code means no replies were received?",
+     "a": "1; 2 means another error [c11]."
+    },
+    {
+     "q": "What is the default wait per traceroute probe on Windows?",
+     "a": "4000 ms, set with /w [c12]."
+    },
+    {
+     "q": "Why keep multiple responders for a single TTL?",
+     "a": "They show ECMP or load balancing, which a single address would hide [c14]."
+    }
+   ],
+   "slides_and_assets": [
+    "Capture fixture pack (Linux and Windows) with expected parse results.",
+    "Runner and parser skeleton with pytest harness.",
+    "Slide mapping each output pattern to a hop status.",
+    "Diff review checklist for Claude-drafted code."
+   ],
+   "sources": [
+    "c10",
+    "c11",
+    "c12",
+    "c14",
+    "c18",
+    "c22",
+    "c24"
+   ]
+  },
+  {
+   "day": 1,
+   "title": "Path evidence model and structured outputs",
+   "goal": "Define the path record and evidence bundle, and make Claude summarize a path with mandatory probe citations and no invented hops.",
+   "learning_objectives": [
+    "Learners can write a Pydantic schema for a path record with explicit unknown segments and per-hop confidence.",
+    "Learners can produce JSON Schema from the model and use it as an Agent SDK output format.",
+    "Learners can prompt Claude to cite probe IDs for every claim and to refuse to fill gaps.",
+    "Learners can lay out a versioned evidence bundle that a reviewer can replay."
+   ],
+   "lessons": [
+    {
+     "title": "The path record schema",
+     "points": [
+      "Fields: path_id, source, target, protocol, port, started_at, finished_at, probe_ids[], tool_versions, hops[], reached_target, notes.",
+      "Hop fields: ttl, responders[], rtts_ms[], loss_pct, status (answered, partial, no_reply), confidence (high, medium, unknown), evidence_refs[].",
+      "Unknown segments are first-class objects: from_hop, to_hop, reason (filtered, rate_limited, mpls, lb, unknown), never a guessed address.",
+      "Generate the schema with model_json_schema() and store it in schema/ under version control [c23]."
+     ]
+    },
+    {
+     "title": "Structured outputs from the Agent SDK",
+     "points": [
+      "Pass output_format={'type': 'json_schema', 'schema': PathSummary.model_json_schema()} and read ResultMessage.structured_output [c19].",
+      "The SDK validates against JSON Schema draft-07; Pydantic targets 2020-12 by default, so keep schemas simple and do not add a newer $schema declaration [c19] [c23].",
+      "Treat subtype error_max_structured_output_retries, or success without structured_output, as failure [c19].",
+      "Re-validate the result with PathSummary.model_validate before saving it [c24]."
+     ]
+    },
+    {
+     "title": "Prompting for cited summaries",
+     "points": [
+      "Wrap the path record in XML tags such as <path_record> and give instructions in <instructions> [c9].",
+      "Tell Claude what to do: 'cite the probe ID for every hop you mention; for unknown segments state the reason given in the record' [c9].",
+      "Give one worked example of a correct summary with citations, since examples steer format reliably [c9].",
+      "A deterministic checker rejects any summary that mentions an address not in the record or a probe ID not in probe_ids.",
+      "Summary fields: headline, hop_summaries[{ttl, text, evidence_refs}], gaps[{from_hop, to_hop, reason}], caveats[]."
+     ]
+    },
+    {
+     "title": "The evidence bundle",
+     "points": [
+      "Layout per request: evidence/<request_id>/raw/, parsed/path.json, enrich/, summary.json, diagram.mmd, manifest.json.",
+      "manifest.json lists each file with a SHA-256 hash, tool versions and timestamps.",
+      "The bundle is committed in the same pull request as the diagram so review sees everything together.",
+      "Nothing in the bundle contains credentials; adapters redact tokens before saving API responses."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Show the Pydantic models and the generated JSON Schema [c23].",
+    "Run the summarizer on a complete path and show structured_output [c19].",
+    "Run it on a path with hops 3 to 5 unknown and show the gaps list instead of invented hops.",
+    "Edit the prompt to remove the citation instruction and show the checker failing the output.",
+    "Show the manifest with hashes and explain replay."
+   ],
+   "lab": {
+    "brief": "Define the schema, feed Claude a path with missing hops, and verify the summary cites probe IDs and refuses to invent the gap.",
+    "steps": [
+     "Write PathRecord, Hop, UnknownSegment and PathSummary models.",
+     "Generate JSON Schema and commit it.",
+     "Write the summarizer agent with output_format set to the PathSummary schema.",
+     "Write the citation checker that cross-checks addresses and probe IDs.",
+     "Run the agent on the provided complete path fixture.",
+     "Run it on the gap fixture and inspect the gaps list.",
+     "Build the evidence bundle and manifest for one run.",
+     "Swap in a fixture with a fake address in the summary and confirm the checker rejects it."
+    ],
+    "success_criteria": [
+     "Every hop mentioned in the summary has at least one valid probe ID.",
+     "The gap fixture produces explicit unknown segments with reasons and no invented addresses.",
+     "The checker rejects the tampered summary.",
+     "The bundle manifest lists hashes for every file."
+    ]
+   },
+   "common_pitfalls": [
+    "Using optional fields for unknown hops instead of an explicit unknown segment, which lets gaps disappear silently.",
+    "Trusting structured_output without re-validating or checking citations.",
+    "Declaring a 2020-12 $schema in the output schema and having the run rejected [c19].",
+    "Telling Claude only what not to do instead of what to do [c9]."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Which result subtype tells you structured output failed after retries?",
+     "a": "error_max_structured_output_retries [c19]."
+    },
+    {
+     "q": "How does the pipeline know Claude did not invent a hop?",
+     "a": "A deterministic checker compares every address and probe ID in the summary with the path record."
+    },
+    {
+     "q": "Which Pydantic method generates the JSON Schema?",
+     "a": "BaseModel.model_json_schema() [c23]."
+    }
+   ],
+   "slides_and_assets": [
+    "Pydantic model file and generated schema.",
+    "Prompt template with XML sections and one worked example.",
+    "Citation checker script.",
+    "Evidence bundle layout diagram and sample manifest."
+   ],
+   "sources": [
+    "c9",
+    "c19",
+    "c23",
+    "c24"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "Enriching hops with load balancer context",
+   "goal": "Use read-only adapters to show what sits behind a VIP on F5, NetScaler, Radware Alteon and other load balancers.",
+   "learning_objectives": [
+    "Learners can query F5 virtual servers and pool members through iControl REST.",
+    "Learners can query NetScaler lbvservers and their service group bindings through NITRO.",
+    "Learners can read Radware Alteon objects from Python and design a common adapter for other load balancers.",
+    "Learners can match a VIP address and port to a device object and attach it to the evidence bundle."
+   ],
+   "lessons": [
+    {
+     "title": "F5 BIG-IP through iControl REST and tmsh",
+     "points": [
+      "GET /mgmt/tm/ltm/virtual lists virtual servers; destination holds the address and port and pool names the default pool [c25].",
+      "GET /mgmt/tm/ltm/pool/~Common~pool_pay_app/members returns members with address, state, session and monitor [c26].",
+      "Use $select=name,destination,pool and expandSubcollections=true to cut calls and payload size [c27].",
+      "tmsh list ltm virtual vs_pay_443 is the CLI equivalent learners will know; the REST path mirrors the tmsh tree.",
+      "Use a read-only (Guest or Auditor role) account for enrichment; the adapter never calls POST, PUT, PATCH or DELETE."
+     ]
+    },
+    {
+     "title": "Citrix NetScaler through NITRO",
+     "points": [
+      "GET /nitro/v1/config/lbvserver returns name, servicetype, ipv46, port, curstate and effectivestate [c28].",
+      "Use ?filter=ipv46:10.40.12.25 and attrs= to fetch only matching fields [c28].",
+      "GET /nitro/v1/config/lbvserver_servicegroup_binding/<name> returns the bound servicegroupname values [c29].",
+      "Authenticate with a session token in Cookie: NITRO_AUTH_TOKEN, or X-NITRO-USER and X-NITRO-PASS headers for single calls [c28]."
+     ]
+    },
+    {
+     "title": "Radware Alteon and the common adapter",
+     "points": [
+      "Radware publishes alteon-sdk, a Python API to Alteon over REST, with beans such as SlbNewCfgEnhRealServerTable; minimum supported Alteon versions are 31.0.10.0 and 32.2.2.0 [c30].",
+      "The SDK is still a beta release on PyPI, so pin the version and wrap it behind the course adapter interface [c30].",
+      "Where Cyber Controller manages the Alteons, confirm with the customer which API is the source of truth before building against it; the course treats it as an optional source.",
+      "Common adapter interface: find_vip(address, port) returns VipRecord(device, vip_name, protocol, port, members[], state, evidence_ref).",
+      "Anaya LB and any other load balancer plug in through the same interface; if no API exists, the adapter returns unknown with a reason."
+     ]
+    },
+    {
+     "title": "Matching hops to device objects",
+     "points": [
+      "Match on address and port first; a VIP address with several ports needs the port from the brief.",
+      "Partitions and route domains (F5) or traffic domains can make addresses ambiguous; record the partition with the match [c25].",
+      "Each adapter call gets an evidence ID (for example F5-77) and its redacted response is saved in enrich/.",
+      "Claude calls f5.get_virtual, netscaler.get_lbvserver and so on as tools; it never receives device credentials."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Call GET /mgmt/tm/ltm/virtual with $select from curl against the lab F5 and read the JSON [c25] [c27].",
+    "Call the pool members endpoint and show a member marked user-down [c26].",
+    "Call NITRO lbvserver with a filter on ipv46 and then the service group binding [c28] [c29].",
+    "Read a real server bean from the lab Alteon with alteon-sdk [c30].",
+    "Run the Agent SDK session and ask Claude to explain what sits behind the payments VIP; show the tool calls and evidence IDs.",
+    "Open the audit log and show each device API call."
+   ],
+   "lab": {
+    "brief": "Build read-only adapters for the lab F5 and NetScaler, let Claude map a VIP to its pool members through tool use, and log every API call.",
+    "steps": [
+     "Create read-only lab accounts on the F5 and NetScaler and store tokens in the vault.",
+     "Implement the F5 adapter: find_vip by destination, then fetch members with expandSubcollections.",
+     "Implement the NetScaler adapter: lbvserver filter by ipv46, then service group bindings.",
+     "Write contract tests against recorded API responses for both adapters.",
+     "Expose both adapters as MCP tools with input validation.",
+     "Ask Claude to enrich the Module 4 path record and attach results to the evidence bundle.",
+     "Stretch: implement the Alteon adapter with alteon-sdk against the lab or a recorded response.",
+     "Review the audit log and confirm only GET calls were made."
+    ],
+    "success_criteria": [
+     "The VIP in the path record is matched to the right virtual server and members on at least two platforms.",
+     "Every enrichment has an evidence ID and a saved redacted response.",
+     "The audit log shows only read calls.",
+     "No credential appears in prompts, tool results or saved responses."
+    ]
+   },
+   "common_pitfalls": [
+    "Using an admin account for enrichment because it was already configured.",
+    "Ignoring F5 partitions and matching the wrong VIP [c25].",
+    "Pulling every lbvserver field and every object on large appliances instead of filtering [c28].",
+    "Building directly against a beta SDK without an adapter layer [c30].",
+    "Letting Claude choose arbitrary REST paths instead of fixed adapter tools."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Which iControl REST parameter returns pool members in the same response as the pool?",
+     "a": "expandSubcollections=true [c27]."
+    },
+    {
+     "q": "Which NITRO object links a NetScaler vserver to a service group?",
+     "a": "lbvserver_servicegroup_binding, field servicegroupname [c29]."
+    },
+    {
+     "q": "What should an adapter return for a load balancer with no usable API?",
+     "a": "An unknown result with a reason, so the diagram marks the segment as unknown."
+    }
+   ],
+   "slides_and_assets": [
+    "Adapter interface definition and VipRecord model.",
+    "Recorded API responses for F5, NetScaler and Alteon (fictional addresses).",
+    "Read-only account setup guide for each lab device.",
+    "Slide mapping tmsh commands to iControl REST paths."
+   ],
+   "sources": [
+    "c25",
+    "c26",
+    "c27",
+    "c28",
+    "c29",
+    "c30"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "Data centre fabric and cloud path context",
+   "goal": "Place hops inside the Cisco ACI fabric and the cloud, and decide what stays a labeled unknown.",
+   "learning_objectives": [
+    "Learners can authenticate to APIC and run class and managed object queries with filters.",
+    "Learners can find the tenant, EPG and leaf where an endpoint IP lives.",
+    "Learners can add cloud route table or next hop evidence where traceroute stops.",
+    "Learners can justify which segments to enrich and which to leave as unknown."
+   ],
+   "lessons": [
+    {
+     "title": "APIC REST basics",
+     "points": [
+      "Log in with POST /api/aaaLogin.json and an aaaUser name and password; reuse the APIC-cookie token [c31].",
+      "Class query: /api/class/fvTenant.json; MO query: /api/mo/uni/tn-pay.json [c31].",
+      "query-target scopes to self, children or subtree; query-target-filter takes eq(fvCEp.ip,\"10.40.30.11\"); rsp-subtree is no, children or full [c31].",
+      "Use a read-only APIC user with a security domain limited to the tenants in scope."
+     ]
+    },
+    {
+     "title": "Locating an endpoint",
+     "points": [
+      "fvCEp represents a learned endpoint; its dn contains tenant, application profile and EPG [c32].",
+      "The child fvRsCEpToPathEp holds the leaf and interface path, so request children with rsp-subtree=children and rsp-subtree-class [c32].",
+      "Turn the path dn (for example topology/pod-1/paths-103/pathep-[eth1/12]) into leaf-103, eth1/12 for the diagram.",
+      "L3Outs and border leaves are where traffic leaves the fabric; record the L3Out name as the exit point.",
+      "Endpoint data is learned state and can age out; record the query time with every result."
+     ]
+    },
+    {
+     "title": "Hybrid and cloud paths",
+     "points": [
+      "Traceroute into a cloud network often stops at the gateway or shows provider hops only; the route table is better evidence.",
+      "AWS route tables map a destination CIDR to a target such as a VPN connection, NAT gateway or peering connection [c34].",
+      "Azure Network Watcher next hop returns next hop type, IP and route table ID for a destination [c35].",
+      "Cloud lookups use read-only roles and are tools like any other, logged with evidence IDs.",
+      "If no cloud access is granted, the diagram shows a labeled cloud boundary with 'route table not inspected'."
+     ]
+    },
+    {
+     "title": "What to enrich and what to leave unknown",
+     "points": [
+      "Enrich when a read-only API can answer with a timestamped fact; leave unknown when the only source would be a guess or a stale document.",
+      "Never enrich from memory or from Claude's general knowledge of typical designs.",
+      "Write the enrichment decision into the evidence bundle so the reviewer can see why a segment is unknown.",
+      "Agree the enrichment policy with the approver role in advance."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Log in to the DevNet ACI sandbox or lab APIC with curl and save the token [c31] [c33].",
+    "Run a class query for fvTenant and an MO query for one tenant [c31].",
+    "Find a lab endpoint with query-target-filter on fvCEp.ip and include fvRsCEpToPathEp children [c32].",
+    "Show an AWS route table and an Azure next hop result for the cloud segment of the lab path [c34] [c35].",
+    "Show the enriched evidence bundle with fabric and cloud records and one deliberately unknown segment."
+   ],
+   "lab": {
+    "brief": "Query the lab APIC for the EPGs and L3Out a path traverses and attach fabric context to the evidence bundle.",
+    "steps": [
+     "Create the APIC adapter with login, class query and MO query functions.",
+     "Write apic.get_endpoint(ip) returning tenant, AP, EPG, leaf and interface.",
+     "Write apic.get_l3out(tenant) returning L3Out names and border leaf nodes.",
+     "Test both against recorded APIC responses.",
+     "Expose the functions as MCP tools and run Claude enrichment on the Module 5 bundle.",
+     "Add a cloud segment from a recorded route table or next hop response, or label it unknown.",
+     "Record the enrichment decisions in the bundle."
+    ],
+    "success_criteria": [
+     "Each pool member IP is placed on a tenant, EPG and leaf with an evidence ID.",
+     "The exit L3Out is recorded for the outbound segment.",
+     "The cloud segment is either evidenced or explicitly unknown with a reason.",
+     "All APIC calls in the audit log are read-only."
+    ]
+   },
+   "common_pitfalls": [
+    "Querying fvCEp without children and wondering where the leaf is [c32].",
+    "Using the APIC admin account for read-only enrichment.",
+    "Treating endpoint learning data as permanent configuration.",
+    "Filling the cloud segment from an old design document instead of evidence."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Which child object of fvCEp tells you where the endpoint attaches to the fabric?",
+     "a": "fvRsCEpToPathEp [c32]."
+    },
+    {
+     "q": "What does rsp-subtree default to in an APIC query?",
+     "a": "no, so children are not returned unless requested [c31]."
+    },
+    {
+     "q": "What three facts does Azure next hop return?",
+     "a": "Next hop type, IP address and route table ID [c35]."
+    }
+   ],
+   "slides_and_assets": [
+    "APIC object model slide: tenant, AP, EPG, BD, L3Out, fvCEp.",
+    "Recorded APIC responses for the lab tenant.",
+    "Cloud evidence examples for AWS and Azure (fictional).",
+    "Enrichment decision checklist."
+   ],
+   "sources": [
+    "c31",
+    "c32",
+    "c33",
+    "c34",
+    "c35"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "Generating the traffic and flow diagram with Mermaid",
+   "goal": "Have Claude draft Mermaid from the evidence bundle and use deterministic tools to validate, render and check every node against evidence.",
+   "learning_objectives": [
+    "Learners can write Mermaid flowcharts and sequence diagrams for network paths.",
+    "Learners can prompt Claude to draft diagram code that carries evidence IDs on every node.",
+    "Learners can validate and render Mermaid with mermaid-cli and reject unsupported nodes.",
+    "Learners can apply course diagram conventions and a legend."
+   ],
+   "lessons": [
+    {
+     "title": "Mermaid for traffic paths",
+     "points": [
+      "Use flowchart LR for hop-by-hop paths; subgraph blocks for site, fabric and cloud boundaries [c5].",
+      "Use dotted links (-.-) for unknown segments and thick links (===) for the primary path [c5].",
+      "Shapes can be set with the A@{ shape: ... } syntax (Mermaid 11.3.0 and later); check GitHub's Mermaid version with an info block before relying on it [c5] [c6].",
+      "classDef unknown fill:#eee,stroke-dasharray: 5\\,5 then class hop3 unknown; escape commas in dasharray [c5].",
+      "Avoid a lowercase end inside labels; it breaks flowcharts [c5].",
+      "Use sequenceDiagram for request-response flows such as client to VIP to member and back [c38]."
+     ]
+    },
+    {
+     "title": "Claude drafts, code validates",
+     "points": [
+      "Claude receives the bundle summary and must output Mermaid only, inside a fixed structured output field [c9] [c19].",
+      "A generator checker parses node IDs and confirms each maps to a hop, VIP, member or unknown segment in the bundle.",
+      "mmdc -i diagram.mmd -o diagram.svg renders the file; a parse failure stops the pipeline [c37].",
+      "mermaid.parse() can validate without rendering in a Node step; keep securityLevel strict so labels cannot inject HTML [c36].",
+      "Rendering happens in the pipeline container (minlag/mermaid-cli) so every run uses the same version [c37]."
+     ]
+    },
+    {
+     "title": "Evidence on every node",
+     "points": [
+      "Node labels carry a short evidence line, for example lb-f5-01 vs_pay_443 [F5-77].",
+      "Unknown nodes say why: 'hop 3 unknown: no reply [P-0218]'.",
+      "Edges carry measured RTT where available and nothing where not measured.",
+      "A legend subgraph explains shapes, line styles and evidence prefixes."
+     ]
+    },
+    {
+     "title": "Other formats",
+     "points": [
+      "GitHub renders mermaid fenced blocks in pull requests and Markdown, so reviewers see the diagram in place [c6].",
+      "Teams on draw.io can import the same node and edge list as CSV with # connect and # identity lines [c7].",
+      "Graphviz DOT with cluster subgraphs is a fallback for large paths [c8].",
+      "Keep Mermaid as the source of truth and generate other formats from the same evidence."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Show a hand-written Mermaid flowchart of the lab path with subgraphs and a dotted unknown segment [c5].",
+    "Run the Claude diagram agent on the enriched bundle and show the Mermaid it returns.",
+    "Render with mmdc in the container and open the SVG [c37].",
+    "Remove the evidence ID from one node and show the checker rejecting it.",
+    "Add a node with lowercase end in the label and show the render failure [c5].",
+    "Push to a branch and show the diagram rendering in a GitHub pull request [c6]."
+   ],
+   "lab": {
+    "brief": "Generate Mermaid for the lab path, render it, break the evidence on purpose and watch the renderer reject an unsupported node.",
+    "steps": [
+     "Write the diagram conventions file: shapes, classDef styles and legend.",
+     "Write the diagram agent prompt with one worked example.",
+     "Generate Mermaid for the lab bundle.",
+     "Run the evidence checker and fix any issues in the prompt, not by hand-editing output.",
+     "Render with mmdc to SVG and PNG.",
+     "Add a fake node with no evidence and confirm the checker rejects it.",
+     "Introduce a syntax error and confirm rendering fails and the pipeline stops.",
+     "Optional: export the same graph as draw.io CSV."
+    ],
+    "success_criteria": [
+     "The rendered diagram shows every hop, VIP, member and unknown segment from the bundle.",
+     "Every node has an evidence ID that exists in the bundle.",
+     "Unknown segments use the unknown style and say why.",
+     "Both broken cases stop the pipeline with a clear error."
+    ]
+   },
+   "common_pitfalls": [
+    "Using shape syntax newer than the Mermaid version GitHub runs [c6].",
+    "Hand-editing Claude's Mermaid and losing reproducibility.",
+    "Rendering on laptops with different mermaid-cli versions.",
+    "Unescaped commas in style definitions [c5]."
+   ],
+   "knowledge_check": [
+    {
+     "q": "How do you find which Mermaid version GitHub uses?",
+     "a": "Put info in a mermaid code block [c6]."
+    },
+    {
+     "q": "Which command renders a Mermaid file to SVG?",
+     "a": "mmdc -i input.mmd -o output.svg [c37]."
+    },
+    {
+     "q": "What does securityLevel strict do?",
+     "a": "Encodes HTML tags in text and disables click functionality [c36]."
+    }
+   ],
+   "slides_and_assets": [
+    "Diagram conventions sheet with shapes, styles and legend.",
+    "Prompt template and worked example for the diagram agent.",
+    "Container image definition with pinned mermaid-cli.",
+    "Before and after diagrams: hand-drawn versus evidence-linked."
+   ],
+   "sources": [
+    "c5",
+    "c6",
+    "c7",
+    "c8",
+    "c9",
+    "c19",
+    "c36",
+    "c37",
+    "c38"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "Guardrails, approvals and audit for probing and publishing",
+   "goal": "Enforce scope, rate limits, approvals and audit in code so the pipeline is safe on production networks.",
+   "learning_objectives": [
+    "Learners can enforce a prefix and hostname scope list in code at more than one layer.",
+    "Learners can implement per-target and per-hour probe budgets.",
+    "Learners can require a named approver before any write to ServiceNow or a shared repository.",
+    "Learners can produce an audit log a reviewer can follow end to end."
+   ],
+   "lessons": [
+    {
+     "title": "Scope lists in code",
+     "points": [
+      "Scope file lists allowed prefixes and hostnames; resolve hostnames first and check every resolved address.",
+      "Enforce in three places: the PreToolUse hook, the MCP tool handler and the runner itself [c20] [c21].",
+      "The prompt may mention scope for clarity, but scope is never enforced by the prompt.",
+      "Out-of-scope requests return a denial with a reason and are logged [c20]."
+     ]
+    },
+    {
+     "title": "Rate limits and probe budgets",
+     "points": [
+      "The MCP specification requires servers to rate limit tool invocations [c21].",
+      "Budget example: 50 probes per hour per pipeline, 3 per target per run, at most 2 concurrent runs.",
+      "Lower traceroute parallelism (-N) to avoid triggering ICMP throttling on routers [c10].",
+      "When the budget is exhausted, the tool returns is_error with 'budget exhausted' and Claude must report it [c18]."
+     ]
+    },
+    {
+     "title": "Approval gate",
+     "points": [
+      "Publishing tools are separate from probing tools and are not given to the drafting agent.",
+      "The publish step checks the approval record: approver name, role, time, request ID and the hash of the bundle approved.",
+      "If the bundle hash changes after approval, the approval is void.",
+      "MCP clients should present confirmation for sensitive operations and keep a human able to deny invocations [c21]."
+     ]
+    },
+    {
+     "title": "Audit log",
+     "points": [
+      "Log every tool call, device query, model output hash and approval decision as JSON lines.",
+      "PostToolUse hooks write the tool call side; adapters write the device side [c20].",
+      "Store logs append-only and outside the repository; ship to the SIEM if the customer has one.",
+      "The audit export for a request is attached to the change record in Module 9."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Show the scope file and the three enforcement points.",
+    "Ask Claude to probe 10.99.7.9 and show the hook denial and log line [c20].",
+    "Exhaust the probe budget in a loop and show the error Claude receives [c21].",
+    "Attempt to publish without an approval record and show the refusal.",
+    "Approve, then alter the bundle, and show the approval becoming void.",
+    "Export the audit log for one request."
+   ],
+   "lab": {
+    "brief": "Add scope enforcement, rate limits and an approval gate, then attempt an out-of-scope probe and an unapproved publish and show both are refused and logged.",
+    "steps": [
+     "Write the scope file and loader with hostname resolution.",
+     "Add scope checks to the hook, tool handler and runner.",
+     "Add a token-bucket budget to the MCP server.",
+     "Write the approval record model and a CLI for an approver to sign a bundle hash.",
+     "Gate the publish function on a valid approval.",
+     "Try an out-of-scope probe, exceed the budget and attempt an unapproved publish.",
+     "Export the audit log and walk through it with a partner."
+    ],
+    "success_criteria": [
+     "The out-of-scope probe is refused at the hook and would be refused at the handler if the hook were removed.",
+     "Budget exhaustion is reported cleanly.",
+     "Unapproved and stale-approval publishes are refused.",
+     "The audit log tells the full story without reading code."
+    ]
+   },
+   "common_pitfalls": [
+    "Checking scope on hostnames but not on resolved addresses.",
+    "Enforcing scope only in the prompt or CLAUDE.md [c16].",
+    "Giving the drafting agent the publish tool 'for convenience'.",
+    "Approvals that are not tied to a bundle hash."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Why enforce scope in the runner as well as the hook?",
+     "a": "Defense in depth: hooks can be misconfigured or bypassed by another caller, and the runner is the last point before packets leave."
+    },
+    {
+     "q": "What makes an approval void in this design?",
+     "a": "Any change to the bundle hash after approval."
+    },
+    {
+     "q": "Which MCP security duty covers probe budgets?",
+     "a": "Servers must rate limit tool invocations [c21]."
+    }
+   ],
+   "slides_and_assets": [
+    "Scope file example and enforcement diagram.",
+    "Approval record schema and approver CLI.",
+    "Audit log sample for one request.",
+    "Slide of the 'ping storm' risk with budget math."
+   ],
+   "sources": [
+    "c10",
+    "c16",
+    "c18",
+    "c20",
+    "c21"
+   ]
+  },
+  {
+   "day": 3,
+   "title": "Publishing to ServiceNow and GitHub",
+   "goal": "Take a ServiceNow request in and publish an approved diagram to the record and to a GitHub pull request.",
+   "learning_objectives": [
+    "Learners can read and update a ServiceNow record through the Table API.",
+    "Learners can attach the diagram and evidence bundle through the Attachment API.",
+    "Learners can trigger the pipeline from Flow Designer and return the result.",
+    "Learners can open a GitHub pull request with the diagram, bundle and Claude summary."
+   ],
+   "lessons": [
+    {
+     "title": "ServiceNow Table API",
+     "points": [
+      "Read the request: GET /api/now/table/sc_req_item?sysparm_query=number=RITM0041877&sysparm_fields=sys_id,short_description [c39].",
+      "Update with PATCH /api/now/table/{table}/{sys_id} to write work notes and status [c39].",
+      "Use sysparm_fields to keep responses small and sysparm_limit on list calls [c39].",
+      "The integration user has a role limited to the tables it needs; CMDB writes need an extra, approved role."
+     ]
+    },
+    {
+     "title": "Attachment API",
+     "points": [
+      "POST /api/now/attachment/file?table_name=sc_req_item&table_sys_id=<sys_id>&file_name=blr-dc1.svg with the binary body [c40].",
+      "Attach the SVG, the Mermaid source, the summary and a zipped evidence bundle.",
+      "Use POST /api/now/attachment/upload when you need multipart form data [c40].",
+      "Record each attachment sys_id in the audit log."
+     ]
+    },
+    {
+     "title": "Flow Designer trigger",
+     "points": [
+      "A catalog item or record trigger starts a flow when a diagram request is submitted.",
+      "The flow uses a REST step to call the pipeline endpoint; the REST step needs Integration Hub and supports connection aliases and MID Server execution [c41].",
+      "The pipeline responds asynchronously by updating the record when done.",
+      "If Integration Hub is not licensed, fall back to the pipeline polling the Table API on a schedule."
+     ]
+    },
+    {
+     "title": "GitHub pull request",
+     "points": [
+      "Branch name diagram/<request>; commit diagrams/<app>/<site>.mmd and evidence/<request>/ [c6].",
+      "Open the pull request with POST /repos/{owner}/{repo}/pulls with title, head, base and body containing Claude's summary [c42].",
+      "CODEOWNERS for diagrams/<app>/ requests the right reviewers; the merge is the approval for the repository copy.",
+      "Repository layout per application and per site keeps history readable."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Submit a diagram request in the lab ServiceNow instance.",
+    "Show the flow firing and the REST step calling the pipeline [c41].",
+    "Show the pipeline reading the record through the Table API [c39].",
+    "After approval, show attachments arriving on the record [c40].",
+    "Show the pull request with the rendered diagram and summary [c42] [c6].",
+    "Merge and show the record updated with the merge link."
+   ],
+   "lab": {
+    "brief": "Run the pipeline from a ServiceNow request to a GitHub pull request and complete the approval end to end.",
+    "steps": [
+     "Create the integration user and role in the lab ServiceNow instance.",
+     "Write the ServiceNow adapter: get request, patch work notes, attach files.",
+     "Build the flow with a record trigger and REST step, or configure polling.",
+     "Write the GitHub publisher that creates a branch, commits files and opens a pull request.",
+     "Submit a request and let the pipeline run to the approval gate.",
+     "Approve as the named approver and watch publication.",
+     "Review and merge the pull request; confirm the record shows the link."
+    ],
+    "success_criteria": [
+     "The request record shows the diagram, bundle and summary as attachments.",
+     "The pull request contains the Mermaid file, bundle and summary.",
+     "Nothing was published before the approval record existed.",
+     "The audit log links request, approval, attachments and pull request."
+    ]
+   },
+   "common_pitfalls": [
+    "Giving the integration user admin rights.",
+    "Using PUT instead of PATCH and clearing fields on the record [c39].",
+    "Forgetting table_sys_id and attaching to nothing [c40].",
+    "Assuming the REST step is available without Integration Hub [c41]."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Which three query parameters does POST /now/attachment/file require?",
+     "a": "table_name, table_sys_id and file_name [c40]."
+    },
+    {
+     "q": "Which fields must a create pull request call include?",
+     "a": "head and base, plus title (or an issue) [c42]."
+    },
+    {
+     "q": "What is needed to call the pipeline from a flow REST step?",
+     "a": "An Integration Hub subscription and a connection, optionally through a MID Server [c41]."
+    }
+   ],
+   "slides_and_assets": [
+    "ServiceNow catalog item and flow export for the lab.",
+    "Adapter code for Table and Attachment APIs.",
+    "GitHub publisher script and PR body template.",
+    "Sequence diagram of request to publication."
+   ],
+   "sources": [
+    "c6",
+    "c39",
+    "c40",
+    "c41",
+    "c42"
+   ]
+  },
+  {
+   "day": 3,
+   "title": "Drift detection and scheduled re-mapping",
+   "goal": "Re-run in-scope probes on a schedule, detect real path changes deterministically, and raise a pull request with Claude's explanation only when something changed.",
+   "learning_objectives": [
+    "Learners can write a scheduled GitHub Actions workflow and understand its timing limits.",
+    "Learners can diff two path records deterministically and classify changes.",
+    "Learners can have Claude explain a diff in plain language with structured output.",
+    "Learners can write an operator runbook for false drift."
+   ],
+   "lessons": [
+    {
+     "title": "Scheduling the job",
+     "points": [
+      "on: schedule with cron '21 21 * * *' runs at 21:21 UTC (02:51 IST); cron is UTC unless a timezone is set [c43].",
+      "Runs use the default branch, the minimum interval is 5 minutes, and runs can be delayed or dropped at busy times such as the top of the hour, so avoid minute 0 [c43].",
+      "Public repositories disable scheduled workflows after 60 days without activity [c43].",
+      "The runner must sit inside the network that can reach the targets, so use a self-hosted runner in the lab network.",
+      "Probes still pass through the same scope list and budget as the interactive pipeline."
+     ]
+    },
+    {
+     "title": "Deterministic diff",
+     "points": [
+      "Compare hop sequences by responder sets, not single addresses, to avoid ECMP noise [c14].",
+      "Classify: new hop, removed hop, changed responder, newly unknown, newly answering, VIP member change.",
+      "Ignore RTT changes below a threshold; RTT is not path.",
+      "Require two consecutive runs to agree before raising drift, to filter one-off probe failures."
+     ]
+    },
+    {
+     "title": "Claude explains the change",
+     "points": [
+      "Feed the diff and both records to Claude with a structured output schema: summary, changes[{type, hops, evidence_refs}], likely_causes[], confidence [c19].",
+      "Claude must cite probe IDs for both the old and new state.",
+      "The diff decides whether a PR is opened; Claude only explains.",
+      "The PR body contains the diff, Claude's explanation and links to the bundles [c42]."
+     ]
+    },
+    {
+     "title": "Pull requests from automation and the runbook",
+     "points": [
+      "A PR opened with GITHUB_TOKEN creates pull_request runs in an approval-required state, so a person must approve CI on drift PRs [c44].",
+      "Grant only contents: write and pull-requests: write to the job.",
+      "Runbook: ECMP flapping, maintenance windows, probe failures, firewall changes that hide hops, and how to suppress a known false drift.",
+      "Close stale drift PRs automatically if the path returns to the published state."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Show the scheduled workflow file and explain the cron expression and timezone [c43].",
+    "Trigger the job with workflow_dispatch to avoid waiting.",
+    "Change the lab path by shutting a link and show the second run confirming drift.",
+    "Show the deterministic diff and Claude's structured explanation [c19].",
+    "Show the drift PR and the approval-required CI banner [c44].",
+    "Restore the link and show the stale PR closed."
+   ],
+   "lab": {
+    "brief": "Schedule the re-mapping job, change the lab path, and review the drift pull request Claude explains.",
+    "steps": [
+     "Register the self-hosted runner in the lab network.",
+     "Write the workflow with schedule and workflow_dispatch triggers.",
+     "Implement the diff and classification with tests on fixture pairs.",
+     "Add the explanation agent with structured output.",
+     "Add the PR opener that runs only on confirmed drift.",
+     "Change the lab path and run the job twice.",
+     "Review the PR and approve its CI run.",
+     "Write the runbook section for one false-drift case you observed."
+    ],
+    "success_criteria": [
+     "No PR is opened when the path is unchanged.",
+     "A confirmed change produces one PR with diff, explanation and evidence links.",
+     "ECMP-only variation does not raise drift.",
+     "The runbook covers at least three false-drift causes."
+    ]
+   },
+   "common_pitfalls": [
+    "Scheduling at minute 0 and seeing delayed or dropped runs [c43].",
+    "Running the schedule on GitHub-hosted runners that cannot reach internal targets.",
+    "Letting Claude decide whether drift happened.",
+    "Expecting CI to run automatically on PRs opened with GITHUB_TOKEN [c44]."
+   ],
+   "knowledge_check": [
+    {
+     "q": "In what timezone does a GitHub Actions cron run by default?",
+     "a": "UTC [c43]."
+    },
+    {
+     "q": "Why compare responder sets instead of single addresses?",
+     "a": "ECMP can produce different responders per run without a real path change [c14]."
+    },
+    {
+     "q": "What happens to CI when the drift job opens a PR with GITHUB_TOKEN?",
+     "a": "The pull_request run waits for approval by a user with write access [c44]."
+    }
+   ],
+   "slides_and_assets": [
+    "Workflow file template.",
+    "Diff classification table and fixture pairs.",
+    "Drift PR template.",
+    "Operator runbook template."
+   ],
+   "sources": [
+    "c14",
+    "c19",
+    "c42",
+    "c43",
+    "c44"
+   ]
+  },
+  {
+   "day": 3,
+   "title": "Capstone: request to approved flow diagram, end to end",
+   "goal": "Run the full pipeline from a ServiceNow request to an approved, published and monitored diagram, and defend it to the group.",
+   "learning_objectives": [
+    "Learners can run the full pipeline across probes, enrichment, diagram, approval and publication.",
+    "Learners can show the audit trail for one request from start to finish.",
+    "Learners can state acceptance criteria and a limitations statement for their diagram.",
+    "Learners can demo the result and answer reviewer questions with evidence."
+   ],
+   "lessons": [
+    {
+     "title": "Capstone scenario",
+     "points": [
+      "A ServiceNow request asks for the payments flow from a branch client to the payments VIP at the lab data center.",
+      "The path crosses a firewall that drops ICMP, an F5 or NetScaler VIP, an Alteon or Anaya LB segment through the common adapter, and the ACI fabric.",
+      "Teams must produce the diagram, bundle, PR, ServiceNow update and drift job.",
+      "The instructor injects one surprise: a pool member change or a new hop mid-exercise."
+     ]
+    },
+    {
+     "title": "Acceptance and limitations",
+     "points": [
+      "Acceptance criteria come from the Module 1 brief and the guardrail rules.",
+      "The limitations statement lists each unknown segment and why it is unknown.",
+      "Return path is stated as not observed unless separately probed from the far side.",
+      "Every claim in the demo must be backed by an evidence ID."
+     ]
+    },
+    {
+     "title": "Review and demo",
+     "points": [
+      "Peer review uses the audit log, not the code.",
+      "Demo: request in, probes, enrichment, diagram, approval, publication, drift check.",
+      "Reviewers try one out-of-scope probe and one unapproved publish.",
+      "Teams close with what they would change before production."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Brief the scenario and show the acceptance checklist.",
+    "Show a reference run end to end in under ten minutes.",
+    "Inject the surprise change after teams publish their first version.",
+    "Model a good review by asking for evidence behind two nodes."
+   ],
+   "lab": {
+    "brief": "Capstone build and demo.",
+    "steps": [
+     "Submit the capstone request in ServiceNow.",
+     "Run probes and enrichment for all segments.",
+     "Generate, check and render the diagram.",
+     "Obtain approval from the designated approver.",
+     "Publish to ServiceNow and GitHub.",
+     "Run the drift job after the injected change and handle the PR.",
+     "Present the demo and limitations statement."
+    ],
+    "success_criteria": [
+     "Every node in the final diagram has valid evidence.",
+     "No publish occurred without approval, shown in the audit log.",
+     "The injected change is detected and explained.",
+     "The limitations statement is accurate and complete."
+    ]
+   },
+   "common_pitfalls": [
+    "Skipping the limitations statement because the diagram 'looks complete'.",
+    "Manually fixing a node in the diagram to save time.",
+    "Approving your own team's publish."
+   ],
+   "knowledge_check": [
+    {
+     "q": "What must every node in the capstone diagram have?",
+     "a": "An evidence ID that exists in the bundle."
+    },
+    {
+     "q": "How do you show a reviewer nothing was published without approval?",
+     "a": "The audit log shows the approval record, its bundle hash and the publish events after it."
+    },
+    {
+     "q": "How is the return path represented?",
+     "a": "As not observed, unless probed separately from the far side."
+    }
+   ],
+   "slides_and_assets": [
+    "Capstone brief and acceptance checklist.",
+    "Reference run recording.",
+    "Peer review form.",
+    "Limitations statement template."
+   ],
+   "sources": [
+    "c14",
+    "c20",
+    "c39",
+    "c40",
+    "c42"
+   ]
+  }
+ ],
+ "capstone_plan": {
+  "brief": "Teams build a repeatable pipeline that takes a flow diagram request from ServiceNow, runs ping and traceroute through deterministic code, enriches hops from load balancer and ACI APIs, has Claude draft an evidence-linked Mermaid diagram, and publishes to ServiceNow and GitHub only after a named approval, with drift detection on a schedule.",
+  "milestones": [
+   "Request received and brief confirmed from the ServiceNow record.",
+   "Probes run within scope and budget; path record saved.",
+   "Enrichment complete across load balancers and ACI, with unknowns labeled.",
+   "Diagram drafted, checked and rendered.",
+   "Approval recorded against the bundle hash.",
+   "Published to ServiceNow and GitHub; PR merged.",
+   "Drift job detects and explains the injected change."
+  ],
+  "evaluation_notes": [
+   "Score evidence integrity first: any node without valid evidence fails the capstone.",
+   "Check the audit log for approval-before-publish and refused out-of-scope probes.",
+   "Assess the limitations statement for accuracy, including the return path.",
+   "Assess clarity of Claude's summary and drift explanation for a non-specialist approver.",
+   "Assess code quality: tests on parsers and adapters, no shell=True, credentials handled correctly."
+  ]
+ },
+ "promo_video_research": {
+  "hook_basis": "The opening scenario (a ticket asks for the flow to a payments VIP, an engineer runs traceroute and ping and draws by hand, and the path changes) is a teaching scenario, but it is grounded in documented behavior: traceroute paths can change during and between traces, and load balancing creates path artifacts [c1] [c14].",
+  "claims_check": [
+   {
+    "claim": "\"What if Claude ran the probes, read every hop, and drew it for you?\"",
+    "basis": "Course framing. In the design, deterministic code runs the probes and Claude requests them through tool use and reads structured results; the narration's 'ran the probes through code you trust' is the accurate version [c18] [c21]."
+   },
+   {
+    "claim": "11 build modules, 3 days, hands-on",
+    "basis": "Matches content.py: 11 modules over 3 days."
+   },
+   {
+    "claim": "4 device families enriched",
+    "basis": "F5, NetScaler, Radware Alteon and Cisco ACI, each with a documented read API [c25] [c28] [c30] [c31]. Anaya LB is covered through the common adapter; no public Anaya LB API documentation was found, so it is taught with mocked or customer-provided interfaces."
+   },
+   {
+    "claim": "0 hops drawn without evidence",
+    "basis": "A design rule enforced by the evidence checker in the diagram module, not an external fact."
+   },
+   {
+    "claim": "Terminal: traceroute 10.40.12.25 max-hops 30 timeout 2s; hop 3 * * *; record marks hop 3 UNKNOWN",
+    "basis": "Realistic: 30 is the default maximum hops and * marks no reply within the wait time [c10]. The addresses, record ID P-0218 and the flowmap command are fictional teaching examples."
+   },
+   {
+    "claim": "f5.get_virtual returns vs_pay_443 -> pool_pay_app with members",
+    "basis": "Consistent with iControl REST virtual (destination, pool) and pool members resources [c25] [c26]; names and addresses are fictional."
+   },
+   {
+    "claim": "apic.get_epg places 10.40.30.11 in tenant pay, EPG app-web, leaf-103",
+    "basis": "Consistent with fvCEp and fvRsCEpToPathEp lookups through APIC REST [c31] [c32]; the values are fictional."
+   },
+   {
+    "claim": "mermaid render: OK lint: OK",
+    "basis": "Rendering and parsing with mermaid-cli and mermaid.parse are real validation steps [c36] [c37]; 'lint' here means the course evidence checker."
+   },
+   {
+    "claim": "Probe REFUSED outside scope list; publish REFUSED no approver",
+    "basis": "Design behavior implemented with PreToolUse hooks and the approval gate [c20] [c21]."
+   },
+   {
+    "claim": "\"Rate limits and probe budgets keep automated tracing from becoming a ping storm\"",
+    "basis": "The MCP specification requires servers to rate limit tool invocations, and traceroute documentation notes routers throttle ICMP under many parallel probes [c21] [c10]."
+   },
+   {
+    "claim": "Result written to the ServiceNow record through the Table API, diagram attached through the Attachment API, Flow Designer starting the pipeline",
+    "basis": "Table API PATCH, Attachment API POST /now/attachment/file and the Workflow Studio REST step are documented; the REST step needs Integration Hub, which the promo does not mention [c39] [c40] [c41]."
+   },
+   {
+    "claim": "\"cmdb_ci_service updated\" (cards panel)",
+    "basis": "Teaching scenario. The course writes to the requesting record by default; CMDB writes require an extra approved role and are optional. No CMDB-specific source was cited."
+   },
+   {
+    "claim": "GitHub Actions schedule re-runs probes and opens a pull request only when something changed; drift job nightly, next: 02:30 IST",
+    "basis": "Scheduled workflows use UTC cron and can be delayed at busy times; the course recommends an off-the-hour minute, so the 02:30 IST time on screen is illustrative [c43]."
+   },
+   {
+    "claim": "\"Claude never guesses a path. If a hop did not answer, the diagram says so.\"",
+    "basis": "Design rule enforced by the schema's explicit unknown segments and the citation checker; supported by documented reasons hops do not answer [c3] [c4] [c10]."
+   },
+   {
+    "claim": "Labs use lab load balancers, a lab APIC and fictional hostnames",
+    "basis": "Lab plan uses BIG-IP VE trial, NetScaler VPX Express and DevNet ACI sandboxes [c45] [c46] [c33]."
+   }
+  ]
+ },
+ "citations": [
+  {
+   "id": "c1",
+   "title": "RFC 1393: Traceroute Using an IP Option",
+   "url": "https://www.rfc-editor.org/rfc/rfc1393",
+   "publisher": "IETF / RFC Editor",
+   "supports": "Module 1: why classic traceroute needs many probes and can see a changing path",
+   "key_fact": "Classic TTL-based traceroute generates about 2n packets for n hops; RFC 1393 proposed an IP Traceroute option and ICMP Traceroute message (type 30) so the path is logged with n+1 packets and does not suffer from a changing path. It is Experimental and obsoleted by RFC 6814 (the RFC Editor header now shows it as Historic).",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c2",
+   "title": "RFC 792: Internet Control Message Protocol",
+   "url": "https://www.rfc-editor.org/rfc/rfc792",
+   "publisher": "IETF / RFC Editor",
+   "supports": "Module 1: ICMP Echo, Echo Reply and Time Exceeded",
+   "key_fact": "ICMP Echo is type 8 and Echo Reply type 0, with identifier and sequence number fields to match replies to requests and the data echoed back unchanged; Time Exceeded is type 11, code 0 meaning time to live exceeded in transit.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c3",
+   "title": "Use the Traceroute Command on Operating Systems",
+   "url": "https://www.cisco.com/c/en/us/support/docs/ip/ip-routed-protocols/22826-traceroute.html",
+   "publisher": "Cisco",
+   "supports": "Module 1 and 3: probe behavior on Cisco IOS, Linux and Windows",
+   "key_fact": "Cisco IOS and Linux traceroute send UDP probes starting at destination port 33434 with TTL 1 (default maximum 30 hops); hops return ICMP Time Exceeded and the destination returns ICMP Port Unreachable (type 3 code 3). Windows tracert uses ICMP Echo. Cisco routers rate-limit ICMP unreachables to one per 500 ms by default, which can show as asterisks for the final hop.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c4",
+   "title": "mtr: Official repository for mtr, a network diagnostic tool",
+   "url": "https://github.com/traviscross/mtr",
+   "publisher": "mtr project (GitHub)",
+   "supports": "Module 1 and 3: continuous per-hop statistics and the meaning of intermediate-hop loss",
+   "key_fact": "mtr combines traceroute and ping, sends probes with increasing TTL and prints running per-hop statistics; routers may never send or may rate-limit ICMP responses, so apparent loss at an intermediate hop does not always mean forwarded traffic is lost there.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c5",
+   "title": "Flowcharts Syntax | Mermaid",
+   "url": "https://mermaid.js.org/syntax/flowchart.html",
+   "publisher": "Mermaid (mermaid.js.org)",
+   "supports": "Module 7: Mermaid flowchart syntax, subgraphs, shapes and classDef styling",
+   "key_fact": "Flowcharts start with flowchart (or graph) plus a direction (TB/TD, BT, RL, LR); links include -->, ---, dotted -.- and thick ===; subgraph id [Title] ... end groups nodes; from v11.3.0 shapes can be set with A@{ shape: ... }; classDef defines a reusable style applied with class; a lowercase end inside a node label breaks the diagram; commas in stroke-dasharray must be escaped.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c6",
+   "title": "Creating diagrams - GitHub Docs",
+   "url": "https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-diagrams",
+   "publisher": "GitHub Docs",
+   "supports": "Module 7 and 9: rendering Mermaid in GitHub pull requests and Markdown files",
+   "key_fact": "GitHub renders Mermaid from a fenced code block labeled mermaid in issues, discussions, pull requests, wikis and Markdown files; a mermaid block containing info reveals which Mermaid version GitHub runs.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c7",
+   "title": "Insert a diagram from specially formatted CSV data | draw.io",
+   "url": "https://www.drawio.com/blog/insert-from-csv",
+   "publisher": "draw.io (diagrams.net)",
+   "supports": "Module 7: optional draw.io export for teams that maintain diagrams in draw.io",
+   "key_fact": "Arrange > Insert > Advanced > CSV takes # configuration lines before the CSV data; # label: uses %column% placeholders, # connect: takes a JSON object with from/to columns, # identity: lets a re-import update existing shapes instead of duplicating them, and # layout: auto applies an automatic layout.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c8",
+   "title": "DOT Language | Graphviz",
+   "url": "https://graphviz.org/doc/info/lang.html",
+   "publisher": "Graphviz",
+   "supports": "Module 7: Graphviz DOT as an alternative renderer",
+   "key_fact": "DOT declares graph (edges --) or digraph (edges ->), optionally strict to forbid multi-edges; attributes are key=value pairs in brackets; graph/node/edge statements set defaults for objects defined afterwards; subgraphs named cluster* are drawn in a bounding box where the layout engine supports it.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c9",
+   "title": "Prompting best practices",
+   "url": "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices",
+   "publisher": "Anthropic (Claude Developer Platform docs)",
+   "supports": "Module 4 and 7: prompting Claude for evidence-cited summaries and clean diagram output",
+   "key_fact": "Tell Claude what to do rather than what not to do, wrap instructions, context and input in XML tags to reduce misinterpretation, and use structured outputs or tool calling for fixed structure; examples are one of the most reliable ways to steer output format and structure.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c10",
+   "title": "traceroute(8) - Linux manual page",
+   "url": "https://man7.org/linux/man-pages/man8/traceroute.8.html",
+   "publisher": "man7.org (Linux man-pages)",
+   "supports": "Module 1 and 3: Linux traceroute options, methods and output annotations",
+   "key_fact": "Options include -I (ICMP ECHO probes), -T (TCP SYN probes, default destination port 80, intended to get past firewalls), -m max_ttl (default 30), -q nqueries (default 3 probes per hop), -w wait (default max 5.0 s), -N simultaneous probes (default 16; routers may throttle ICMP) and -n. The default method uses UDP to unlikely ports starting at 33434. No response prints *, and annotations such as !H, !N, !P and !X mark host, network, protocol unreachable and administratively prohibited.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c11",
+   "title": "ping(8) - Linux manual page",
+   "url": "https://man7.org/linux/man-pages/man8/ping.8.html",
+   "publisher": "man7.org (iputils)",
+   "supports": "Module 3: ping options and exit codes for deterministic wrappers",
+   "key_fact": "-c count stops after count ECHO_REQUESTs, -W timeout sets the per-reply wait in seconds, -w deadline sets an overall timeout; ping exits 1 if no reply is received (or fewer than count by the deadline), 2 on other errors, and 0 otherwise.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c12",
+   "title": "tracert | Microsoft Learn",
+   "url": "https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/tracert",
+   "publisher": "Microsoft",
+   "supports": "Module 3: Windows tracert syntax and output for the Windows parser",
+   "key_fact": "Syntax tracert [/d] [/h <maximumhops>] [/j <hostlist>] [/w <timeout>] [/R] [/S <srcaddr>] [/4][/6] <targetname>; /d skips name resolution, /h default is 30 hops, /w default is 4000 ms and an asterisk is printed when no reply arrives in time; routers that do not return Time Exceeded show as a row of asterisks; pathping gives per-hop loss.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c13",
+   "title": "RFC 4950: ICMP Extensions for Multiprotocol Label Switching",
+   "url": "https://www.rfc-editor.org/rfc/rfc4950",
+   "publisher": "IETF / RFC Editor",
+   "supports": "Module 1: MPLS hops and what traceroute can show inside an MPLS core",
+   "key_fact": "Defines an ICMP extension object that lets Label Switching Routers append the MPLS label stack to ICMP messages so enhanced traceroute can show MPLS information; an LSR that cannot deliver a labeled datagram removes the label stack and generates the ICMP message from the inner IP datagram.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c14",
+   "title": "Detection, Understanding, and Prevention of Traceroute Measurement Artifacts",
+   "url": "https://www.arxiv.org/abs/0904.2733",
+   "publisher": "arXiv (Viger, Augustin et al.)",
+   "supports": "Module 1 and 10: ECMP and load balancing artifacts in traceroute",
+   "key_fact": "Load balancing routers cause false loops, cycles and diamonds in traceroute output; Paris traceroute controls packet header contents so probes follow one path and gives a truer picture of the routes packets take.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c15",
+   "title": "Configure permissions - Claude Code Docs",
+   "url": "https://code.claude.com/docs/en/permissions",
+   "publisher": "Anthropic (code.claude.com)",
+   "supports": "Module 2 and 8: allow, ask and deny rules for Bash and MCP tools",
+   "key_fact": "Rules are evaluated deny, then ask, then allow, and the first match wins regardless of specificity; a bare tool name such as Bash in deny removes the tool from context; mcp__<server>__* matches every tool from one server; Bash rules match command text and are not a security boundary around a program, so pair them with the sandbox when a restriction must hold; project rules live in .claude/settings.json.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c16",
+   "title": "How Claude remembers your project - Claude Code Docs",
+   "url": "https://code.claude.com/docs/en/memory",
+   "publisher": "Anthropic (code.claude.com)",
+   "supports": "Module 2: CLAUDE.md conventions for the pipeline repository",
+   "key_fact": "Project instructions live in ./CLAUDE.md or ./.claude/CLAUDE.md and are shared through version control; /init generates a starting CLAUDE.md; Claude treats CLAUDE.md as context, not enforced configuration, so use a PreToolUse hook to block an action.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c17",
+   "title": "Connect Claude Code to tools via MCP - Claude Code Docs",
+   "url": "https://code.claude.com/docs/en/mcp",
+   "publisher": "Anthropic (code.claude.com)",
+   "supports": "Module 2: registering the probe MCP server with Claude Code",
+   "key_fact": "Stdio servers are added with claude mcp add [options] <name> -- <command> [args...]; scopes are local (default), project (stored in .mcp.json at the project root and shared via version control) and user; interactive sessions ask for approval before using project-scoped servers.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c18",
+   "title": "Give Claude custom tools - Claude Agent SDK",
+   "url": "https://code.claude.com/docs/en/agent-sdk/custom-tools",
+   "publisher": "Anthropic (code.claude.com)",
+   "supports": "Module 2, 3 and 5: defining probe and device tools in the Python Agent SDK",
+   "key_fact": "Python tools use the @tool decorator (name, description, input schema, async handler) and are wrapped with create_sdk_mcp_server; tools are named mcp__{server}__{tool} and listed in allowed_tools; tools=[] removes all built-in tools so Claude can only use your MCP tools; a bare name in disallowed_tools removes a built-in from context; readOnlyHint annotations are metadata, not enforcement; handlers return content and optionally is_error.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c19",
+   "title": "Get structured output from agents - Claude Agent SDK",
+   "url": "https://code.claude.com/docs/en/agent-sdk/structured-outputs",
+   "publisher": "Anthropic (code.claude.com)",
+   "supports": "Module 4 and 10: schema-validated summaries and drift explanations",
+   "key_fact": "Pass output_format={'type': 'json_schema', 'schema': ...} (Pydantic model_json_schema() works) and read ResultMessage.structured_output; the SDK validates with JSON Schema draft-07 and re-prompts on mismatch; failure ends with subtype error_max_structured_output_retries, and a success result without structured_output must also be treated as a failure.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c20",
+   "title": "Intercept and control agent behavior with hooks - Claude Agent SDK",
+   "url": "https://code.claude.com/docs/en/agent-sdk/hooks",
+   "publisher": "Anthropic (code.claude.com)",
+   "supports": "Module 2 and 8: PreToolUse scope checks and PostToolUse audit logging",
+   "key_fact": "PreToolUse hooks registered with HookMatcher can return hookSpecificOutput.permissionDecision 'deny' with a permissionDecisionReason; matchers match tool names (MCP tools as mcp__<server>__<action>), not arguments, so check tool_input inside the hook; when several hooks disagree deny wins; PostToolUse suits audit logging; a timed-out PreToolUse hook blocks the call.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c21",
+   "title": "Tools - Model Context Protocol specification (2025-06-18)",
+   "url": "https://modelcontextprotocol.io/specification/2025-06-18/server/tools",
+   "publisher": "Model Context Protocol",
+   "supports": "Module 2 and 8: MCP tool discovery, results and security duties",
+   "key_fact": "Clients discover tools with tools/list and call them with tools/call; tools carry name, description, inputSchema, optional outputSchema and annotations (untrusted unless from trusted servers); results carry content, structuredContent and isError; servers MUST validate inputs, implement access controls, rate limit invocations and sanitize outputs; clients SHOULD keep a human able to deny invocations, use timeouts and log tool usage for audit.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c22",
+   "title": "subprocess - Subprocess management",
+   "url": "https://docs.python.org/3/library/subprocess.html",
+   "publisher": "Python Software Foundation",
+   "supports": "Module 3: timeouts and exit-code handling in probe runners",
+   "key_fact": "With run(timeout=...), the child is killed and TimeoutExpired is raised after it terminates; CalledProcessError is raised for a non-zero exit when check=True and carries returncode, cmd and captured output.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c23",
+   "title": "JSON Schema | Pydantic Docs",
+   "url": "https://docs.pydantic.dev/latest/concepts/json_schema/",
+   "publisher": "Pydantic",
+   "supports": "Module 4: generating the path record schema",
+   "key_fact": "BaseModel.model_json_schema() returns a jsonable dict of the model's JSON Schema; Pydantic targets JSON Schema Draft 2020-12 and OpenAPI 3.1.0.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c24",
+   "title": "Models | Pydantic Docs",
+   "url": "https://docs.pydantic.dev/latest/concepts/models/",
+   "publisher": "Pydantic",
+   "supports": "Module 3 and 4: validating parsed probe output",
+   "key_fact": "model_validate() validates an object and model_validate_json() validates a JSON string or bytes; ValidationError is raised when data cannot be parsed into a model instance.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c25",
+   "title": "APIRef_tm_ltm_virtual",
+   "url": "https://clouddocs.f5.com/api/icontrol-rest/APIRef_tm_ltm_virtual.html",
+   "publisher": "F5 (clouddocs.f5.com)",
+   "supports": "Module 5: reading F5 virtual servers",
+   "key_fact": "The collection /mgmt/tm/ltm/virtual supports OPTIONS and GET; properties include destination (virtual address and port), pool (default pool), ipProtocol and the partition (tmPartition, default Common).",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c26",
+   "title": "APIRef_tm_ltm_pool_members",
+   "url": "https://clouddocs.f5.com/api/icontrol-rest/APIRef_tm_ltm_pool_members.html",
+   "publisher": "F5 (clouddocs.f5.com)",
+   "supports": "Module 5: reading F5 pool members and their state",
+   "key_fact": "Pool members live at /mgmt/tm/ltm/pool/~<pool id>/members; properties include address, state (user-down forces the member offline), session (default user-enabled) and monitor.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c27",
+   "title": "Demystifying iControl REST Part 3 - How to pass query parameters and tmsh options",
+   "url": "https://community.f5.com/t5/technical-articles/demystifying-icontrol-rest-part-3-how-to-pass-query-parameters/ta-p/286957",
+   "publisher": "F5 DevCentral",
+   "supports": "Module 5: efficient read-only F5 queries",
+   "key_fact": "iControl REST supports OData $filter, $select, $skip and $top, plus expandSubcollections (returns subcollections such as pool members in the first request), options (adds tmsh arguments) and ver (pins behavior to a TMOS version); example /mgmt/tm/ltm/pool?$filter=partition+eq+staging&$select=name,loadBalancingMode.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c28",
+   "title": "lbvserver | configuration (NITRO API)",
+   "url": "https://developer-docs.netscaler.com/en-us/adc-nitro-api/current-release/configuration/lb/lbvserver.html",
+   "publisher": "NetScaler (developer-docs.netscaler.com)",
+   "supports": "Module 5: reading NetScaler load balancing virtual servers",
+   "key_fact": "GET (all) is /nitro/v1/config/lbvserver with attrs and filter query parameters; fields include name, servicetype, ipv46, port and read-only curstate and effectivestate (UP, DOWN, OUT OF SERVICE and others); requests carry Cookie: NITRO_AUTH_TOKEN, or X-NITRO-USER and X-NITRO-PASS headers for single authenticated operations.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c29",
+   "title": "lbvserver_servicegroup_binding | configuration (NITRO API)",
+   "url": "https://developer-docs.netscaler.com/en-us/adc-nitro-api/current-release/configuration/lb/lbvserver_servicegroup_binding.html",
+   "publisher": "NetScaler (developer-docs.netscaler.com)",
+   "supports": "Module 5: mapping a NetScaler vserver to its service groups",
+   "key_fact": "The binding object /nitro/v1/config/lbvserver_servicegroup_binding links a virtual server name to servicegroupname (with weight and order); add is a PUT and returns 201 Created.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c30",
+   "title": "alteon-sdk (PyPI project metadata)",
+   "url": "https://pypi.org/pypi/alteon-sdk/json",
+   "publisher": "PyPI (package published by a Radware author)",
+   "supports": "Module 5: Radware Alteon access from Python",
+   "key_fact": "alteon-sdk provides a Python API to Alteon structures via a REST backend, with beans such as SlbNewCfgEnhRealServerTable read through AlteonClient(...).api.device.read(bean); it requires Python 3.6 or later and lists minimum supported Alteon versions 31.0.10.0 and 32.2.2.0; the latest release on PyPI is a beta (0.16b2).",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c31",
+   "title": "Cisco APIC REST API Configuration Guide, Release 4.2(x) and Later - Using the REST API",
+   "url": "https://www.cisco.com/c/en/us/td/docs/dcn/aci/apic/all/apic-rest-api-configuration-guide/cisco-apic-rest-api-configuration-guide-42x-and-later/m_using_the_rest_api.html",
+   "publisher": "Cisco",
+   "supports": "Module 6: APIC login, class and managed object queries",
+   "key_fact": "Log in with POST https://<apic>/api/aaaLogin.json and an aaaUser object; the token is sent back as the APIC-cookie; class queries use /api/class/<className>.json and MO queries /api/mo/<dn>.json; query-target is self, children or subtree (default self), query-target-filter takes expressions such as eq(attribute,value), and rsp-subtree is no, children or full (default no).",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c32",
+   "title": "Cisco Live LTRDCN-3225 ACI programmability lab: class queries and children",
+   "url": "https://aci-prog-lab.ciscolive.com/lab/pod1/js/js-app2",
+   "publisher": "Cisco Live",
+   "supports": "Module 6: locating an endpoint on a leaf",
+   "key_fact": "The children of fvCEp hold the endpoint's location in the fabric, specifically fvRsCEpToPathEp; query /api/node/class/fvCEp.json?rsp-subtree=children&rsp-subtree-class=fvRsCEpToPathEp style requests to include them, because a plain fvCEp query does not return its children.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c33",
+   "title": "ACI Sandboxes - Cisco DevNet",
+   "url": "https://developer.cisco.com/docs/aci/sandbox",
+   "publisher": "Cisco DevNet",
+   "supports": "Lab environment: free APIC access",
+   "key_fact": "DevNet offers an Always-On ACI Simulator (shared, no reservation) and a reservable ACI Simulator sandbox (up to 5 consecutive days) for REST API work over HTTP/HTTPS with XML and JSON.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c34",
+   "title": "Configure route tables - Amazon VPC",
+   "url": "https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Route_Tables.html",
+   "publisher": "Amazon Web Services",
+   "supports": "Module 6: where traceroute stops and VPC route tables begin",
+   "key_fact": "A route table holds routes that decide where traffic from a subnet or gateway is directed; each route has a destination (CIDR or prefix list) and a target such as an internet gateway, NAT gateway, peering connection or VPN connection; a main route table is created with every VPC.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c35",
+   "title": "Next hop overview - Azure Network Watcher",
+   "url": "https://learn.microsoft.com/en-us/azure/network-watcher/next-hop-overview",
+   "publisher": "Microsoft",
+   "supports": "Module 6: Azure next hop as cloud path evidence",
+   "key_fact": "Next hop returns the next hop type, IP address and route table ID for a destination; types include Internet, VirtualAppliance, VirtualNetworkGateway, VirtualNetwork, VirtualNetworkPeering, VirtualNetworkServiceEndpoint, MicrosoftEdge and None; System Route is returned when no user-defined route applies.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c36",
+   "title": "Usage | Mermaid",
+   "url": "https://mermaid.js.org/config/usage.html",
+   "publisher": "Mermaid (mermaid.js.org)",
+   "supports": "Module 7: validating Mermaid without rendering, and security level",
+   "key_fact": "mermaid.parse(text, parseOptions) checks a definition without rendering; it returns an object with diagramType when valid and throws (or returns false with suppressErrors) when invalid; securityLevel strict (default) encodes HTML tags and disables click functionality.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c37",
+   "title": "mermaid-cli",
+   "url": "https://github.com/mermaid-js/mermaid-cli",
+   "publisher": "Mermaid project (GitHub)",
+   "supports": "Module 7: deterministic command-line rendering",
+   "key_fact": "Install with npm install -g @mermaid-js/mermaid-cli and run mmdc -i input.mmd -o output.svg to produce SVG, PNG or PDF; a Docker image is published as minlag/mermaid-cli.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c38",
+   "title": "Sequence diagrams | Mermaid",
+   "url": "https://mermaid.js.org/syntax/sequenceDiagram.html",
+   "publisher": "Mermaid (mermaid.js.org)",
+   "supports": "Module 7: request-response flow diagrams",
+   "key_fact": "sequenceDiagram declares participant and actor lines (with aliases), solid ->> and dashed -->> messages, activate/deactivate, autonumber and Note over A,B for annotations.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c39",
+   "title": "Table API (Zurich release)",
+   "url": "https://www.servicenow.com/docs/r/MVRCUFVyKWd7vUoUukbW6g/sIehVLrQON4zvkIDTxVDQg",
+   "publisher": "ServiceNow",
+   "supports": "Module 9: updating the requesting record",
+   "key_fact": "Endpoints are GET/POST /now/table/{tableName} and GET/PUT/PATCH/DELETE /now/table/{tableName}/{sys_id}; sysparm_query is an encoded query, sysparm_fields limits returned fields, sysparm_limit caps records (default 10000).",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c40",
+   "title": "Attachment API (Xanadu release)",
+   "url": "https://www.servicenow.com/docs/r/zZBaGIzc7EPkA0ySnMn5eg/6cG37dgmR1vwJCbI7a6lCg",
+   "publisher": "ServiceNow",
+   "supports": "Module 9: attaching the diagram and evidence bundle",
+   "key_fact": "POST /now/attachment/file uploads a binary file with required query parameters table_name, table_sys_id and file_name; POST /now/attachment/upload takes multipart form data; GET /now/attachment/{sys_id}/file returns the file.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c41",
+   "title": "REST step (Workflow Studio, Brazil release)",
+   "url": "https://www.servicenow.com/docs/r/build-workflows/workflow-studio/rest-request-action-designer.html",
+   "publisher": "ServiceNow",
+   "supports": "Module 9: Flow Designer calling the pipeline",
+   "key_fact": "The REST step sends an outbound REST request to an external system; it is not in the base system and requires an Integration Hub subscription; it supports a Connection Alias and an option to run through a MID Server.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c42",
+   "title": "REST API endpoints for pull requests",
+   "url": "https://docs.github.com/en/rest/pulls/pulls",
+   "publisher": "GitHub Docs",
+   "supports": "Module 9 and 10: opening the diagram pull request",
+   "key_fact": "POST /repos/{owner}/{repo}/pulls takes title, head (the branch with changes), base (the target branch), body and draft; it returns 201 Created, 403 or 422.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c43",
+   "title": "Events that trigger workflows - schedule",
+   "url": "https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows",
+   "publisher": "GitHub Docs",
+   "supports": "Module 10: scheduled re-mapping",
+   "key_fact": "on: schedule uses five-field POSIX cron in UTC by default (an IANA timezone can be set); runs use the latest commit on the default branch; the shortest interval is every 5 minutes; runs can be delayed or dropped at high load, especially at the start of every hour; in public repositories scheduled workflows are disabled after 60 days without activity; @daily-style shortcuts are not supported.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c44",
+   "title": "GITHUB_TOKEN - GitHub Docs",
+   "url": "https://docs.github.com/en/actions/concepts/security/github_token",
+   "publisher": "GitHub Docs",
+   "supports": "Module 10: what happens when the drift job opens a pull request",
+   "key_fact": "GITHUB_TOKEN is a GitHub App installation token limited to the repository; events it triggers do not create new workflow runs, except workflow_dispatch and repository_dispatch, and pull_request opened, synchronize or reopened events, which create runs in an approval-required state that a user with write access must approve.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c45",
+   "title": "BIG-IP Virtual Edition free trial",
+   "url": "https://www.f5.com/trials/big-ip-virtual-edition",
+   "publisher": "F5",
+   "supports": "Lab environment: F5 BIG-IP VE for labs",
+   "key_fact": "F5 offers a 30-day free trial of BIG-IP Virtual Edition and BIG-IQ Virtual Edition; trial keys are requested through a MyF5 account under Trials.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c46",
+   "title": "NetScaler VPX FAQ (13.1)",
+   "url": "https://docs.netscaler.com/en-us/vpx/13-1/deploy-vpx-faq.html",
+   "publisher": "NetScaler (docs.netscaler.com)",
+   "supports": "Lab environment: NetScaler VPX Express for labs",
+   "key_fact": "VPX Express is free, needs no license file and has no expiry in the newer version (older Express licenses expire one year after download); it has the Standard Edition feature set except Gateway from 12.0-56.20; a retail license is needed to file support cases.",
+   "verified": "2026-10-30"
+  }
+ ]
+}

@@ -34,7 +34,7 @@ The result is a pipeline learners can take back to work: portal exports and sanc
 | HR operations and talent acquisition specialists | Understand what can be automated safely, how to approve and override, and how to read the audit trail. | Know the hiring process and portals well; basic Python and command line. |
 | HR technology and enterprise IT automation engineers | Build and maintain the MCP server, Agent SDK agent, FastAPI service and integrations. | Comfortable with Python, JSON and REST APIs; new to agent tooling. |
 | Network and platform teams hosting the workflow | Run the containers, manage secrets, webhooks, CI and the ServiceNow integration user. | Strong on infrastructure and CI; light on HR processes. |
-| Data protection or compliance reviewers (optional attendees) | See how consent, retention, minimisation and fairness are implemented and evidenced. | Know DPDP and GDPR; not developers. |
+| Data protection or compliance reviewers (optional attendees) | See how consent, retention, minimization and fairness are implemented and evidenced. | Know DPDP and GDPR; not developers. |
 
 ### Prerequisites from the outline
 
@@ -47,10 +47,10 @@ The result is a pipeline learners can take back to work: portal exports and sanc
 
 - Can you create a Python virtual environment, install packages and run pytest?
 - Can you read and write JSON and call a REST API with curl or Python requests?
-- Can you describe your organisation's hiring steps from requisition to offer, and which portal exports you can download?
+- Can you describe your organization's hiring steps from requisition to offer, and which portal exports you can download?
 - Do you have a laptop that can run Docker Desktop or Docker Engine with Compose and at least 8 GB of free memory?
-- Can you obtain a Claude API key or Claude Code access through your organisation for the training days?
-- Has your organisation agreed that only synthetic candidate data will be used in the labs?
+- Can you obtain a Claude API key or Claude Code access through your organization for the training days?
+- Has your organization agreed that only synthetic candidate data will be used in the labs?
 
 ### Course outcomes
 
@@ -68,7 +68,7 @@ Each learner runs a Docker Compose stack on a laptop or lab VM: PostgreSQL for t
 
 | Component | Version or edition | Purpose | How to obtain | Notes |
 |---|---|---|---|---|
-| Claude Code | Current release at course date | Agentic coding environment, CLAUDE.md, hooks and MCP client. | Install using the official Claude Code documentation with an organisation account or API key. | Hooks and project MCP scope are used from module 2 [13] [14]. |
+| Claude Code | Current release at course date | Agentic coding environment, CLAUDE.md, hooks and MCP client. | Install using the official Claude Code documentation with an organization account or API key. | Hooks and project MCP scope are used from module 2 [13] [14]. |
 | Claude Agent SDK for Python | claude-agent-sdk, current release | Python agents for extraction, scoring and pitching. | pip install claude-agent-sdk in a virtual environment [10]. | Needs an API key in the environment. |
 | Python | 3.11 or later | Pipeline, MCP server, tests. | python.org or the OS package manager. | Use a virtual environment; system pip installs fail on recent Debian, Ubuntu and Homebrew Python [10]. |
 | Pydantic | 2.x | Schemas for every record and model output. | pip install pydantic. | extra='forbid' on all models [25]. |
@@ -77,7 +77,7 @@ Each learner runs a Docker Compose stack on a laptop or lab VM: PostgreSQL for t
 | Twilio Programmable Voice | REST API 2010-04-01 | Outbound calls, consent prompts, recordings. | Twilio account (trial or paid) with one voice-capable number; trainer provides sandbox numbers to call. | Check trial restrictions in the Twilio console before the course; calls only to trainer-controlled numbers [15] [16]. |
 | Speech-to-text engine | Client's choice (for example a locally run open-source model) | Transcribing full-length screening calls with timestamps. | Pre-installed in the lab image or a client-approved service. | Twilio <Record> transcription is limited to American English and under 120 seconds [17]. |
 | ServiceNow developer instance | Current release | Onboarding record creation through the Table API. | Free personal developer instance from the ServiceNow developer program; trainer confirms HR Service Delivery availability, otherwise use a custom onboarding table. | sn_hr_core_case requires HR Service Delivery [18] [19]. |
-| GitHub repository and GitHub Actions | github.com | Pull requests, CI evaluation and branch protection. | Organisation or personal GitHub account; the course template repository. | Required status checks and code owners in module 9 [26]. |
+| GitHub repository and GitHub Actions | github.com | Pull requests, CI evaluation and branch protection. | Organization or personal GitHub account; the course template repository. | Required status checks and code owners in module 9 [26]. |
 | Docker with Compose | Current Docker Desktop or Engine with Compose v2 | Runs PostgreSQL and the services. | docker.com or OS packages. | 8 GB free memory recommended. |
 
 ### Fixtures and sample data
@@ -144,7 +144,7 @@ Each learner runs a Docker Compose stack on a laptop or lab VM: PostgreSQL for t
 - Section 7(i) treats processing for the purposes of employment as a legitimate use [5]; whether that covers people who are only applicants is a question for the client's counsel, so the course defaults to explicit consent for screening calls and recordings.
 - Section 8(7) requires erasure when consent is withdrawn or the purpose is no longer served, unless the law requires retention [5]: rejected candidates need a retention clock.
 - The DPDP Rules were notified on 14 November 2025 with an eighteen-month phased compliance period and a separate, purpose-specific consent notice [6].
-- For EU candidates, GDPR Article 5 adds purpose limitation, data minimisation and storage limitation, and makes the controller able to demonstrate compliance [21].
+- For EU candidates, GDPR Article 5 adds purpose limitation, data minimization and storage limitation, and makes the controller able to demonstrate compliance [21].
 
 ##### The teaching pattern and the lab baseline
 
@@ -157,7 +157,7 @@ Each learner runs a Docker Compose stack on a laptop or lab VM: PostgreSQL for t
 
 1. Open the synthetic portal export in a spreadsheet and show the messy reality: duplicate phones, blank salary fields, free-text locations.
 2. Draw the current flow live as a Mermaid flowchart with swimlanes for recruiter, hiring manager, candidate and systems.
-3. Overlay the target flow and colour each node: model proposes, code executes, human approves.
+3. Overlay the target flow and color each node: model proposes, code executes, human approves.
 4. Mark the three approval gates and name the approver role for each.
 5. Annotate the data each step touches and the DPDP and GDPR obligation that applies [5] [21].
 6. Show the empty audit log table that every later module will write to.
@@ -168,7 +168,7 @@ Each learner runs a Docker Compose stack on a laptop or lab VM: PostgreSQL for t
 2. Run the seed script to load portal_export_sample.xlsx (synthetic) into a staging table.
 3. Interview a partner playing the recruiter for ten minutes and list every step and hand-off they describe.
 4. Draw the current flow in Mermaid in docs/flow_current.md.
-5. Draw the target flow in docs/flow_target.md and colour each node by who acts.
+5. Draw the target flow in docs/flow_target.md and color each node by who acts.
 6. Mark the shortlist, outreach and pitch gates with an approver role each.
 7. Add a data table listing the personal data each step touches and its lawful basis or consent requirement.
 8. Commit both diagrams and open a pull request for peer review.
@@ -199,7 +199,7 @@ Each learner runs a Docker Compose stack on a laptop or lab VM: PostgreSQL for t
 **Slides and assets to prepare.**
 
 - Slide: the client request quoted verbatim, with implied steps highlighted.
-- Mermaid templates for current and target flows with a colour legend.
+- Mermaid templates for current and target flows with a color legend.
 - Synthetic portal_export_sample.xlsx with seeded defects.
 - One-page DPDP and GDPR obligations cheat sheet for hiring data [5] [6] [21] [22].
 - Approval gate register template (gate, approver role, evidence required).
@@ -327,7 +327,7 @@ Each learner runs a Docker Compose stack on a laptop or lab VM: PostgreSQL for t
 
 - Learners can choose between file export and sanctioned API for a given portal and respect its access terms and limits.
 - Learners can have Claude translate a requisition into a filter rule set that Python applies and explains.
-- Learners can deduplicate across portals by normalised email and phone and report every rejected row.
+- Learners can deduplicate across portals by normalized email and phone and report every rejected row.
 - Learners can attach provenance (portal, file, row, timestamp) to every record.
 
 ##### Portal exports and sanctioned APIs
@@ -349,7 +349,7 @@ Each learner runs a Docker Compose stack on a laptop or lab VM: PostgreSQL for t
 
 ##### Deduplication and rejected rows
 
-- Normalise phone numbers to E.164 and emails to lower case before matching.
+- Normalize phone numbers to E.164 and emails to lower case before matching.
 - Merge on exact phone or email match; flag near matches (same name, different phone) for a person rather than merging.
 - Rows missing both phone and email are rejected with a reason, not silently dropped.
 - Report counts at every stage: parsed, rejected, matched, excluded, merged.
@@ -374,7 +374,7 @@ Each learner runs a Docker Compose stack on a laptop or lab VM: PostgreSQL for t
 
 1. Write an XLSX and CSV reader that maps portal column names to the PortalRow model.
 2. Reject rows with neither phone nor email and write them to rejected.csv with a reason.
-3. Normalise phones and emails and implement exact-match deduplication with merge provenance.
+3. Normalize phones and emails and implement exact-match deduplication with merge provenance.
 4. Have Claude propose a FilterRules JSON from the requisition text and validate it with Pydantic [8] [25].
 5. Implement the filter engine as pure functions that return (included, excluded_with_reason).
 6. Write table-driven pytest cases for each rule and for the deduplication edge cases.
@@ -828,7 +828,7 @@ Each learner runs a Docker Compose stack on a laptop or lab VM: PostgreSQL for t
 
 #### Module 8: Guardrails, approvals and audit for hiring automation
 
-**Goal.** Learners harden the pipeline with PII minimisation, consent and retention tracking, injection tests, named approval gates, bias monitoring and an append-only audit log.
+**Goal.** Learners harden the pipeline with PII minimization, consent and retention tracking, injection tests, named approval gates, bias monitoring and an append-only audit log.
 
 **Outline topics.**
 
@@ -844,9 +844,9 @@ Each learner runs a Docker Compose stack on a laptop or lab VM: PostgreSQL for t
 - Learners can implement approval gates with named approvers and an append-only audit log in PostgreSQL.
 - Learners can monitor score distributions for adverse impact and log every override.
 
-##### PII minimisation, consent and retention
+##### PII minimization, consent and retention
 
-- Data minimisation and storage limitation are GDPR principles, and the controller must be able to demonstrate compliance [21].
+- Data minimization and storage limitation are GDPR principles, and the controller must be able to demonstrate compliance [21].
 - The model sees only the fields a step needs: the scorer gets transcript and rubric, not name, phone or photo.
 - Store consent records (notice version, timestamp, method) for screening and recording [5] [6].
 - Erase on withdrawal or when the purpose ends unless law requires retention [5]; implement as a scheduled job with a report.
@@ -917,7 +917,7 @@ Each learner runs a Docker Compose stack on a laptop or lab VM: PostgreSQL for t
 1. Why can a TRUNCATE not be blocked with the same row-level trigger? Answer: PostgreSQL TRUNCATE triggers can only be FOR EACH STATEMENT [24].
 2. Name three injection defences in this pipeline. Answer: Tool-free extraction and scoring, delimited untrusted text with schema and evidence validation, and human approval before any action [20].
 3. What must every override record? Answer: The approver identity and a reason, in the audit log.
-4. Which GDPR principles drive what the model sees? Answer: Data minimisation and purpose limitation [21].
+4. Which GDPR principles drive what the model sees? Answer: Data minimization and purpose limitation [21].
 
 **Slides and assets to prepare.**
 
@@ -1171,7 +1171,7 @@ Each team receives a new synthetic requisition and two unseen portal exports and
 | SERVICENOW sn_hr_core_case HRC0041877 created via Table API | sn_hr_core_case is the HR case table in HR Service Delivery [19] and the Table API creates one record per POST [18]. The record number is illustrative; the table only exists where HR Service Delivery is installed and needs HR roles, so the course provides a fallback table on developer instances. |
 | CI PR #58 rubric v5, eval set 120 transcripts, agreement 0.91, checks passed | Illustrative values; the mechanism (required status checks on a protected branch) is GitHub's [26]. |
 | Append-only audit log in PostgreSQL | Implemented with row and statement triggers and revoked privileges [24]. |
-| PII minimisation, consent and retention tracking | DPDP Act consent, notice and erasure [5], DPDP Rules consent notices [6], GDPR Article 5 principles [21]. |
+| PII minimization, consent and retention tracking | DPDP Act consent, notice and erasure [5], DPDP Rules consent notices [6], GDPR Article 5 principles [21]. |
 | When a candidate accepts, a ServiceNow record is opened so onboarding and access requests start the same day | The Table API call is immediate [18]; same-day start of downstream work depends on the client's ServiceNow flows, which the course does not build. |
 | 5 fit criteria scored with evidence; 0 candidates contacted without approval | The five criteria are the client's list (English, experience, location, salary ask, hours); zero unapproved contacts is the capstone's hard pass condition, a design property rather than a measured statistic. |
 | You need basic Python, a working knowledge of your hiring process, and nothing more. No prior agent experience is required. | Matches the stated prerequisites, which also list JSON and REST familiarity; the narration slightly understates that. |

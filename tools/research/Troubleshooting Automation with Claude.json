@@ -1,0 +1,1707 @@
+{
+ "course": "Troubleshooting Automation with Claude",
+ "domain": "Network and Infrastructure Automation",
+ "source_input": "From the client's use-case list (Yusuf), item 5, Troubleshooting Automation: \"Troubleshooting page for issue moment issue landed on SNOW acknowledgement mail with the asking details for primary troubleshooting and working accordingly by suggesting troubleshooting steps using CLI command. And create template on basis of reason, action and next action.\" The list closes with: \"Our Aim is to do automation using Claude for all these content.\"",
+ "why_this_course": [
+  "Load balancer and data center operations teams spend the first part of every incident on the same mechanical work: acknowledge the ticket, ask the caller for the VIP, start time, scope and last change, log in to the device and type the same handful of show commands, then write a resolution note. The client's request describes exactly this loop, from the moment an issue lands in ServiceNow to a reason, action and next action template, and asks for it to be automated with Claude.",
+  "The value is not in letting an agent change devices. It is in removing the repetitive reading and writing around an incident while keeping engineers in control. ServiceNow already provides the hooks for this: a Table API for reading and updating incidents [c1], watermarked notifications that route replies back to the record [c2], Flow Designer triggers [c3] and KCS-style knowledge templates [c7]. Claude Code, the Agent SDK and MCP provide scoped tool access, structured output, permission rules and hooks that can enforce a read-only default [c8][c10][c11][c14].",
+  "The course therefore teaches a supervised pattern: deterministic collectors gather typed evidence from F5, NetScaler, Radware, other load balancers and Cisco ACI; Claude ranks causes and proposes cited CLI steps; a person approves anything that changes state; and every action is logged in an audit trail and in ServiceNow work notes. Learners finish with a working troubleshooting page and a runbook they can adapt to their own estate."
+ ],
+ "design_decisions": [
+  {
+   "decision": "Keep the client's exact sequence as the course spine: SNOW intake, acknowledgement with asking details, CLI troubleshooting steps, reason/action/next action template, troubleshooting page.",
+   "rationale": "The client input is one sentence describing a workflow; following it in order makes each module map to a step the client's engineers already recognize."
+  },
+  {
+   "decision": "The agent drafts the acknowledgement mail and resolution note; a person sends and resolves.",
+   "rationale": "Customer communication and ticket closure carry accountability; the MCP specification itself calls for a human able to deny tool invocations [c16]."
+  },
+  {
+   "decision": "Read-only by default, with state-changing commands behind an approval gate enforced by deny rules and a PreToolUse hook rather than by prompt instructions.",
+   "rationale": "CLAUDE.md is context, not enforcement [c12]; deny-first rules and blocking hooks are the documented enforcement points [c10][c11]."
+  },
+  {
+   "decision": "Deterministic collectors produce typed evidence; Claude only interprets and cites it.",
+   "rationale": "Separating collection from reasoning makes every claim in the final template traceable to raw device output and keeps CLI parsing testable."
+  },
+  {
+   "decision": "Cover F5, NetScaler, Radware Alteon, 'Anaya LB' and Cisco ACI, using free trials, VPX Express, the DevNet ACI simulator and recorded fixtures.",
+   "rationale": "The client's other use cases name these platforms; free and trial options keep the lab affordable [c27][c29][c30], and recorded fixtures cover platforms without lab access."
+  },
+  {
+   "decision": "End with a FastAPI page, pytest regression suite and GitHub Actions.",
+   "rationale": "The client asked for a 'troubleshooting page'; tests and CI make the automation maintainable after the course."
+  }
+ ],
+ "audience_profile": [
+  {
+   "role": "Load balancer and network operations engineer (L2/L3)",
+   "needs": "Faster first response and less repetitive typing during incidents without losing control of devices.",
+   "starting_point": "Fluent in tmsh or NetScaler CLI, some Python, limited API experience."
+  },
+  {
+   "role": "NOC and service desk analyst",
+   "needs": "Consistent acknowledgement mails and complete tickets before hand-off.",
+   "starting_point": "Strong ServiceNow user, little device or scripting experience; pairs with an engineer in device labs."
+  },
+  {
+   "role": "Data center / ACI engineer",
+   "needs": "Quick fault and health lookups tied to the incident.",
+   "starting_point": "Knows APIC GUI, may not have used the REST API."
+  },
+  {
+   "role": "IT automation lead",
+   "needs": "A governed pattern for agent use in operations: permissions, approvals, audit and CI.",
+   "starting_point": "Python and Git experienced, may not know load balancer specifics."
+  }
+ ],
+ "prerequisite_check": [
+  "Can you explain VIP, pool, pool member, health monitor and HA pair in your own words?",
+  "Can you log in to an F5 or NetScaler and run a show command for a virtual server?",
+  "Can you read and edit a 50-line Python script and run it in a virtual environment?",
+  "Can you clone a Git repository, create a branch and open a pull request?",
+  "Do you have (or can you create) a ServiceNow Personal Developer Instance account?",
+  "Can you make a REST call with curl or Postman and read a JSON response?"
+ ],
+ "lab_environment": {
+  "overview": "Each learner gets a ServiceNow PDI with five synthetic incidents, access to shared lab load balancers (F5 BIG-IP VE and a NetScaler VPX HA pair), the Cisco DevNet ACI simulator, and recorded fixtures for Radware Alteon and 'Anaya LB'. Learners work in a course Git repository with Claude Code, the Agent SDK and two read-only MCP servers.",
+  "components": [
+   {
+    "name": "ServiceNow Personal Developer Instance",
+    "version": "Current release offered by the Developer Site (Zurich family at time of writing)",
+    "purpose": "Incidents, work notes, notifications, Flow Designer and knowledge articles.",
+    "how_to_obtain": "Free from the ServiceNow Developer Site.",
+    "notes": "Reclaimed after ten days without use and hibernates when idle; have learners sign in the day before the course [c28]. Activate the Knowledge Management Advanced plugin for KCS templates [c7]."
+   },
+   {
+    "name": "F5 BIG-IP Virtual Edition",
+    "version": "17.x (matches the TMSH 17.x reference) [c4]",
+    "purpose": "Primary load balancer for tmsh and iControl REST labs.",
+    "how_to_obtain": "30-day free trial keys from MyF5 [c29]; a paid VE lab license is an alternative for repeated cohorts.",
+    "notes": "Trial keys expire; plan provisioning within 30 days of delivery."
+   },
+   {
+    "name": "NetScaler VPX Express (HA pair)",
+    "version": "14.1",
+    "purpose": "NITRO API, show ha node and HA sync scenarios.",
+    "how_to_obtain": "VPX Express needs no license file (20 Mbps, 250 SSL sessions) [c30].",
+    "notes": "Two VPX instances on the same subnet form the HA pair."
+   },
+   {
+    "name": "Cisco ACI Simulator",
+    "version": "DevNet sandbox version (shared always-on or reservable)",
+    "purpose": "APIC REST queries for faults, health and endpoints.",
+    "how_to_obtain": "Cisco DevNet always-on sandbox (no reservation) or reservable sandbox up to 5 days [c27].",
+    "notes": "The always-on instance is shared and read-mostly; use the reservable one if labs need fixed data."
+   },
+   {
+    "name": "Radware Alteon",
+    "version": "31.x documentation set",
+    "purpose": "Alteon CLI evidence collection.",
+    "how_to_obtain": "Alteon VA if the client can provide a license; otherwise recorded CLI fixtures [c25][c26].",
+    "notes": "Obtain the Command Reference and REST API User Guide for the matching version from the Radware portal [c26]."
+   },
+   {
+    "name": "'Anaya LB' (client-named load balancer)",
+    "version": "Unknown",
+    "purpose": "Generic CLI capture adapter exercise.",
+    "how_to_obtain": "Recorded, sanitized output supplied by the client.",
+    "notes": "No public documentation was found under this name; confirm the actual product with the client."
+   },
+   {
+    "name": "Claude Code and Claude Agent SDK (Python)",
+    "version": "Current releases",
+    "purpose": "Interactive work, triage service, MCP integration.",
+    "how_to_obtain": "Install Claude Code and the claude-agent-sdk Python package; API key per learner or team.",
+    "notes": "Use project-scope .mcp.json and settings.json from the course repository [c8][c10]."
+   },
+   {
+    "name": "Python toolchain",
+    "version": "Python 3.11+, Pydantic 2, FastAPI, pytest, httpx, MCP Python SDK",
+    "purpose": "Collectors, MCP servers, page and tests.",
+    "how_to_obtain": "Course requirements file.",
+    "notes": "The MCP Python quickstart uses MCPServer and mcp.run(transport='stdio') [c17]."
+   },
+   {
+    "name": "GitHub repository with Actions",
+    "version": "GitHub.com or GitHub Enterprise",
+    "purpose": "Pull requests, CI and prompt regression checks.",
+    "how_to_obtain": "Course organization with one repository per team.",
+    "notes": "Protect main with required reviews and status checks."
+   }
+  ],
+  "fixtures": [
+   {
+    "name": "Synthetic incident pack",
+    "contents": "Five incidents (VIP down, pool member flapping, HA sync failure, certificate expiry, slow application) with deliberately missing details.",
+    "used_in": "The troubleshooting workflow and the ServiceNow incident lifecycle; Incident intake through the Table API and the acknowledgement mail"
+   },
+   {
+    "name": "Recorded device output",
+    "contents": "tmsh, iControl REST, NITRO, show ha node, Alteon /stats/slb and APIC JSON responses for each incident, sanitized.",
+    "used_in": "Evidence collection from load balancers and ACI; The troubleshooting page: service, tests and delivery"
+   },
+   {
+    "name": "Bad-evidence variants",
+    "contents": "Missing, stale and contradictory evidence bundles for three incidents.",
+    "used_in": "Claude suggests troubleshooting steps as structured JSON"
+   },
+   {
+    "name": "Allowlist and hook pack",
+    "contents": "allowlist.yaml, PreToolUse hook script, settings.json.",
+    "used_in": "Guardrails, approvals and audit for incident automation"
+   },
+   {
+    "name": "Capstone incident",
+    "contents": "An unseen HA sync failure incident with matching device state.",
+    "used_in": "Capstone: incident to resolution note, end to end"
+   }
+  ],
+  "safety": [
+   "Never connect lab agents to production devices or the production ServiceNow instance.",
+   "Collectors use read-only accounts; state-changing commands run only on lab devices and only with an approval record.",
+   "No credentials in prompts, transcripts, fixtures or the repository; use ${VAR} expansion and repository secrets [c8].",
+   "Never run the triage agent in bypassPermissions mode [c15].",
+   "Sanitize client-supplied fixtures (hostnames, IPs, user names) before they enter the repository."
+  ]
+ },
+ "modules": [
+  {
+   "day": 1,
+   "title": "The troubleshooting workflow and the ServiceNow incident lifecycle",
+   "goal": "Learners map today's manual incident-to-resolution workflow for load balancer and ACI incidents and mark exactly where an agent may read, draft and explain, and where a person must act.",
+   "learning_objectives": [
+    "Learners can describe the incident states and the hand-offs between service desk, assignment group and resolver.",
+    "Learners can explain how ServiceNow ties an emailed reply back to the incident record.",
+    "Learners can draw the manual workflow from ticket creation to resolution note and label every decision point.",
+    "Learners can classify each workflow step as agent-allowed (read, draft, explain) or person-only (change a device, send mail, close a ticket).",
+    "Learners can name the lab systems and what each one stands in for in production."
+   ],
+   "lessons": [
+    {
+     "title": "The incident record and its lifecycle",
+     "points": [
+      "Incident records live in the incident table and are read and updated through /api/now/table/incident and /api/now/table/incident/{sys_id} [c1].",
+      "Walk through the typical state progression used in most instances (New, In Progress, On Hold, Resolved, Closed) and tell learners to confirm the actual choice values in their own instance's state dictionary, because instances are customized.",
+      "Assignment group, assigned_to, priority, short_description, description, cmdb_ci and work_notes are the fields the troubleshooting workflow reads and writes; work_notes appear as a field on Table API responses [c1].",
+      "Close notes and close code are written at resolution; in this course they are only ever drafted by the agent and submitted by a person.",
+      "Every update the agent proposes must be traceable to an engineer action in the audit trail (built in the guardrails module)."
+     ]
+    },
+    {
+     "title": "Acknowledgement mail and how replies come back",
+     "points": [
+      "Outbound notifications carry a watermark at the bottom so the instance can match an incoming reply to the existing record [c2].",
+      "Inbound email actions script what the instance does with that reply, for example append it to the incident as a comment [c2].",
+      "Digests can summarize frequent updates into one mail, which matters when a P2 is being updated every few minutes [c2].",
+      "The 'acknowledgement mail with asking details' from the client input becomes a drafted reply in this course; the agent never sends mail itself.",
+      "Show a real-style acknowledgement mail and mark which sentences are boilerplate and which are the primary troubleshooting questions."
+     ]
+    },
+    {
+     "title": "Mapping the manual workflow",
+     "points": [
+      "Steps: ticket lands, engineer acknowledges, asks for missing details, gathers evidence on the device, runs first checks, suggests or performs a fix, writes the resolution note.",
+      "For each step record the inputs (ticket fields, device output), the decision made, who made it and how long it took.",
+      "Highlight the repeated first five commands an on-call engineer types for a VIP-down ticket; these become the read-only collectors on day 2.",
+      "Capture the reason, action and next action fields the client wants in the final template from the start, so the evidence chain is designed backwards from the note.",
+      "Record hand-offs (service desk to lb-ops, lb-ops to app team) because they become the 'next action owner' field."
+     ]
+    },
+    {
+     "title": "Automation boundaries",
+     "points": [
+      "Agent may: read the incident, read device state through allowlisted read-only commands, draft the acknowledgement, propose ranked steps, draft the resolution note.",
+      "Agent may not without a person: send mail, run any state-changing command, change incident state to Resolved or Closed, publish a knowledge article.",
+      "MCP's own specification says there should always be a human in the loop able to deny tool invocations [c16]; the course turns that into an enforced control, not a convention.",
+      "Write the boundaries as a one-page policy that later becomes permission rules and hooks [c10][c11].",
+      "Agree a stop rule: if the agent cannot cite evidence for a claim, the claim is marked unknown."
+     ]
+    },
+    {
+     "title": "The lab estate",
+     "points": [
+      "ServiceNow Personal Developer Instance: free, reclaimed after ten days without use, hibernates when idle [c28].",
+      "F5 BIG-IP VE on a 30-day trial key from MyF5 [c29] and NetScaler VPX Express with no license file, 20 Mbps [c30].",
+      "Cisco DevNet always-on ACI Simulator (shared, no reservation) or the reservable simulator for up to five days [c27].",
+      "Radware Alteon and 'Anaya LB' are represented by recorded CLI fixtures unless the client provides a lab appliance (see lab environment).",
+      "Synthetic incidents with real symptoms are loaded into the PDI on day 1 so every later lab uses the same tickets."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Open a synthetic P2 incident INC0048211 'app portal slow / timeouts' in the PDI and show its fields through the list view and through GET /api/now/table/incident?sysparm_query=number=INC0048211 [c1].",
+    "Show the acknowledgement notification and point out the watermark line that links replies to the record [c2].",
+    "Reply to the mail from a test mailbox and show the reply landing on the incident through the inbound email action [c2].",
+    "Log in to the lab F5 and type the usual first checks by hand (tmsh show ltm virtual, tmsh show ltm pool) while narrating each decision [c4].",
+    "Write the resolution note by hand in reason, action, next action form.",
+    "Draw the workflow on the whiteboard and color each step green (agent may act), amber (agent drafts, person sends) or red (person only)."
+   ],
+   "lab": {
+    "brief": "Walk one real-style incident from creation to resolution by hand and record every decision an engineer makes.",
+    "steps": [
+     "Log in to your PDI and confirm the five synthetic incidents are present in the lb-ops assignment group.",
+     "Pick the VIP-down incident and read every field; list the ones you would use to start troubleshooting.",
+     "Write the acknowledgement mail you would send today, including the questions you would ask the caller.",
+     "Connect to the lab F5 or NetScaler and run the read-only commands you would normally run; paste each command and output into a worksheet with timestamps.",
+     "Record each decision you made, what evidence drove it and how long it took.",
+     "Write the resolution note in reason, action, next action form.",
+     "Color each step on the workflow template green, amber or red and justify the color in one sentence.",
+     "Compare your map with a partner and resolve any step you colored differently."
+    ],
+    "success_criteria": [
+     "The workflow map covers ticket creation to resolution note with no missing step.",
+     "Every step has an owner and a green, amber or red classification with a reason.",
+     "Every command in the worksheet is marked read-only or state-changing.",
+     "The resolution note separates reason, action and next action."
+    ]
+   },
+   "common_pitfalls": [
+    "Assuming the instance uses out-of-box state values; always read the state choices from the instance.",
+    "Letting the agent send the acknowledgement mail 'because it is only an acknowledgement'; mail to customers is a person-only action in this course.",
+    "Mapping the ideal process instead of what engineers actually do at nine at night.",
+    "Forgetting that a PDI is reclaimed after ten days without sign-in; learners lose their data between cohorts [c28]."
+   ],
+   "knowledge_check": [
+    {
+     "q": "How does ServiceNow match an emailed reply to the original incident?",
+     "a": "Through the watermark label added to outbound notifications, processed by an inbound email action [c2]."
+    },
+    {
+     "q": "Name two actions the agent may take on its own and two it may never take without a person.",
+     "a": "May: read the incident, run allowlisted read-only commands, draft mail and notes. May not: send mail, run state-changing commands, resolve or close the ticket, publish a KB article."
+    },
+    {
+     "q": "Which Table API path updates a single incident?",
+     "a": "PATCH or PUT /api/now/table/incident/{sys_id} [c1]."
+    },
+    {
+     "q": "Why is the workflow designed backwards from the resolution note?",
+     "a": "So that every reason and action line in the final template has evidence collected for it earlier in the flow."
+    }
+   ],
+   "slides_and_assets": [
+    "Workflow map template with green, amber and red swimlanes.",
+    "Five synthetic incident records (VIP down, pool member flapping, HA sync failure, certificate expiry, slow application) as an import file for the PDI.",
+    "Sample acknowledgement mail with watermark highlighted.",
+    "One-page automation boundary policy template.",
+    "Lab access sheet with PDI, F5, NetScaler and ACI sandbox endpoints."
+   ],
+   "sources": [
+    "c1",
+    "c2",
+    "c4",
+    "c10",
+    "c11",
+    "c16",
+    "c27",
+    "c28",
+    "c29",
+    "c30"
+   ]
+  },
+  {
+   "day": 1,
+   "title": "Setting up Claude Code, the Agent SDK and MCP for incident triage",
+   "goal": "Learners build a working agent environment in which Claude can reach only a read-only ServiceNow tool and a read-only device tool, with credentials outside prompts and transcripts.",
+   "learning_objectives": [
+    "Learners can write a project CLAUDE.md and permission rules that encode the automation boundaries from module 1.",
+    "Learners can build a stdio MCP server in Python and register it with claude mcp add at project scope.",
+    "Learners can define in-process tools with the Agent SDK and restrict which tools are available and auto-approved.",
+    "Learners can keep credentials in environment variables or a vault and reference them from .mcp.json without committing them."
+   ],
+   "lessons": [
+    {
+     "title": "Claude Code project configuration",
+     "points": [
+      "Project instructions go in ./CLAUDE.md or ./.claude/CLAUDE.md and are shared through Git; /init generates a starting file [c12].",
+      "CLAUDE.md is context, not enforcement; anything that must be blocked goes into permission rules or a PreToolUse hook [c12].",
+      "Keep CLAUDE.md short (the docs suggest under 200 lines) and import long runbooks with @path [c12].",
+      "Permission rules live in .claude/settings.json (team) and .claude/settings.local.json (personal) [c10].",
+      "Rules are evaluated deny, then ask, then allow; first match wins, so deny Bash(ssh *) cannot be undone by a narrower allow [c10]."
+     ]
+    },
+    {
+     "title": "MCP servers for incident triage",
+     "points": [
+      "MCP standardizes how Claude reaches tools and data so the same server works from Claude Code and the Agent SDK [c9].",
+      "Build servers with the Python SDK: from mcp.server import MCPServer, @mcp.tool(), mcp.run(transport='stdio') [c17].",
+      "A stdio server must never print to stdout; send logs to stderr with the logging module [c17].",
+      "Register with claude mcp add --transport stdio servicenow-ro -- python servers/snow_ro.py; use --scope project to write .mcp.json for the team [c8].",
+      "Tools are discovered with tools/list and invoked with tools/call; return failures with isError true so Claude can react [c16]."
+     ]
+    },
+    {
+     "title": "Claude Agent SDK basics",
+     "points": [
+      "The SDK runs the same agent loop as Claude Code from Python or TypeScript; use it for the scripted triage service, and the CLI for interactive work.",
+      "Define in-process tools with @tool and create_sdk_mcp_server, then pass them in ClaudeAgentOptions(mcp_servers={...}) [c13].",
+      "Tool names follow mcp__{server}__{tool}; list exactly the read-only ones in allowed_tools [c13].",
+      "Use the tools option to remove built-ins the triage agent does not need, such as Bash and Write [c13].",
+      "Annotations such as readOnlyHint are metadata only; the handler must actually be read-only [c13][c16]."
+     ]
+    },
+    {
+     "title": "Credentials outside prompts",
+     "points": [
+      ".mcp.json supports ${VAR} and ${VAR:-default} expansion in command, args, env, url and headers, so secrets stay in the environment [c8].",
+      "Unset variables are left as literal text and claude mcp list warns about them; check before running the lab [c8].",
+      "Device and ServiceNow credentials are injected into the MCP server process, never returned in tool output.",
+      "Use a dedicated read-only ServiceNow integration user and read-only device accounts (for example an F5 Guest or Operator role) for the collectors.",
+      "Add a deny rule for reading .env and secrets paths so they cannot be pulled into a transcript [c10]."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Run /init in the course repository and edit CLAUDE.md to state the boundaries from module 1 [c12].",
+    "Add .claude/settings.json with deny rules for Bash(ssh *), Bash(curl *) and Read(./.env) and show the deny-first behavior with a test command [c10].",
+    "Write a 30-line snow_ro.py MCP server with get_incident and get_journal tools and register it at project scope [c8][c17].",
+    "Run claude mcp list, show the server and the environment-variable warning when SNOW_TOKEN is unset [c8].",
+    "Ask Claude in the CLI to summarize INC0048211 and show the tools/call in the transcript [c16].",
+    "Repeat the same call from a 20-line Agent SDK script with allowed_tools set to the two read-only tools [c13]."
+   ],
+   "lab": {
+    "brief": "Build and register a read-only ServiceNow MCP server and a read-only device MCP server and call them from an Agent SDK script.",
+    "steps": [
+     "Clone the course repository and run /init; edit CLAUDE.md to include the boundary policy.",
+     "Create .claude/settings.json with the deny rules supplied in the lab sheet.",
+     "Implement servicenow-ro with get_incident(number) and list_work_notes(sys_id) using GET on the Table API with sysparm_fields to limit fields [c1][c17].",
+     "Implement device-ro with show_virtual(device, name) and show_pool(device, name) backed by fixed command templates, not free text.",
+     "Register both servers with claude mcp add at project scope and commit .mcp.json without secrets [c8].",
+     "Write triage_check.py with the Agent SDK, passing allowed_tools for the four tools only and removing Bash from tools [c13].",
+     "Run the script against INC0048211 and save the transcript.",
+     "Search the transcript and .mcp.json for any password or token string and confirm there are none."
+    ],
+    "success_criteria": [
+     "Both MCP servers appear in claude mcp list and respond to tools/list.",
+     "The Agent SDK script reads the incident and one device object successfully.",
+     "No credential appears in the repository, the transcript or tool output.",
+     "An attempt to call Bash from the triage agent is refused or the tool is absent."
+    ]
+   },
+   "common_pitfalls": [
+    "Printing debug output to stdout inside a stdio MCP server, which breaks JSON-RPC [c17].",
+    "Relying on CLAUDE.md to forbid an action instead of a deny rule or hook [c12].",
+    "Exposing a generic run_command tool on the device server; every tool must map to a fixed, read-only command template.",
+    "Committing a real token in .mcp.json instead of ${VAR} expansion [c8].",
+    "Assuming a narrow allow rule overrides a broad deny; deny always wins [c10]."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Where do team-shared MCP server definitions live?",
+     "a": "In .mcp.json at the project root, created with claude mcp add --scope project [c8]."
+    },
+    {
+     "q": "What is the evaluation order of permission rules in Claude Code?",
+     "a": "Deny, then ask, then allow; the first match decides [c10]."
+    },
+    {
+     "q": "Why must a stdio MCP server never print to stdout?",
+     "a": "stdout carries the JSON-RPC messages, so stray output corrupts them [c17]."
+    },
+    {
+     "q": "How is an SDK MCP tool named in allowed_tools?",
+     "a": "mcp__{server_name}__{tool_name} [c13]."
+    }
+   ],
+   "slides_and_assets": [
+    "CLAUDE.md template for the triage repository.",
+    "settings.json starter with deny and ask rules.",
+    "snow_ro.py and device_ro.py starter servers.",
+    "Diagram of Claude Code, Agent SDK, MCP servers and target systems with trust boundaries.",
+    "Secrets handling checklist."
+   ],
+   "sources": [
+    "c1",
+    "c8",
+    "c9",
+    "c10",
+    "c12",
+    "c13",
+    "c16",
+    "c17"
+   ]
+  },
+  {
+   "day": 1,
+   "title": "Incident intake through the Table API and the acknowledgement mail",
+   "goal": "Learners build an intake service that pulls incidents and their journal entries, validates them, lists the missing primary troubleshooting details and drafts an acknowledgement for a person to send.",
+   "learning_objectives": [
+    "Learners can query incident and sys_journal_field through the Table API with filters, field lists and paging.",
+    "Learners can validate incoming records with Pydantic and reject malformed data.",
+    "Learners can define a primary troubleshooting checklist and have Claude compare a ticket against it with structured output.",
+    "Learners can post the drafted acknowledgement as a work note marked draft, never as a sent mail."
+   ],
+   "lessons": [
+    {
+     "title": "Querying incidents and journals",
+     "points": [
+      "List the queue with GET /api/now/table/incident?sysparm_query=assignment_group.name=lb-ops^active=true^ORDERBYDESCsys_updated_on [c1].",
+      "Limit payloads with sysparm_fields=number,sys_id,short_description,description,priority,cmdb_ci,opened_at and sysparm_exclude_reference_link=true [c1].",
+      "Page with sysparm_limit and sysparm_offset; the default limit is 10000, which is too large for an interactive tool [c1].",
+      "Read comments and work notes from sys_journal_field filtered by element_id=<incident sys_id> (and name=incident); confirm read access for the integration user on the PDI.",
+      "Use sysparm_display_value=all when the agent needs both the display value and the stored value of choice fields such as state [c1]."
+     ]
+    },
+    {
+     "title": "Validating records",
+     "points": [
+      "Model Incident and JournalEntry as Pydantic classes with required fields and explicit optional ones.",
+      "Reject records that fail validation and log them; never pass unvalidated JSON to the model.",
+      "Store the raw Table API response next to the parsed object so later citations can point to it.",
+      "Normalize timestamps to UTC with the instance time zone recorded."
+     ]
+    },
+    {
+     "title": "The primary troubleshooting checklist",
+     "points": [
+      "Fields: affected VIP or service, symptom, start time, scope (users, sites), last change, error text or screenshot.",
+      "Each checklist item has a status of present, missing or ambiguous plus the ticket text that supports it.",
+      "Define the checklist as a JSON schema and ask for structured output so the result is machine-checkable [c14].",
+      "Treat a success result without structured_output as a failure, as the SDK docs advise [c14].",
+      "Unknowns are allowed and must be explicit; the agent may not infer the VIP from the short description alone unless it quotes the text."
+     ]
+    },
+    {
+     "title": "Drafting and posting the acknowledgement",
+     "points": [
+      "The draft contains the acknowledgement line, the missing-details questions and the expected next update time.",
+      "Post the draft as a work note with a 'DRAFT - not sent' prefix via PATCH /api/now/table/incident/{sys_id} with a work_notes value [c1].",
+      "The engineer copies or sends the mail from ServiceNow; the reply returns through the watermark and inbound action [c2].",
+      "The intake tool records which tools were used (servicenow.read only) in the audit log."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Run the queue query with sysparm_query and sysparm_fields and show the JSON [c1].",
+    "Fetch the journal entries for INC0048211 and show how the work notes and comments are separated.",
+    "Validate the record with Pydantic and deliberately break a field to show the ValidationError path.",
+    "Run the checklist agent with output_format and show the structured_output for vip, start_time, scope and last_change [c14].",
+    "Post the draft acknowledgement as a work note and show it on the incident form [c1].",
+    "Reply from a test mailbox and show the reply attached to the incident [c2]."
+   ],
+   "lab": {
+    "brief": "Ingest five synthetic incidents, generate the missing-details list and acknowledgement draft for each, and post it as a work note.",
+    "steps": [
+     "Implement fetch_queue() with sysparm_query, sysparm_fields and paging [c1].",
+     "Implement fetch_journal(sys_id) for comments and work notes.",
+     "Write Pydantic models for Incident, JournalEntry and ChecklistResult.",
+     "Write the checklist JSON schema and the intake prompt; call the Agent SDK with output_format [c14].",
+     "Handle error_max_structured_output_retries by flagging the incident for manual intake [c14].",
+     "Generate the acknowledgement draft from the checklist result using a fixed template.",
+     "Post each draft as a work note prefixed DRAFT and capture the response sys_id [c1].",
+     "Write an audit line for each incident with tools used and checklist outcome."
+    ],
+    "success_criteria": [
+     "All five incidents are ingested and validated, or rejected with a logged reason.",
+     "Each checklist result marks every item present, missing or ambiguous with quoted ticket text.",
+     "Each draft asks only for details that are actually missing.",
+     "No mail is sent by the tool; all drafts are work notes."
+    ]
+   },
+   "common_pitfalls": [
+    "Using sysparm_display_value=true and then writing the display value back into a choice field [c1].",
+    "Pulling the whole incident record with all reference links and blowing the context window; always set sysparm_fields [c1].",
+    "Letting the model guess the VIP from the CI name without quoting evidence.",
+    "Posting to comments (customer-visible) instead of work_notes (internal)."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Which parameter limits the fields the Table API returns?",
+     "a": "sysparm_fields, a comma-separated list [c1]."
+    },
+    {
+     "q": "How do you page through a large incident list?",
+     "a": "Increase sysparm_offset by sysparm_limit on each request [c1]."
+    },
+    {
+     "q": "What does the SDK return when the agent cannot satisfy your schema?",
+     "a": "A result with subtype error_max_structured_output_retries [c14]."
+    },
+    {
+     "q": "Why post the acknowledgement as a work note rather than send it?",
+     "a": "Sending mail to the caller is a person-only action; the work note is a reviewable draft."
+    }
+   ],
+   "slides_and_assets": [
+    "Checklist JSON schema and Pydantic models.",
+    "Five synthetic incidents with deliberately missing details.",
+    "Acknowledgement mail template.",
+    "Slide: Table API query anatomy with sysparm parameters."
+   ],
+   "sources": [
+    "c1",
+    "c2",
+    "c14"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "Evidence collection from load balancers and ACI",
+   "goal": "Learners write deterministic read-only collectors for F5, NetScaler, Radware Alteon, other load balancers and Cisco APIC that return typed evidence records and never infer anything without data.",
+   "learning_objectives": [
+    "Learners can collect virtual server, pool and member status from F5 through tmsh and iControl REST.",
+    "Learners can collect lbvserver statistics and HA status from NetScaler through NITRO and the CLI.",
+    "Learners can capture Radware Alteon and other load balancer output through CLI adapters with recorded fixtures.",
+    "Learners can query APIC faults, health scores and endpoints for a tenant through the REST API.",
+    "Learners can define an evidence record that carries device, timestamp, command and raw output."
+   ],
+   "lessons": [
+    {
+     "title": "F5 BIG-IP",
+     "points": [
+      "Use tmsh show ltm virtual <name> and tmsh show ltm pool <name> members for status and statistics; the available tmsh commands depend on provisioned modules [c4].",
+      "iControl REST mirrors tmsh: /mgmt/tm/ltm/pool is the collection and /mgmt/tm/ltm/pool/~Common~<name> a single resource, keyed by name, partition and subPath [c21].",
+      "Pool members can be forced offline with state user-down or drained with session user-disabled; both are state-changing and excluded from collectors [c18].",
+      "show sys connection filters by ss-server-addr to list connections to a backend pool member; cs-server-addr is the client-side local (virtual) address [c20].",
+      "Monitor settings to capture: send, recv, interval (default 5 s) and timeout (default 16 s) [c19]."
+     ]
+    },
+    {
+     "title": "Citrix NetScaler",
+     "points": [
+      "Read statistics with GET /nitro/v1/stat/lbvserver?args=name:<vserver> and config with GET /nitro/v1/config/lbvserver/<name> [c22].",
+      "Authenticate with a session cookie NITRO_AUTH_TOKEN or per-request X-NITRO-USER and X-NITRO-PASS headers, never both [c22].",
+      "HA status: show ha node returns Node State, Master State, Sync State and Propagation; a healthy secondary shows Sync State SUCCESS [c23].",
+      "The CLI reference is organized by feature area (lb, ssl, system, ha) for finding the matching show command [c5]."
+     ]
+    },
+    {
+     "title": "Radware Alteon and other load balancers",
+     "points": [
+      "Alteon uses menu-path CLI commands such as /stats/slb/virt <x>, /stats/slb/group and /info/l3/ha [c25].",
+      "Radware publishes a Command Reference, CLI Application Guide, REST API User Guide and Troubleshooting Guide; obtain the version matching the lab appliance from the Radware portal [c26].",
+      "For 'Anaya LB' and any platform without a documented API, build a CLI capture adapter: fixed command list, prompt detection, timeout and raw output capture.",
+      "Without a lab appliance, collectors run against recorded fixtures supplied by the client's engineers, with device names and IPs sanitized."
+     ]
+    },
+    {
+     "title": "Cisco APIC",
+     "points": [
+      "Log in with POST /api/aaaLogin.json and reuse the APIC-cookie; the default session timeout is 600 seconds [c24].",
+      "Faults for a tenant: GET /api/mo/uni/tn-<tenant>.json?query-target=subtree&target-subtree-class=faultInst, or class queries on faultInst sorted with order-by=faultInst.severity|desc [c24].",
+      "Unhealthy objects: query-target-filter=lt(healthInst.cur,\"50\") [c24].",
+      "Endpoint lookup for the backend IP through the fvCEp class with a filter on ip.",
+      "Every APIC call in the collector is a GET, which changes nothing [c24]."
+     ]
+    },
+    {
+     "title": "The evidence record",
+     "points": [
+      "Fields: evidence_id, incident, device, platform, command_or_endpoint, collected_at (UTC), duration, exit status, raw_output, parsed summary.",
+      "Raw output is kept verbatim; the parsed summary is produced by deterministic code, not by Claude.",
+      "If a collector fails, the record says so; the agent must not fill the gap.",
+      "Evidence ids are what Claude cites in the next module."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Run tmsh show ltm pool pool_portal members on the lab F5 and the equivalent GET on /mgmt/tm/ltm/pool/~Common~pool_portal/members [c21].",
+    "Call GET /nitro/v1/stat/lbvserver?args=name:vs_portal on the NetScaler VPX and show the curstate field [c22].",
+    "Run show ha node on the NetScaler pair and point out Sync State [c23].",
+    "Log in to the DevNet ACI simulator and run a faultInst class query sorted by severity [c24][c27].",
+    "Play back a recorded Alteon /stats/slb/virt output through the capture adapter [c25].",
+    "Show the resulting evidence bundle JSON for INC0048211."
+   ],
+   "lab": {
+    "brief": "Write deterministic collectors for each platform and run them against the lab devices for one incident.",
+    "steps": [
+     "Implement f5_collect(device, virtual) using iControl REST for virtual, pool and member status [c21].",
+     "Implement ns_collect(device, vserver) using NITRO stat and config endpoints and show ha node [c22][c23].",
+     "Implement alteon_collect(fixture) parsing /stats/slb/virt and /stats/slb/group output [c25].",
+     "Implement apic_collect(tenant, ip) for faults, health below 50 and endpoint lookup [c24].",
+     "Wrap each collector so it returns an EvidenceRecord and catches timeouts.",
+     "Expose the collectors through the device-ro MCP server as fixed tools.",
+     "Run all collectors for INC0048211 and write the evidence bundle to runs/<incident>/evidence.json.",
+     "Diff a second run to confirm the collectors are repeatable apart from counters and timestamps."
+    ],
+    "success_criteria": [
+     "Each platform produces at least one evidence record for the incident.",
+     "Every record has device, timestamp, command or endpoint and raw output.",
+     "No collector issues a POST, PUT, PATCH or DELETE except the APIC login.",
+     "Failed collections are recorded as failures, not omitted."
+    ]
+   },
+   "common_pitfalls": [
+    "Using cs-server-addr when you meant the pool member; for backend connections filter on ss-server-addr [c20].",
+    "Letting NITRO requests carry both the auth cookie and X-NITRO headers [c22].",
+    "Forgetting APIC token expiry after 600 seconds and silently returning empty results [c24].",
+    "Parsing raw CLI output with the model instead of deterministic parsers.",
+    "Using an admin account for collectors because it was easier in the lab."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Which iControl REST path returns a single pool in the Common partition?",
+     "a": "/mgmt/tm/ltm/pool/~Common~<pool name> [c21]."
+    },
+    {
+     "q": "Which NetScaler output field shows whether HA configuration sync is working?",
+     "a": "Sync State in show ha node; SUCCESS on a healthy secondary [c23]."
+    },
+    {
+     "q": "How do you list only unhealthy APIC objects?",
+     "a": "query-target-filter=lt(healthInst.cur,\"50\") [c24]."
+    },
+    {
+     "q": "Why keep the raw output in the evidence record?",
+     "a": "So every claim Claude makes can be checked against the exact device response."
+    }
+   ],
+   "slides_and_assets": [
+    "Collector contract and EvidenceRecord schema.",
+    "Command and endpoint cheat sheet per platform.",
+    "Recorded Alteon and Anaya LB fixtures.",
+    "Postman or curl collection for iControl REST, NITRO and APIC."
+   ],
+   "sources": [
+    "c4",
+    "c5",
+    "c18",
+    "c19",
+    "c20",
+    "c21",
+    "c22",
+    "c23",
+    "c24",
+    "c25",
+    "c26",
+    "c27"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "Claude suggests troubleshooting steps as structured JSON",
+   "goal": "Learners build a suggestion agent that takes a ticket and its evidence and returns ranked likely causes, each with a confirming command, expected result, command class and evidence citations.",
+   "learning_objectives": [
+    "Learners can design a step schema that separates read-only from state-changing commands.",
+    "Learners can prompt Claude to rank causes and cite evidence ids for each.",
+    "Learners can test the agent with missing, stale and contradictory evidence.",
+    "Learners can score suggestions against an engineer's notes and a vendor-documented check."
+   ],
+   "lessons": [
+    {
+     "title": "Prompt design",
+     "points": [
+      "Input: validated ticket, checklist result and evidence bundle; output: ranked causes with one confirming step each.",
+      "Instruct Claude to cite evidence ids for every statement and to put anything unsupported in an unknowns list.",
+      "Give platform context: for a pool member down, the confirming check is the monitor configuration and result (send, recv, interval, timeout) [c19].",
+      "Keep device commands as templates from the allowlist; Claude chooses a template and fills parameters, not free text."
+     ]
+    },
+    {
+     "title": "The step schema",
+     "points": [
+      "Fields: rank, cause, platform, device, command_template, parameters, class (read_only or state_changing), expected_result, rationale, evidence_ids, confidence.",
+      "Generate the schema from Pydantic with model_json_schema() and pass it as output_format [c14].",
+      "Schemas are validated as JSON Schema draft-07; keep them shallow to avoid retries [c14].",
+      "Example read-only step: tmsh show ltm monitor https https_portal; example state-changing step: modify ltm pool pool_portal members modify { web-04:443 { state user-down } } [c18][c19]."
+     ]
+    },
+    {
+     "title": "Testing with bad evidence",
+     "points": [
+      "Missing: remove the pool evidence; the agent must ask for it, not guess.",
+      "Stale: evidence older than the incident start time must be flagged.",
+      "Contradictory: F5 shows a member down while APIC shows the endpoint learned and healthy; the agent must present both and rank a check that resolves the conflict [c24].",
+      "Connectivity checks: extended ping and traceroute need privileged EXEC on Cisco IOS; the agent must not suggest them for a user-EXEC account [c6]."
+     ]
+    },
+    {
+     "title": "Scoring against playbooks",
+     "points": [
+      "Score first-step accuracy: did the top-ranked step match what the engineer did first?",
+      "Score citation validity: does every evidence id exist in the bundle?",
+      "Compare with vendor-documented checks, for example the meaning of ! and . in ping output and * in traceroute [c6].",
+      "Keep a scored set of incidents as the prompt regression suite used in module 9."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Show the evidence bundle for INC0048211 and the step schema side by side.",
+    "Run the suggestion agent and show the structured_output with two ranked causes [c14].",
+    "Delete the pool evidence and rerun; show the unknowns list growing.",
+    "Inject a contradictory APIC endpoint record and show the agent proposing a resolving check [c24].",
+    "Score the run against the engineer's notes on screen."
+   ],
+   "lab": {
+    "brief": "Build the suggestion agent, run it on three incidents and score its first-step accuracy against the engineer's manual notes.",
+    "steps": [
+     "Write the Step and Suggestion Pydantic models.",
+     "Write the system prompt with citation and unknowns rules.",
+     "Call the Agent SDK with output_format and only the device-ro read tools available [c13][c14].",
+     "Run it on the VIP-down, member-flapping and HA-sync incidents.",
+     "Validate that every command_template exists in the allowlist and every evidence id exists.",
+     "Run the missing, stale and contradictory variants.",
+     "Score first-step accuracy and citation validity in the provided sheet.",
+     "Commit the three scored cases as regression fixtures."
+    ],
+    "success_criteria": [
+     "Every suggestion validates against the schema.",
+     "Every step is classed read_only or state_changing correctly.",
+     "Every evidence citation resolves to a record in the bundle.",
+     "In the missing-evidence case the agent lists the gap instead of inventing data."
+    ]
+   },
+   "common_pitfalls": [
+    "Letting Claude write free-form commands rather than choosing from templates.",
+    "Trusting the model's own class label without checking it against the allowlist.",
+    "Over-nested schemas that cause repeated validation retries [c14].",
+    "Suggesting privileged commands to an account that only has user EXEC access [c6]."
+   ],
+   "knowledge_check": [
+    {
+     "q": "What two fields stop a suggested step from being run blindly?",
+     "a": "class (read_only or state_changing) and the evidence_ids that justify it."
+    },
+    {
+     "q": "How do you supply a Pydantic schema to the Agent SDK?",
+     "a": "output_format={'type': 'json_schema', 'schema': Model.model_json_schema()} [c14]."
+    },
+    {
+     "q": "Which F5 monitor settings explain a member marked down by an https monitor?",
+     "a": "send, recv, interval and timeout, with recv defining the expected response string [c19]."
+    },
+    {
+     "q": "What should the agent do when F5 and APIC disagree?",
+     "a": "Present both pieces of evidence and rank a check that resolves the conflict."
+    }
+   ],
+   "slides_and_assets": [
+    "Step schema reference card.",
+    "Scoring sheet for first-step accuracy.",
+    "Bad-evidence variants of three incidents.",
+    "Slide: anatomy of a cited suggestion."
+   ],
+   "sources": [
+    "c6",
+    "c13",
+    "c14",
+    "c18",
+    "c19",
+    "c24"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "Guardrails, approvals and audit for incident automation",
+   "goal": "Learners enforce command classes with allowlists, permission rules and hooks, record approvals and write every action to an audit log and to ServiceNow work notes.",
+   "learning_objectives": [
+    "Learners can build an allowlist that classifies each command template as read-only or state-changing.",
+    "Learners can enforce the allowlist with deny rules and a PreToolUse hook that fails closed.",
+    "Learners can create an approval record that captures approver, command, device, time and output.",
+    "Learners can write audit entries to a local log and to the incident's work notes."
+   ],
+   "lessons": [
+    {
+     "title": "Command classification",
+     "points": [
+      "Every template is tagged read_only or state_changing in a versioned allowlist file; anything not on the list is denied.",
+      "F5 examples: show ltm pool is read-only; modify ltm pool ... state user-down or session user-disabled are state-changing [c18].",
+      "delete sys connection is state-changing and, without a port, removes all connections matching the address [c20].",
+      "Tool annotations like readOnlyHint are hints; the allowlist is the source of truth [c13][c16]."
+     ]
+    },
+    {
+     "title": "Enforcement layers",
+     "points": [
+      "Permission rules: deny wins over ask and allow, so deny broad patterns first [c10].",
+      "A PreToolUse hook reads tool_name and tool_input from stdin, looks up the template class and exits 2 to block state-changing calls without an approval id [c11].",
+      "Set onFailure to block so a crashed or timed-out hook fails closed [c11].",
+      "In the SDK, hooks run before deny rules and the deny rules apply even in bypassPermissions mode; never run the triage agent in bypassPermissions [c15].",
+      "Use dontAsk mode for headless runs so anything not pre-approved is denied rather than prompting [c15]."
+     ]
+    },
+    {
+     "title": "The approval record",
+     "points": [
+      "Fields: approval_id, incident, step id, command, device, requested_by, approved_by, approved_at, expiry, output_hash.",
+      "An approval covers one command on one device for one incident and expires.",
+      "The approver must not be the agent or the requesting session.",
+      "MCP guidance says hosts should show tool inputs before invocation and ask for confirmation on sensitive operations; the approval UI shows the exact command [c16]."
+     ]
+    },
+    {
+     "title": "Audit trail",
+     "points": [
+      "Write JSON lines for every tool call: who, what, when, inputs, outputs hash, decision.",
+      "Mirror a human-readable summary to the incident's work_notes through PATCH on the Table API [c1].",
+      "MCP clients should log tool usage for audit purposes [c16].",
+      "Keep audit logs separate from the agent's working directory so the agent cannot edit them."
+     ]
+    },
+    {
+     "title": "Failure modes",
+     "points": [
+      "Wrong device: the hook checks that the device belongs to the incident's CI.",
+      "Wrong incident: approvals are bound to the incident sys_id.",
+      "Hallucinated command: any template id not in the allowlist is denied.",
+      "Hook errors: exit 1 is non-blocking, so policy hooks must use exit 2 or the deny decision [c11]."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Show the allowlist file with read_only and state_changing tags.",
+    "Show the PreToolUse hook script and its configuration in settings.json [c11].",
+    "Ask the agent to force web-04 offline and show the hook blocking it with a reason [c11].",
+    "Create an approval record in the approval tool and rerun; show the command passing.",
+    "Show the audit JSON lines and the work note on INC0048211 [c1].",
+    "Kill the hook mid-run and show onFailure block keeping the call denied [c11]."
+   ],
+   "lab": {
+    "brief": "Add the approval gate and audit writer, then try to push a state-changing command through without approval and watch it refuse.",
+    "steps": [
+     "Create allowlist.yaml with every template from the collectors and suggestion agent, each classed.",
+     "Add deny rules for anything outside the device-ro and approved-exec tools [c10].",
+     "Write the PreToolUse hook that checks class, approval id, device and incident [c11].",
+     "Set onFailure block on the hook [c11].",
+     "Implement approve(step_id, approver) that writes the approval record with expiry.",
+     "Implement audit_write() to JSONL and to work_notes [c1].",
+     "Attempt the user-down command with no approval and capture the refusal.",
+     "Approve it and run it on the lab F5, then confirm the audit and work note entries."
+    ],
+    "success_criteria": [
+     "The unapproved state-changing command is blocked and the block is logged.",
+     "The approved command runs once and only on the approved device.",
+     "Every tool call appears in the audit log with inputs and outcome.",
+     "The work note on the incident shows the approval and the command output summary."
+    ]
+   },
+   "common_pitfalls": [
+    "Writing the hook to exit 1 on a policy violation, which does not block [c11].",
+    "Running the agent in bypassPermissions to save time in the lab [c15].",
+    "Approvals with no expiry that can be replayed on another incident.",
+    "Letting the agent write to the same file the audit trail lives in."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Which hook exit code blocks a tool call?",
+     "a": "Exit code 2, with stderr as the reason [c11]."
+    },
+    {
+     "q": "Does a PreToolUse hook that returns allow bypass deny rules?",
+     "a": "No; deny and ask rules are still evaluated [c15]."
+    },
+    {
+     "q": "What does delete sys connection do if no port is given?",
+     "a": "Deletes all connections that match just the IP address [c20]."
+    },
+    {
+     "q": "Name four fields of an approval record.",
+     "a": "Approver, command, device, timestamp (plus incident, expiry and output hash)."
+    }
+   ],
+   "slides_and_assets": [
+    "allowlist.yaml template.",
+    "PreToolUse hook script and settings snippet.",
+    "Approval record schema.",
+    "Audit log schema and sample.",
+    "Slide: layers of defense (rules, hooks, approval, audit)."
+   ],
+   "sources": [
+    "c1",
+    "c10",
+    "c11",
+    "c13",
+    "c15",
+    "c16",
+    "c18",
+    "c20"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "Running approved steps and reading the result",
+   "goal": "Learners execute approved commands through SSH and REST wrappers, let Claude interpret the result against the expected outcome and control the loop until the cause is confirmed or the incident is escalated.",
+   "learning_objectives": [
+    "Learners can wrap SSH and REST execution with timeouts, output capture and evidence records.",
+    "Learners can have Claude compare actual output with the expected result and propose the next step.",
+    "Learners can enforce loop limits, stop conditions and escalation.",
+    "Learners can start the loop from a ServiceNow trigger when an incident is assigned to the group."
+   ],
+   "lessons": [
+    {
+     "title": "Execution wrappers",
+     "points": [
+      "SSH wrapper: fixed template, connect timeout, command timeout, prompt detection, raw output saved as evidence.",
+      "REST wrappers for iControl REST, NITRO and APIC reuse the collector auth and only call approved endpoints [c21][c22][c24].",
+      "Every execution produces an evidence record linked to the approval id.",
+      "Read-only steps run automatically in the lab; state-changing ones only with a valid approval."
+     ]
+    },
+    {
+     "title": "Interpreting results",
+     "points": [
+      "Claude receives expected_result, actual output and the step rationale and returns confirmed, refuted or inconclusive with citations.",
+      "Ping and traceroute output must be read by its documented meaning: ! reply, . timeout, * no response before the timer [c6].",
+      "For NetScaler HA steps, Sync State values such as SUCCESS or AUTO DISABLED decide the next step [c23].",
+      "Each interpretation either proposes the next step or proposes stopping with a confirmed cause."
+     ]
+    },
+    {
+     "title": "Loop control",
+     "points": [
+      "Maximum steps per incident (for example eight) and maximum elapsed time.",
+      "Stop when a cause is confirmed with evidence, when two consecutive steps are inconclusive, or when the next step is state-changing and no approver responds.",
+      "Escalate by assigning to a senior engineer and writing the evidence summary as a work note [c1].",
+      "Use the SDK permission mode that denies anything not pre-approved for unattended runs [c15]."
+     ]
+    },
+    {
+     "title": "Starting from ServiceNow",
+     "points": [
+      "A record-based Flow Designer trigger on incident update, condition assignment group is lb-ops, calls the triage service [c3].",
+      "Flows can start with a delay because events are queued and processed in order [c3].",
+      "The flow passes only the incident sys_id; the service pulls everything else through the Table API [c1].",
+      "Guard against duplicate starts by recording a run id on the incident."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Approve and run tmsh show ltm monitor https https_portal through the SSH wrapper and show the evidence record.",
+    "Show Claude marking the monitor hypothesis confirmed with citations to the output.",
+    "Show the next suggested step being state-changing and waiting for approval.",
+    "Run an inconclusive branch twice and show automatic escalation with a work note.",
+    "Show the Flow Designer flow with a record-based trigger calling the service [c3]."
+   ],
+   "lab": {
+    "brief": "Run the suggest, approve, execute, interpret loop end to end on one incident until the cause is confirmed.",
+    "steps": [
+     "Implement ssh_exec(template, params, approval_id) with timeouts and capture.",
+     "Implement rest_exec for one approved endpoint per platform.",
+     "Implement interpret(step, output) with structured output confirmed, refuted or inconclusive [c14].",
+     "Implement the loop with max steps, max time and stop conditions.",
+     "Implement escalate() that reassigns and writes a work note [c1].",
+     "Build the Flow Designer flow that calls the service on assignment [c3].",
+     "Assign INC0048211 to lb-ops and watch the loop start.",
+     "Approve the state-changing step when prompted and run to a confirmed cause."
+    ],
+    "success_criteria": [
+     "The loop starts from the ServiceNow assignment.",
+     "Read-only steps run automatically and state-changing steps wait for approval.",
+     "The loop stops with a confirmed cause backed by cited evidence, or escalates.",
+     "All executions are in the audit log and summarized in work notes."
+    ]
+   },
+   "common_pitfalls": [
+    "No command timeout, so a hung SSH session blocks the loop.",
+    "Feeding Claude only a parsed summary and losing the detail needed to interpret the result.",
+    "Endless loops when the agent keeps proposing slightly different read-only checks.",
+    "Assuming the flow fires instantly after assignment [c3]."
+   ],
+   "knowledge_check": [
+    {
+     "q": "What are three stop conditions for the loop?",
+     "a": "Confirmed cause, repeated inconclusive results, or an unapproved state-changing next step (plus max steps or time)."
+    },
+    {
+     "q": "What does a period mean in Cisco ping output?",
+     "a": "The server timed out waiting for a reply [c6]."
+    },
+    {
+     "q": "Which trigger type starts the flow on assignment?",
+     "a": "A record-based trigger on the incident table [c3]."
+    },
+    {
+     "q": "Why does the flow pass only the sys_id?",
+     "a": "So the service re-reads current data through the Table API rather than trusting a payload."
+    }
+   ],
+   "slides_and_assets": [
+    "Loop state diagram.",
+    "SSH and REST wrapper starters.",
+    "Flow Designer flow export for the lab.",
+    "Escalation work note template."
+   ],
+   "sources": [
+    "c1",
+    "c3",
+    "c6",
+    "c14",
+    "c15",
+    "c21",
+    "c22",
+    "c23",
+    "c24"
+   ]
+  },
+  {
+   "day": 3,
+   "title": "The reason, action and next action template",
+   "goal": "Learners generate, review and post a reason, action and next action resolution template from the evidence bundle and execution outputs, and create a knowledge article draft for reuse.",
+   "learning_objectives": [
+    "Learners can define the template fields and what evidence each requires.",
+    "Learners can have Claude draft the template with a citation for every claim and explicit unverified items.",
+    "Learners can post resolution notes and close code through the Table API after review.",
+    "Learners can map the template to a KCS knowledge article and maintain variants per symptom family."
+   ],
+   "lessons": [
+    {
+     "title": "Template fields",
+     "points": [
+      "Reason: root cause with evidence ids, for example monitor recv mismatch on web-04 after a deploy.",
+      "Action: what was done, by whom, approved by whom and when, from the approval and audit records.",
+      "Next action: owner, task and due date; owners come from the hand-offs mapped in module 1.",
+      "Unverified: anything Claude could not support with evidence, listed separately."
+     ]
+    },
+    {
+     "title": "Drafting with citations",
+     "points": [
+      "Input is the evidence bundle, execution outputs and approvals only; no fresh device queries at this stage.",
+      "Structured output enforces fields and a citations array per line [c14].",
+      "A deterministic check rejects any line whose citations do not resolve.",
+      "The engineer edits and approves the draft before it is posted."
+     ]
+    },
+    {
+     "title": "Posting to the incident",
+     "points": [
+      "PATCH /api/now/table/incident/{sys_id} with close_notes and close_code after approval; state change to Resolved is done by the engineer [c1].",
+      "Write the template summary to work_notes as well for the audit trail [c1].",
+      "Use the instance's own close code choices; read them rather than hard-coding."
+     ]
+    },
+    {
+     "title": "Knowledge article draft",
+     "points": [
+      "The KCS Article template has Issue, Environment, Cause and Resolution fields and maps cleanly to the template [c7].",
+      "Predefined templates are inactive by default and must be activated and linked to a knowledge base [c7].",
+      "The feature needs the Knowledge Management Advanced plugin; check it on the PDI [c7].",
+      "Create the article as a draft through the Table API on the knowledge table; publishing stays with the knowledge owner."
+     ]
+    },
+    {
+     "title": "Variants per symptom family",
+     "points": [
+      "VIP down: virtual status, pool availability, address and route checks.",
+      "Pool member flapping: monitor settings (interval default 5 s, timeout 16 s) and recv strings [c19].",
+      "HA sync failure: Sync State and Propagation on NetScaler show ha node [c23].",
+      "Certificate expiry: certificate object and expiry date evidence, linked to the Certificate Renewal course."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Show the evidence bundle and approvals for the resolved incident.",
+    "Generate the template and show each line's citations [c14].",
+    "Break a citation and show the deterministic check rejecting the draft.",
+    "Post close_notes and close_code after review and show the incident [c1].",
+    "Create a KCS-style knowledge draft and show the Issue, Environment, Cause and Resolution fields [c7]."
+   ],
+   "lab": {
+    "brief": "Generate the template for the resolved incident, review it, post it to ServiceNow and create the knowledge article.",
+    "steps": [
+     "Write the ResolutionTemplate Pydantic model with per-line citations.",
+     "Generate the draft from the module 7 run [c14].",
+     "Run the citation resolver and fix any rejected lines.",
+     "Review the draft and record your approval.",
+     "Post close_notes, close_code and a work note through the Table API [c1].",
+     "Activate the KCS template on the PDI if needed and create the article draft [c7].",
+     "Write one variant prompt for the HA sync failure family and test it on that incident [c23]."
+    ],
+    "success_criteria": [
+     "Every reason and action line cites evidence that exists.",
+     "Unverified items are listed, not hidden.",
+     "Close notes and work note are on the incident; the state change was made by a person.",
+     "A knowledge article draft exists with all four KCS fields filled."
+    ]
+   },
+   "common_pitfalls": [
+    "Letting the template agent query devices again and introduce new, unreviewed evidence.",
+    "Hard-coding close codes that do not exist on the instance.",
+    "Not activating the KCS template and then wondering why it is not offered [c7].",
+    "Writing next actions without an owner or date."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Which fields does the KCS Article template provide?",
+     "a": "Issue, Environment, Cause and Resolution [c7]."
+    },
+    {
+     "q": "Who changes the incident state to Resolved?",
+     "a": "The engineer, after reviewing the posted template."
+    },
+    {
+     "q": "What happens to a template line with an unresolvable citation?",
+     "a": "The deterministic check rejects the draft until it is fixed or moved to unverified."
+    },
+    {
+     "q": "What evidence anchors the HA sync failure variant?",
+     "a": "Sync State and Propagation from show ha node [c23]."
+    }
+   ],
+   "slides_and_assets": [
+    "Reason, action and next action template with field rules.",
+    "Citation resolver script.",
+    "KCS article mapping sheet.",
+    "Four symptom-family variant prompts."
+   ],
+   "sources": [
+    "c1",
+    "c7",
+    "c14",
+    "c19",
+    "c23"
+   ]
+  },
+  {
+   "day": 3,
+   "title": "The troubleshooting page: service, tests and delivery",
+   "goal": "Learners assemble a FastAPI troubleshooting page, test it with pytest against recorded device output and ship it through reviewed pull requests with GitHub Actions.",
+   "learning_objectives": [
+    "Learners can build the page views: queue, evidence, suggested steps, approve and reject, audit.",
+    "Learners can write pytest suites with recorded fixtures for intake, classification and template generation.",
+    "Learners can add a prompt regression check to CI.",
+    "Learners can write the runbook and on-call handover for the page."
+   ],
+   "lessons": [
+    {
+     "title": "FastAPI service",
+     "points": [
+      "Endpoints: GET /incidents, GET /incidents/{number}/evidence, GET /incidents/{number}/steps, POST /steps/{id}/approve, POST /steps/{id}/reject, GET /audit.",
+      "Approve and reject call the approval service from module 6; the page never calls devices directly.",
+      "Authenticate engineers and record the approver identity from the session, not from a form field.",
+      "Read incidents through the Table API with the same read-only integration user [c1]."
+     ]
+    },
+    {
+     "title": "Testing with recorded output",
+     "points": [
+      "Store recorded device output (F5, NetScaler, Alteon, APIC) as fixtures and load them with pytest fixtures and conftest.py.",
+      "Test intake: checklist results for the five synthetic incidents.",
+      "Test classification: every allowlist template classed correctly; unknown templates denied.",
+      "Test the hook: a state-changing call without approval exits 2 [c11].",
+      "Use FastAPI's TestClient for endpoint tests."
+     ]
+    },
+    {
+     "title": "Pull requests and Actions",
+     "points": [
+      "Workflow on pull_request: lint, unit tests, hook tests and the prompt regression suite.",
+      "Prompt regression: the scored incidents from module 5 must keep first-step accuracy and citation validity at or above the baseline.",
+      "Protect the main branch with required reviews and status checks.",
+      "Secrets for live checks come from repository secrets, never fixtures."
+     ]
+    },
+    {
+     "title": "Operating the page",
+     "points": [
+      "Runbook: start and stop, credentials rotation, PDI or instance outage, device unreachable.",
+      "On-call handover: open incidents in the loop, pending approvals, last escalations.",
+      "When the agent is wrong: reject the step, record the reason, add the case to the regression set.",
+      "Review the audit log weekly for denied calls and repeated rejections."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Run the FastAPI app and walk through the queue, evidence, steps and audit tabs.",
+    "Approve a step from the page and show the audit entry.",
+    "Run pytest with recorded fixtures and show the hook test [c11].",
+    "Open a pull request that degrades the prompt and show the regression check failing.",
+    "Fix it and merge with Actions green."
+   ],
+   "lab": {
+    "brief": "Assemble the page, write the regression suite and merge through a reviewed pull request with Actions green.",
+    "steps": [
+     "Implement the six endpoints and minimal HTML views.",
+     "Wire approve and reject to the approval service.",
+     "Write fixtures from recorded device output.",
+     "Write tests for intake, classification, hook and template generation.",
+     "Write the prompt regression test against the scored incidents.",
+     "Add the GitHub Actions workflow for pull requests.",
+     "Open a pull request, get a review from a partner and merge with checks green.",
+     "Write the runbook and handover template."
+    ],
+    "success_criteria": [
+     "All endpoints work against the lab data.",
+     "The suite covers intake, classification, hook and template generation and passes.",
+     "The prompt regression check runs on every pull request.",
+     "The runbook covers outage, wrong-agent and credential-rotation cases."
+    ]
+   },
+   "common_pitfalls": [
+    "Letting the page call devices directly and bypass the approval service.",
+    "Taking the approver name from a form field.",
+    "Fixtures that contain real hostnames, IPs or secrets.",
+    "Prompt changes merged without the regression check."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Why does the page never call devices directly?",
+     "a": "All device actions go through the approval and audit services so the guardrails cannot be bypassed."
+    },
+    {
+     "q": "What does the prompt regression check measure?",
+     "a": "First-step accuracy and citation validity on the scored incidents."
+    },
+    {
+     "q": "What should an engineer do when the agent is wrong?",
+     "a": "Reject the step with a reason and add the case to the regression set."
+    },
+    {
+     "q": "Which test proves the guardrail still works?",
+     "a": "The hook test that expects exit code 2 for an unapproved state-changing call [c11]."
+    }
+   ],
+   "slides_and_assets": [
+    "FastAPI starter app.",
+    "pytest fixture pack of recorded device output.",
+    "GitHub Actions workflow file.",
+    "Runbook and handover templates."
+   ],
+   "sources": [
+    "c1",
+    "c11"
+   ]
+  },
+  {
+   "day": 3,
+   "title": "Capstone: incident to resolution note, end to end",
+   "goal": "Teams take a new incident from acknowledgement to posted resolution note using the full workflow and defend it against the acceptance criteria.",
+   "learning_objectives": [
+    "Learners can run the full workflow on an unseen incident.",
+    "Learners can show that no device changed without approval and every claim is cited.",
+    "Learners can present the limitations of their automation honestly."
+   ],
+   "lessons": [
+    {
+     "title": "Capstone scenario",
+     "points": [
+      "A new incident lands in the PDI with a symptom the teams have not seen (for example an HA sync failure on the NetScaler pair after a change) [c23].",
+      "Teams run intake, acknowledgement draft, evidence collection, suggestions, approvals, execution and template.",
+      "The instructor plays caller and senior approver."
+     ]
+    },
+    {
+     "title": "Acceptance criteria",
+     "points": [
+      "No state-changing command without an approval record.",
+      "Every reason and action line cites evidence.",
+      "Every tool call in the audit log and summarized in work notes [c1].",
+      "Resolution posted and knowledge draft created [c7]."
+     ]
+    },
+    {
+     "title": "Demo and limitations",
+     "points": [
+      "Five-minute demo of the run.",
+      "Limitations statement: platforms covered, known gaps, false-positive and false-negative cases seen.",
+      "Next steps for production: credentials, change control, rollout."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Inject the capstone incident into the PDI and show it arriving in the lb-ops queue.",
+    "Show the acceptance checklist.",
+    "Walk through one prior run on the troubleshooting page as a model of a good demo.",
+    "Demonstrate how the audit log will be checked during review."
+   ],
+   "lab": {
+    "brief": "Capstone build and demo.",
+    "steps": [
+     "Pick up the capstone incident from the queue.",
+     "Draft and send (as a person) the acknowledgement.",
+     "Collect evidence from every relevant platform.",
+     "Run the suggestion agent and review the ranked steps.",
+     "Approve and execute the steps needed to confirm the cause.",
+     "Generate, review and post the reason, action and next action template.",
+     "Create the knowledge article draft.",
+     "Present the run and the limitations statement."
+    ],
+    "success_criteria": [
+     "The incident is resolved with a posted template.",
+     "Audit log shows zero unapproved state-changing commands.",
+     "All template lines are cited.",
+     "Limitations statement is specific and honest."
+    ]
+   },
+   "common_pitfalls": [
+    "Skipping the acknowledgement step under time pressure.",
+    "Approving your own team's state-changing step without checking the device.",
+    "Presenting only the happy path."
+   ],
+   "knowledge_check": [
+    {
+     "q": "How do you prove no device changed without approval?",
+     "a": "Match every state-changing execution in the audit log to a valid approval record."
+    },
+    {
+     "q": "What belongs in the limitations statement?",
+     "a": "Platforms and symptoms covered, known gaps, and observed wrong suggestions."
+    },
+    {
+     "q": "What is the last action a person takes on the incident?",
+     "a": "Reviewing the posted template and changing the state to Resolved."
+    }
+   ],
+   "slides_and_assets": [
+    "Capstone incident pack.",
+    "Acceptance checklist.",
+    "Demo scoring rubric."
+   ],
+   "sources": [
+    "c1",
+    "c7",
+    "c23"
+   ]
+  }
+ ],
+ "capstone_plan": {
+  "brief": "Teams receive an unseen ServiceNow incident and run the full workflow: intake and acknowledgement draft, evidence collection from every relevant platform, ranked cited suggestions, approved execution, and a posted reason, action and next action template with a knowledge draft, all visible on their troubleshooting page.",
+  "milestones": [
+   "Incident picked up, checklist and acknowledgement draft posted as a work note.",
+   "Evidence bundle collected and reviewed.",
+   "Suggestions generated; read-only steps executed; state-changing step approved and executed.",
+   "Cause confirmed or escalation made with evidence.",
+   "Template reviewed and posted; knowledge article draft created.",
+   "Demo and limitations statement presented."
+  ],
+  "evaluation_notes": [
+   "Zero state-changing executions without a matching approval record (pass/fail).",
+   "Citation validity: every reason and action line resolves to evidence.",
+   "Quality of the acknowledgement: asks only for genuinely missing details.",
+   "Audit completeness: every tool call logged and summarized in work notes.",
+   "Honesty and specificity of the limitations statement."
+  ]
+ },
+ "promo_video_research": {
+  "hook_basis": "An incident arriving after hours, an acknowledgement followed by questions about the VIP, start time and last change, and an engineer retyping the same first commands is a teaching scenario drawn from the client's description of the current process. The mechanics it relies on are real: ServiceNow notifications carry a watermark so replies are matched back to the incident [c2], and incidents are read and updated through the Table API [c1].",
+  "claims_check": [
+   {
+    "claim": "10 modules that run / every module ends with something you can run and review",
+    "basis": "Matches the course outline in content.py: ten modules, each with a lab and deliverable."
+   },
+   {
+    "claim": "3 days, hands-on",
+    "basis": "Matches the outline (days 1 to 3)."
+   },
+   {
+    "claim": "4 device platforms in the lab",
+    "basis": "Course design: F5, NetScaler, Radware Alteon and Cisco ACI. Note that Radware may be fixture-based if no Alteon VA license is available [c25][c26], and the outline also names 'Anaya LB', which is fixture-only."
+   },
+   {
+    "claim": "0 device changes without approval",
+    "basis": "A design goal enforced in the labs by deny rules, a PreToolUse hook that exits 2 and approval records [c10][c11]; it is a property of the course build, not a product guarantee."
+   },
+   {
+    "claim": "Read-only tools by default; credentials stay in the vault, never in a prompt",
+    "basis": "Supported by scoped MCP tools and allowed_tools [c13] and ${VAR} expansion in .mcp.json [c8]."
+   },
+   {
+    "claim": "Pull the incident through the ServiceNow Table API",
+    "basis": "Table API GET on /api/now/table/incident [c1]."
+   },
+   {
+    "claim": "Terminal: 'triage intake INC0048211 ... posted as work note (draft) ... audit: intake#1 tools used: servicenow.read'",
+    "basis": "Teaching scenario output from the course's own intake tool; the incident number and tool names are invented for the lab."
+   },
+   {
+    "claim": "Terminal: 'tmsh show ltm virtual vs_portal_443 ... tmsh show ltm pool pool_portal members: 3/4 up web-04:443 DOWN'",
+    "basis": "Real tmsh commands [c4][c18]; device, object names and numbers are a teaching scenario."
+   },
+   {
+    "claim": "Suggestion 1: 'tmsh show ltm monitor https https_portal'",
+    "basis": "The https monitor and its recv string are documented [c19]; the specific object is a teaching scenario."
+   },
+   {
+    "claim": "Suggestion 2: 'tmsh show sys connection cs-server-addr 10.20.4.14' to check backend resets",
+    "basis": "The command exists, but cs-server-addr is the client-side local (virtual) address; to see connections to pool member 10.20.4.14 the filter should be ss-server-addr [c20]. Recommend correcting the on-screen line to ss-server-addr."
+   },
+   {
+    "claim": "'modify ltm pool pool_portal members modify { web-04:443 {state user-down} }' is state-changing and blocked until approved",
+    "basis": "state user-down forces a member offline, overriding monitors [c18]; blocking it until approval is the course guardrail [c11]."
+   },
+   {
+    "claim": "'monitor https_portal: recv string mismatch on web-04:443'",
+    "basis": "Teaching scenario; consistent with how recv strings determine monitor success [c19]."
+   },
+   {
+    "claim": "Posted resolution notes and KB draft KB0012077",
+    "basis": "Close notes via the Table API [c1] and KCS-style knowledge templates [c7]; numbers are invented."
+   },
+   {
+    "claim": "'pytest 118 passed, prompt regression 12/12, Actions: green'",
+    "basis": "Illustrative output of the capstone build; not a measured result."
+   },
+   {
+    "claim": "ServiceNow Flow Designer trigger starts the loop when an incident is assigned",
+    "basis": "Record-based triggers on create or update are supported, with possible queue delay [c3]."
+   },
+   {
+    "claim": "Every lab runs against a ServiceNow developer instance, lab load balancers and a Cisco ACI sandbox",
+    "basis": "Free PDIs [c28], F5 VE trial [c29], NetScaler VPX Express [c30] and the DevNet ACI simulator [c27]."
+   }
+  ]
+ },
+ "citations": [
+  {
+   "id": "c1",
+   "title": "Table API",
+   "url": "https://www.servicenow.com/docs/bundle/zurich-api-reference/page/integrate/inbound-rest/concept/c_TableAPI.html",
+   "publisher": "ServiceNow Product Documentation",
+   "supports": "Incident intake; guardrails and audit; reason, action and next action template",
+   "key_fact": "The Table API exposes /api/now/table/{tableName} (GET list, POST insert one record; multiple-record insertion is not supported) and /api/now/table/{tableName}/{sys_id} (GET, PATCH, PUT, DELETE, with DELETE returning 204 and no body); api_version is optional. GET supports sysparm_query (encoded query with =, !=, LIKE, STARTSWITH, ENDSWITH, ^ and ^OR, ORDERBY/ORDERBYDESC), sysparm_fields, sysparm_limit (default 10000), sysparm_offset, sysparm_display_value (true, false, all; default false) and sysparm_exclude_reference_link.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c2",
+   "title": "Email and SMS notifications",
+   "url": "https://www.servicenow.com/docs/bundle/zurich-platform-administration/page/administer/notification/concept/c_EmailNotifications.html",
+   "publisher": "ServiceNow Product Documentation",
+   "supports": "The troubleshooting workflow and the incident lifecycle; acknowledgement mail",
+   "key_fact": "A watermark is generated by default at the bottom of each notification email to allow matching incoming email to existing records; inbound email actions script how the instance responds to inbound email; a digest is a single email that summarizes activity for a selected notification over a time interval.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c3",
+   "title": "Architecture Overview (Flow Designer / Workflow Studio)",
+   "url": "https://www.servicenow.com/docs/bundle/washingtondc-build-workflows/page/administer/flow-designer/concept/flow-designer-arch-overview.html",
+   "publisher": "ServiceNow Product Documentation",
+   "supports": "Running approved steps: Flow Designer trigger",
+   "key_fact": "Flows start from record-based (created, updated, deleted), schedule-based or application-based triggers; a scheduler works through the event queue in the order items were added, so a flow may not start immediately; process plans are compiled just in time and a cached copy is reused when nothing changed. The page is now served under the Workflow Studio name.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c4",
+   "title": "F5 TMSH Reference - 17.x",
+   "url": "https://clouddocs.f5.com/cli/tmsh-reference/latest/",
+   "publisher": "F5 (clouddocs.f5.com)",
+   "supports": "Evidence collection from load balancers and ACI",
+   "key_fact": "The TMSH reference is the collection of BIG-IP tmsh man pages organized into General, Commands and Modules sections, and the available man pages depend on which modules are provisioned on the BIG-IP system.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c5",
+   "title": "ADC CLI Commands 14.1",
+   "url": "https://developer-docs.netscaler.com/en-us/adc-command-reference-int/current-release.html",
+   "publisher": "NetScaler (developer-docs.netscaler.com)",
+   "supports": "Evidence collection from load balancers and ACI",
+   "key_fact": "The NetScaler ADC CLI command reference (14.1) is indexed by feature area such as lb, ssl, system and ha, each with a commands page and object sub-pages.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c6",
+   "title": "Understand the Extended Ping and Extended Traceroute Commands",
+   "url": "https://www.cisco.com/c/en/us/support/docs/ip/routing-information-protocol-rip/13730-ext-ping-trace.html",
+   "publisher": "Cisco",
+   "supports": "Claude suggests troubleshooting steps; running approved steps",
+   "key_fact": "Extended ping and extended traceroute work only in privileged EXEC mode, while normal ping and traceroute work in user and privileged EXEC; in ping output each ! is a reply and . is a timeout; traceroute prints * when the timer expires before a response.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c7",
+   "title": "Knowledge article templates",
+   "url": "https://www.servicenow.com/docs/r/washingtondc/servicenow-platform/knowledge-management/knowledge-article-templates.html",
+   "publisher": "ServiceNow Product Documentation",
+   "supports": "The reason, action and next action template",
+   "key_fact": "ServiceNow provides Standard, FAQ, How To, What Is and KCS Article templates; the KCS Article template has Issue, Environment, Cause and Resolution fields (table kb_template_kcs_article); all predefined templates are inactive by default and only active templates associated with a knowledge base are shown; the feature is activated with the Knowledge Management Advanced plugin.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c8",
+   "title": "Connect Claude Code to tools via MCP",
+   "url": "https://code.claude.com/docs/en/mcp",
+   "publisher": "Anthropic (Claude Code docs)",
+   "supports": "Setting up Claude Code, the Agent SDK and MCP",
+   "key_fact": "claude mcp add --transport http <name> <url> adds a remote server (recommended), stdio servers are added with everything after -- passed to the process (for example claude mcp add --env KEY=value --transport stdio name -- cmd), and SSE is deprecated. Scopes are local (default, ~/.claude.json), project (.mcp.json in the project root, shared via version control, approval required) and user; precedence is local, project, user, plugin, then claude.ai connectors. .mcp.json supports ${VAR} and ${VAR:-default} expansion in command, args, env, url and headers.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c9",
+   "title": "What is the Model Context Protocol (MCP)?",
+   "url": "https://modelcontextprotocol.io/introduction",
+   "publisher": "Model Context Protocol (modelcontextprotocol.io)",
+   "supports": "Setting up Claude Code, the Agent SDK and MCP",
+   "key_fact": "MCP is an open-source standard for connecting AI applications to external systems (data sources, tools and workflows), described as a USB-C port for AI applications and supported across many clients so a server can be built once and integrated everywhere.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c10",
+   "title": "Configure permissions",
+   "url": "https://code.claude.com/docs/en/permissions",
+   "publisher": "Anthropic (Claude Code docs)",
+   "supports": "Setting up Claude Code; guardrails, approvals and audit",
+   "key_fact": "Permission rules are evaluated deny, then ask, then allow, and the first match wins regardless of specificity, so a broad deny such as Bash(aws *) cannot be carved out by a narrower allow. Rules live in .claude/settings.json (project), .claude/settings.local.json (local) and ~/.claude/settings.json (user). Deny and ask rules match any subcommand of a compound command, but Bash rules match the command text as written and are not a security boundary around a program.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c11",
+   "title": "Hooks reference",
+   "url": "https://code.claude.com/docs/en/hooks",
+   "publisher": "Anthropic (Claude Code docs)",
+   "supports": "Guardrails, approvals and audit for incident automation",
+   "key_fact": "A PreToolUse hook runs before a tool call and can block it; it receives JSON on stdin with tool_name, tool_input and tool_use_id; it blocks by exiting with code 2 (stderr becomes the reason) or by printing hookSpecificOutput with permissionDecision deny. Exit code 1 is a non-blocking error, silence does not approve, and a timed-out hook does not block unless onFailure is set to block.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c12",
+   "title": "How Claude remembers your project",
+   "url": "https://code.claude.com/docs/en/memory",
+   "publisher": "Anthropic (Claude Code docs)",
+   "supports": "Setting up Claude Code, the Agent SDK and MCP",
+   "key_fact": "Project instructions live in ./CLAUDE.md or ./.claude/CLAUDE.md and are shared through version control; /init generates a starting file; files can import others with @path syntax; CLAUDE.md is context, not enforced configuration, so blocking an action requires a PreToolUse hook. The page recommends keeping each CLAUDE.md under 200 lines.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c13",
+   "title": "Give Claude custom tools (Agent SDK)",
+   "url": "https://code.claude.com/docs/en/agent-sdk/custom-tools",
+   "publisher": "Anthropic (Claude Code docs)",
+   "supports": "Setting up the Agent SDK; evidence collection tools",
+   "key_fact": "In Python, tools are defined with the @tool decorator (name, description, input schema, async handler) and wrapped with create_sdk_mcp_server; they are passed in ClaudeAgentOptions(mcp_servers=...) and named mcp__{server}__{tool} in allowed_tools. Handlers return content blocks and can set is_error; annotations such as readOnlyHint are metadata, not enforcement. The tools option controls which built-ins are available, while allowed_tools controls auto-approval.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c14",
+   "title": "Get structured output from agents",
+   "url": "https://code.claude.com/docs/en/agent-sdk/structured-outputs",
+   "publisher": "Anthropic (Claude Code docs)",
+   "supports": "Claude suggests troubleshooting steps as structured JSON",
+   "key_fact": "Passing output_format={'type': 'json_schema', 'schema': ...} to query() returns validated data in ResultMessage.structured_output; Pydantic models can supply the schema via model_json_schema(); the SDK validates against JSON Schema draft-07 and re-prompts on mismatch, and failure ends with subtype error_max_structured_output_retries. A success result without structured_output must also be treated as a failure.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c15",
+   "title": "Configure permissions (Agent SDK)",
+   "url": "https://code.claude.com/docs/en/agent-sdk/permissions",
+   "publisher": "Anthropic (Claude Code docs)",
+   "supports": "Guardrails, approvals and audit; running approved steps",
+   "key_fact": "The SDK evaluates hooks, deny rules, ask rules, permission mode, allow rules and finally the canUseTool callback; a deny rule applies even in bypassPermissions mode; dontAsk mode denies anything that would prompt; allowed_tools does not constrain bypassPermissions; and checks that must run on every call belong in a PreToolUse hook.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c16",
+   "title": "Tools (MCP specification 2025-06-18)",
+   "url": "https://modelcontextprotocol.io/specification/2025-06-18/server/tools",
+   "publisher": "Model Context Protocol (modelcontextprotocol.io)",
+   "supports": "Setting up MCP; guardrails",
+   "key_fact": "Clients discover tools with tools/list and invoke them with tools/call; a tool has name, description, inputSchema, optional outputSchema and annotations; execution errors are returned with isError true; there should always be a human in the loop able to deny invocations; clients must treat annotations as untrusted unless the server is trusted, and should log tool usage for audit.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c17",
+   "title": "Build an MCP server",
+   "url": "https://modelcontextprotocol.io/docs/develop/build-server",
+   "publisher": "Model Context Protocol (modelcontextprotocol.io)",
+   "supports": "Setting up MCP: building the read-only ServiceNow and device servers",
+   "key_fact": "The Python quickstart creates a server with from mcp.server import MCPServer; mcp = MCPServer('weather'), declares tools with @mcp.tool() using type hints and docstrings, and runs it with mcp.run(transport='stdio'); stdio servers must never write to stdout because it corrupts JSON-RPC messages, so logging goes to stderr.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c18",
+   "title": "ltm pool - F5 TMSH Reference",
+   "url": "https://clouddocs.f5.com/cli/tmsh-reference/latest/modules/ltm/ltm_pool.html",
+   "publisher": "F5 (clouddocs.f5.com)",
+   "supports": "Evidence collection; guardrails (state-changing commands)",
+   "key_fact": "Pool member options include state user-up | user-down (user-down forces the member offline, overriding monitors) and session user-enabled | user-disabled (used to drain connections gently); the member monitor defaults to the pool's monitors; load-balancing-mode defaults to round-robin; priority-group ranges 0 to 65535; example syntax: modify pool mypool members modify { pool_member_1:80 { monitor http } }.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c19",
+   "title": "ltm monitor https - F5 TMSH Reference",
+   "url": "https://clouddocs.f5.com/cli/tmsh-reference/latest/modules/ltm/ltm_monitor_https.html",
+   "publisher": "F5 (clouddocs.f5.com)",
+   "supports": "Claude suggests troubleshooting steps; reason template variants",
+   "key_fact": "The https monitor's send string defaults to GET /, recv (the string the monitor looks for in the response) defaults to none, recv-disable requires recv, interval defaults to 5 seconds and timeout defaults to 16 seconds.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c20",
+   "title": "sys connection - F5 TMSH Reference",
+   "url": "https://clouddocs.f5.com/cli/tmsh-reference/latest/modules/sys/sys_connection.html",
+   "publisher": "F5 (clouddocs.f5.com)",
+   "supports": "Evidence collection; promo claims check",
+   "key_fact": "show sys connection filters active connections by cs-client-addr (client-side remote), cs-server-addr (client-side local, i.e. the virtual address), ss-client-addr (server-side local) and ss-server-addr (server-side remote, i.e. the pool member); delete connection uses the same filters, and if no port is given the system deletes all connections matching the address.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c21",
+   "title": "APIRef_tm_ltm_pool (iControl REST)",
+   "url": "https://clouddocs.f5.com/api/icontrol-rest/APIRef_tm_ltm_pool.html",
+   "publisher": "F5 (clouddocs.f5.com)",
+   "supports": "Evidence collection from load balancers and ACI",
+   "key_fact": "The iControl REST collection URI is /mgmt/tm/ltm/pool (OPTIONS, GET) and the resource URI is /mgmt/tm/ltm/pool/~resource id (OPTIONS, GET, PUT, PATCH, DELETE, POST), with natural key name, partition and subPath; properties mirror tmsh, for example allowNat defaults to yes.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c22",
+   "title": "lbvserver statistics (NITRO API 13.1)",
+   "url": "https://developer-docs.netscaler.com/en-us/adc-nitro-api/13-1/statistics/lb/lbvserver",
+   "publisher": "NetScaler (developer-docs.netscaler.com)",
+   "supports": "Evidence collection from load balancers and ACI",
+   "key_fact": "Load balancing virtual server statistics are read with GET /nitro/v1/stat/lbvserver (optionally ?args=name:<name> or ?attrs=...), with headers Cookie: NITRO_AUTH_TOKEN=<token> and Accept: application/json; per-request authentication can instead use X-NITRO-USER and X-NITRO-PASS headers without the cookie.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c23",
+   "title": "Upgrade a high availability pair",
+   "url": "https://docs.netscaler.com/us/en/citrix-adc/current-release/upgrade-downgrade-citrix-adc-appliance/upgrade-downgrade-ha-pair.html",
+   "publisher": "NetScaler (docs.netscaler.com)",
+   "supports": "Evidence collection (HA status); reason template variant HA sync failure",
+   "key_fact": "show ha node prints Node State, Master State, INC State, Sync State and Propagation per node; in a healthy pair the primary shows Sync State ENABLED and the secondary SUCCESS, while during an upgrade the secondary shows Sync State AUTO DISABLED and Propagation AUTO DISABLED; force failover switches roles.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c24",
+   "title": "Cisco APIC REST API Configuration Guide - Using the REST API",
+   "url": "https://www.cisco.com/c/en/us/td/docs/dcn/aci/apic/all/apic-rest-api-configuration-guide/cisco-apic-rest-api-configuration-guide/m_using_the_rest_api.html",
+   "publisher": "Cisco",
+   "supports": "Evidence collection from load balancers and ACI",
+   "key_fact": "APIC objects are read at /api/mo/{dn}.{json|xml} and classes at /api/class/{className}; aaaLogin (POST) returns a token used as the APIC-cookie, with a default session timeout of 600 seconds; query-target takes self (default), children or subtree; query-target-filter supports operators such as eq, wcard and and, for example lt(healthInst.cur,\"50\"); rsp-subtree-include can add faults or health; results page with page and page-size and sort with order-by=faultInst.severity|desc; GET makes no changes.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c25",
+   "title": "Alteon 31.0.11.0 Release Notes - Maintenance fixes",
+   "url": "https://portals.radware.com/releasenotes/Alteon_Release_Notes_31.0.11.0/Alteon_Release_Notes/AlteonOS-31_0_11_0-RN.1.41.html",
+   "publisher": "Radware",
+   "supports": "Evidence collection: Radware Alteon CLI",
+   "key_fact": "Radware's own fix list references the Alteon CLI menu paths /stats/slb/virt <x> (virtual server statistics), /stats/slb/group (real server group statistics), /info/l3/ha (HA information), /cfg/slb/virt <vsid>/service <vport> and the diff flash command, which confirms the menu-path style an Alteon collector must handle.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c26",
+   "title": "Alteon 31.0.11.0 Release Notes - Related documentation",
+   "url": "https://portals.radware.com/releasenotes/Alteon_Release_Notes_31.0.11.0/Alteon_Release_Notes/AlteonOS-31_0_11_0-RN.1.51.html",
+   "publisher": "Radware",
+   "supports": "Lab environment; evidence collection: Radware Alteon",
+   "key_fact": "The Alteon documentation set includes the Alteon VA Installation and Maintenance Guide, the Command Line Interface Application Guide, the Command Reference, the REST API User Guide and the Alteon Troubleshooting Guide.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c27",
+   "title": "ACI Sandboxes",
+   "url": "https://developer.cisco.com/docs/aci/sandbox",
+   "publisher": "Cisco DevNet",
+   "supports": "Lab environment",
+   "key_fact": "Cisco DevNet offers an always-on ACI Simulator sandbox (shared, no reservation required) and a reservable ACI Simulator sandbox (up to 5 consecutive days) for APIC REST API requests over HTTP/HTTPS with XML and JSON.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c28",
+   "title": "Understanding PDIs",
+   "url": "https://www.servicenow.com/docs/r/SmYvGPN0OygSQs53fsexIQ/yG_RdLKb649OcfnDiGEkwQ",
+   "publisher": "ServiceNow Product Documentation",
+   "supports": "Lab environment",
+   "key_fact": "Personal Developer Instances are free; a PDI unused for ten days is returned to the pool, and an idle PDI hibernates (database and application server shut down, data kept) until the owner signs in to the Developer Site, which restarts the ten-day countdown.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c29",
+   "title": "Try BIG-IP and BIG-IQ Virtual Editions",
+   "url": "https://www.f5.com/trials/big-ip-virtual-edition",
+   "publisher": "F5",
+   "supports": "Lab environment",
+   "key_fact": "F5 offers a 30-day free trial of BIG-IP Virtual Edition: log in or register at MyF5, choose Trials under My Products & Plans, select the BIG-IP Virtual Edition & BIG-IQ Virtual Edition tile and request trial keys.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c30",
+   "title": "Licensing (NetScaler VPX Express)",
+   "url": "https://docs.netscaler.com/en-us/citrix-adc/current-release/licensing.html",
+   "publisher": "NetScaler (docs.netscaler.com)",
+   "supports": "Lab environment",
+   "key_fact": "NetScaler VPX Express for on-premises and cloud deployments needs no license file and offers 20 Mbps bandwidth, a maximum of 250 SSL sessions and 20 Mbps SSL throughput; from release 14.1 build 29.65 it includes the advanced features of the Premium license.",
+   "verified": "2026-10-30"
+  }
+ ]
+}

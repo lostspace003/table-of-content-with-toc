@@ -1,0 +1,1553 @@
+{
+ "course": "Bill Creation Automation with Claude",
+ "domain": "Business Process Automation",
+ "source_input": "Client use case 4, 'Bill Creation Automation': 'Creation of bill for vendor as we received mail from candidate. Check the amount and create with GST and without GST bill as per requirement of company.' The client asked for each use case to be taught as 'Automation of <> using Claude'.",
+ "why_this_course": [
+  "In staffing and IT services firms, a placed candidate's confirmation mail starts a billing chain that is still largely manual: someone reads the mail, finds the agreed rate, retypes the amount, decides whether GST applies and how, numbers the document and mails it. Each step is a chance for a wrong figure, a wrong tax head or a duplicate. The client's request is exactly this: read the mail, check the amount, and create the bill with or without GST as the company requires.",
+  "GST documents are not free-form. Rule 46 sets the fields a tax invoice must carry, a bill of supply replaces it for exempt-only or composition suppliers, serial numbers must be consecutive and unique for the financial year [c1], and the choice between IGST and CGST plus SGST follows from where the supplier and place of supply are [c14]. Larger issuers must also e-invoice [c24]. A language model is good at reading mails and attachments [c6] and explaining discrepancies, and poor at being the system of record for tax arithmetic. The course is built on that split.",
+  "Learners leave with a pipeline in which Claude reads and drafts, tested Python computes and numbers, a named person approves through ServiceNow or a review CLI [c21], and an append-only log records everything [c26]. The design is deliberately conservative so finance teams can adopt it, and it reuses the same pattern as the other automation courses in the series."
+ ],
+ "design_decisions": [
+  {
+   "decision": "Claude never computes tax or amounts; a pure Python engine does.",
+   "rationale": "The client's 'check the amount' and 'with GST and without GST' are arithmetic and rule decisions. Decimal arithmetic with an explicit rounding mode [c17] and property-based tests [c18] give the certainty finance needs; Claude explains results instead."
+  },
+  {
+   "decision": "'With GST and without GST' is taught as a legal consequence, with both previews drafted and only the applicable one issued.",
+   "rationale": "Whether a bill carries GST depends on the issuer's registration and the supply: tax invoice, bill of supply for exempt-only or composition suppliers [c1], or a non-GST bill below the registration threshold [c15]. Drafting both previews from one source makes the difference visible to the reviewer without ever issuing the wrong one."
+  },
+  {
+   "decision": "Read-only MCP tools first; send and issue only behind an approval gate and a hook.",
+   "rationale": "The MCP specification calls for a human able to deny tool invocations [c10]; CLAUDE.md is not enforced [c11], so a PreToolUse hook blocks send and issue tools [c12]."
+  },
+  {
+   "decision": "Mail intake through Microsoft Graph or IMAP, with Gmail as a reference alternative.",
+   "rationale": "The client said 'as we received mail'; corporate mailboxes are mostly Microsoft 365 [c2] [c3] or IMAP [c20], and Gmail APIs are shown for teams on Google Workspace [c4] [c5]."
+  },
+  {
+   "decision": "Gap-free numbering advanced only on the approved path.",
+   "rationale": "Serials must be consecutive and unique per financial year and are reported in GSTR-1 [c1]; allocating numbers at draft time creates gaps."
+  },
+  {
+   "decision": "Approval in ServiceNow through the Service Catalog API, with a CLI fallback, and export to CSV or Tally XML.",
+   "rationale": "The audience runs ServiceNow for requests [c21] [c22] and many Indian finance teams post in Tally [c23]; both are reached through documented interfaces rather than screen automation."
+  }
+ ],
+ "audience_profile": [
+  {
+   "role": "Finance operations and shared-services engineers",
+   "needs": "Automate billing without losing control of tax treatment and numbering.",
+   "starting_point": "Know GST invoicing (GSTIN, CGST, SGST, IGST, HSN and SAC); basic Python."
+  },
+  {
+   "role": "Enterprise IT and network operations teams",
+   "needs": "Host the service, mailbox integration, secrets and CI.",
+   "starting_point": "Strong on infrastructure and Microsoft 365 or IMAP; new to GST rules and agent tooling."
+  },
+  {
+   "role": "Automation and platform engineers",
+   "needs": "Build the MCP server, Agent SDK agent, FastAPI service and ServiceNow and Tally integrations.",
+   "starting_point": "Comfortable with Python, JSON and REST APIs."
+  },
+  {
+   "role": "Finance controllers and tax reviewers (optional attendees)",
+   "needs": "See how rates, approvals and audit evidence are controlled.",
+   "starting_point": "Expert in GST; not developers."
+  }
+ ],
+ "prerequisite_check": [
+  "Can you explain when CGST plus SGST applies and when IGST applies?",
+  "Can you read a GSTIN and say which State it belongs to?",
+  "Can you create a Python virtual environment, install packages and run pytest?",
+  "Do you have access to a test Microsoft 365 mailbox or IMAP account, or will you use the course's synthetic mailbox only?",
+  "Can you obtain a Claude API key or Claude Code access for the course days?",
+  "Has your finance team agreed that only fictional vendors and synthetic mails will be used?"
+ ],
+ "lab_environment": {
+  "overview": "Each learner runs the billing service, MCP server and SQLite database locally or on a lab VM, with Claude Code and the Agent SDK on the host. Mail comes from a synthetic mailbox (a local IMAP server or exported MIME files) with an optional Microsoft 365 developer tenant for Graph. Approvals use a ServiceNow developer instance or the review CLI. Exports target a TallyPrime test company or files. All vendors and candidates are fictional.",
+  "components": [
+   {
+    "name": "Claude Code",
+    "version": "Current release at course date",
+    "purpose": "Agentic coding, CLAUDE.md, hooks and MCP client.",
+    "how_to_obtain": "Install from the official Claude Code documentation with an organization account or API key.",
+    "notes": "Hooks and project MCP scope used from module 2 [c12] [c13]."
+   },
+   {
+    "name": "Claude Agent SDK for Python",
+    "version": "claude-agent-sdk, current release",
+    "purpose": "Intake, extraction and explanation agents.",
+    "how_to_obtain": "pip install claude-agent-sdk in a virtual environment [c9].",
+    "notes": "API key in environment."
+   },
+   {
+    "name": "Python with Pydantic, FastAPI, pytest and Hypothesis",
+    "version": "Python 3.11 or later; Pydantic 2.x; current FastAPI, pytest, Hypothesis",
+    "purpose": "Pipeline, engine and tests.",
+    "how_to_obtain": "pip install pydantic fastapi uvicorn pytest hypothesis.",
+    "notes": "Decimal for all money [c17]; Hypothesis for properties [c18]."
+   },
+   {
+    "name": "SQLite",
+    "version": "3.47 or later recommended",
+    "purpose": "Vendor master, rate cards, sequence and audit log.",
+    "how_to_obtain": "Bundled with Python; sqlite3 CLI from sqlite.org.",
+    "notes": "3.47 allows expressions in RAISE messages [c26]."
+   },
+   {
+    "name": "Headless Chromium with Puppeteer",
+    "version": "Current Puppeteer release",
+    "purpose": "HTML to PDF rendering.",
+    "how_to_obtain": "npm install puppeteer in the renderer folder.",
+    "notes": "Pin the version and fonts for stable golden PDFs [c8]."
+   },
+   {
+    "name": "Mailbox",
+    "version": "Synthetic IMAP server or Microsoft 365 developer tenant",
+    "purpose": "Mail intake and dispatch.",
+    "how_to_obtain": "Course image includes a local IMAP server with the synthetic mailbox; optional Microsoft 365 developer tenant for Graph.",
+    "notes": "Graph permissions Mail.ReadBasic/Mail.Read and Mail.Send [c2] [c3] [c19]; IMAP over TLS on 993 [c20]."
+   },
+   {
+    "name": "ServiceNow developer instance",
+    "version": "Current release",
+    "purpose": "Approval through a catalog item.",
+    "how_to_obtain": "Free personal developer instance from the ServiceNow developer program.",
+    "notes": "Trainer provides the catalog item definition [c21] [c22]; CLI fallback available."
+   },
+   {
+    "name": "TallyPrime",
+    "version": "Current TallyPrime release (educational or trial mode)",
+    "purpose": "Testing the XML voucher import.",
+    "how_to_obtain": "Trainer machine with a test company, or file-only export for learners.",
+    "notes": "HTTP server on port 9000 [c23]."
+   },
+   {
+    "name": "GitHub and GitHub Actions",
+    "version": "github.com",
+    "purpose": "Pull requests and CI.",
+    "how_to_obtain": "Course template repository.",
+    "notes": "Golden tests in module 8."
+   }
+  ],
+  "fixtures": [
+   {
+    "name": "Synthetic mailbox",
+    "contents": "Twenty confirmation threads with PDF attachments, two missing GSTINs, one with two amounts, one encrypted PDF, one forwarded duplicate.",
+    "used_in": "The vendor bill workflow and the agentic baseline; Mail intake and structured extraction"
+   },
+   {
+    "name": "Fictional vendor master and rate cards",
+    "contents": "Vendors with GSTINs across Maharashtra and Karnataka, regular, composition and unregistered types, versioned rate cards including NS-2026-03.",
+    "used_in": "Vendor master, amount verification and reconciliation; The GST computation engine"
+   },
+   {
+    "name": "SAC and rate table",
+    "contents": "Versioned mapping of service types to SAC codes and rates, owned by the finance role.",
+    "used_in": "The GST computation engine; Testing, CI and accounting hand-off"
+   },
+   {
+    "name": "Golden cases and PDFs",
+    "contents": "Hand-checked figures and reference PDFs for both templates.",
+    "used_in": "The GST computation engine; Bill generation, numbering and templates; Testing, CI and accounting hand-off"
+   },
+   {
+    "name": "Capstone mailbox",
+    "contents": "Unseen threads with mixed cases.",
+    "used_in": "Capstone: end-to-end bill creation pipeline"
+   }
+  ],
+  "safety": [
+   "Only fictional vendors, GSTINs and synthetic mails are used; no real tax documents.",
+   "Dispatch is limited to the lab mail domain by an allow-list in the MCP server and service.",
+   "No real Tally company or production ServiceNow instance is connected.",
+   "Credentials live in environment variables or a secrets manager, never in prompts, CLAUDE.md, .mcp.json or git.",
+   "Mail and attachments are treated as untrusted input; extraction runs without tools.",
+   "Tax figures produced in the course are teaching examples; rates and SAC mappings must be confirmed by the client's tax advisor before production use [c25]."
+  ]
+ },
+ "modules": [
+  {
+   "day": 1,
+   "title": "The vendor bill workflow and the agentic baseline",
+   "goal": "Learners map how a placed candidate's confirmation mail becomes a bill today, list what a compliant GST document must carry, and decide when a tax invoice or a bill of supply applies.",
+   "learning_objectives": [
+    "Learners can trace the manual flow from confirmation mail to dispatched bill and name every decision and failure point.",
+    "Learners can list the mandatory Rule 46 tax invoice fields and the bill of supply fields.",
+    "Learners can decide, from the issuer's registration status and the supply, whether a tax invoice or a bill of supply applies and record why.",
+    "Learners can explain the course pattern: Claude reads and drafts, code computes and issues, a person approves, everything is logged."
+   ],
+   "lessons": [
+    {
+     "title": "The flow as it runs today",
+     "points": [
+      "A placed candidate (or the staffing vendor on their behalf) mails a joining confirmation; finance opens it, finds the rate, retypes the amount, picks a tax treatment and numbers the bill.",
+      "Record each hand-off: intake, amount check against the agreement, GST decision, numbering, PDF, dispatch, posting to accounts.",
+      "Typical failures: wrong rate card line, missing or mistyped GSTIN, CGST plus SGST used on an inter-State supply, duplicate bills from forwarded mails, numbering gaps.",
+      "Clarify with the client who issues the document to whom: the company billing a client for the placement, or a vendor billing the company. The GST logic is the same, but the GSTINs and approval owners differ.",
+      "A services invoice issued after the supply must be issued within 30 days [c1]; slow manual intake puts that at risk."
+     ]
+    },
+    {
+     "title": "What a compliant tax invoice carries",
+     "points": [
+      "GST law prescribes no layout, but Rule 46 fields are mandatory [c1].",
+      "Supplier name, address and GSTIN; consecutive serial number unique for the financial year; date; recipient name, address and GSTIN [c1].",
+      "HSN or SAC code, description, taxable value, rate and amount of central, State and integrated tax [c1].",
+      "Place of supply with the State name for inter-State supplies, and whether tax is payable on reverse charge [c1] [c16].",
+      "Signature or digital signature, not required for electronic invoices issued under the IT Act [c1].",
+      "Services invoices are prepared in duplicate: ORIGINAL FOR RECIPIENT and DUPLICATE FOR SUPPLIER [c1]."
+     ]
+    },
+    {
+     "title": "Tax invoice or bill of supply",
+     "points": [
+      "A registered person making taxable supplies issues a tax invoice [c1].",
+      "A registered person dealing only in exempted supplies, or under the composition scheme, issues a bill of supply instead [c1].",
+      "A service provider below the registration threshold (Rs 20 lakh, Rs 10 lakh in specified States) need not register [c15] and cannot charge GST; the course treats its document as a non-GST bill with the reason recorded.",
+      "No invoice or bill of supply is needed below Rs 200, subject to conditions [c1]; the pipeline still records the request.",
+      "Taxpayers whose aggregate turnover exceeded Rs 5 crore must e-invoice from 1 August 2023 [c24]; if the client is in scope, an IRP step must be added after approval and before dispatch."
+     ]
+    },
+    {
+     "title": "The teaching pattern",
+     "points": [
+      "Claude reads mail, extracts fields and writes explanations; it never computes tax or chooses a number.",
+      "Deterministic Python validates, reconciles, computes GST, renders and numbers.",
+      "A named person approves before a number is reserved or a mail is sent.",
+      "Every prompt, tool call, decision and document is logged, as the MCP specification recommends for tool usage [c10]."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Open a synthetic confirmation mail thread and walk the manual process aloud.",
+    "Fill a blank tax invoice field by field and point to the Rule 46 item for each [c1].",
+    "Show the same supply as a bill of supply and highlight what disappears (tax lines) [c1].",
+    "Run the decision table for three issuers: regular registered, composition, unregistered below threshold [c1] [c15].",
+    "Mark on the flow where Claude, code and people act."
+   ],
+   "lab": {
+    "brief": "Walk a sample mail thread from the synthetic mailbox through the manual process and record every decision point and failure mode.",
+    "steps": [
+     "Open the synthetic mailbox and pick thread BR-0931.",
+     "List every piece of data the bill needs and where in the thread it appears.",
+     "Look up the vendor and rate card in the fictional vendor master spreadsheet.",
+     "Decide the document type and tax treatment and write down why [c1] [c14].",
+     "Fill the bill field checklist and mark any field you could not source.",
+     "Repeat for BR-0932 (missing GSTIN) and BR-0935 (two amounts).",
+     "Draw the manual flow and mark decision points and failure modes.",
+     "Mark which steps Claude, code and a person will own in the target flow."
+    ],
+    "success_criteria": [
+     "The field checklist covers every Rule 46 item [c1].",
+     "Each thread has a recorded document-type decision with a reason.",
+     "At least five failure modes are identified with where they occur.",
+     "The target flow shows an approval step before numbering and dispatch."
+    ]
+   },
+   "common_pitfalls": [
+    "Treating 'without GST' as a choice rather than a consequence of the issuer's registration and the supply's tax status [c1].",
+    "Forgetting the place of supply and reverse-charge fields [c1].",
+    "Ignoring e-invoicing when the client's turnover puts it in scope [c24].",
+    "Mapping the flow without asking who is the supplier on the document."
+   ],
+   "knowledge_check": [
+    {
+     "q": "When does a registered person issue a bill of supply instead of a tax invoice?",
+     "a": "When it deals only in exempted supplies or is under the composition scheme [c1]."
+    },
+    {
+     "q": "Name four Rule 46 fields that a bill of supply does not need.",
+     "a": "Rate of tax, amount of tax, place of supply for inter-State tax purposes and the reverse-charge indication; it keeps supplier, serial number, date and recipient details [c1]."
+    },
+    {
+     "q": "How many copies of a services invoice are prepared and how are they marked?",
+     "a": "Two: ORIGINAL FOR RECIPIENT and DUPLICATE FOR SUPPLIER [c1]."
+    },
+    {
+     "q": "What changes if the issuer's turnover exceeded Rs 5 crore?",
+     "a": "It must e-invoice, so an IRP step is needed before dispatch [c24]."
+    }
+   ],
+   "slides_and_assets": [
+    "Rule 46 field checklist poster [c1].",
+    "Decision table: tax invoice, bill of supply or non-GST bill [c1] [c15].",
+    "Synthetic mailbox export with twenty threads.",
+    "Fictional vendor master and rate card workbook.",
+    "Slide: who acts at each step (Claude, code, person)."
+   ],
+   "sources": [
+    "c1",
+    "c10",
+    "c14",
+    "c15",
+    "c16",
+    "c24"
+   ]
+  },
+  {
+   "day": 1,
+   "title": "Setting up Claude Code, the Agent SDK and MCP for billing",
+   "goal": "Learners scaffold the billing repository, run a Python agent on the Claude Agent SDK, and expose mailbox search, vendor lookup and rate-card fetch through a read-only MCP server.",
+   "learning_objectives": [
+    "Learners can scaffold the repository with a CLAUDE.md that states billing conventions and forbidden actions, backed by a hook.",
+    "Learners can build an Agent SDK agent whose every response follows a JSON schema.",
+    "Learners can build an MCP server with read-only tools and output schemas, and no send or write tools.",
+    "Learners can keep API keys and mailbox credentials in the environment and out of prompts and git."
+   ],
+   "lessons": [
+    {
+     "title": "Repository and CLAUDE.md",
+     "points": [
+      "Create the repository and run /init, then rewrite CLAUDE.md under 200 lines [c11].",
+      "State the rules: money is Decimal, tax is computed only in gst_engine, no invoice number outside the approval path, no mail sending tools.",
+      "Put detail in .claude/rules/ (for example rules/gst.md) or import it with @path [c11].",
+      "CLAUDE.md is context, not enforcement; add a PreToolUse hook that denies any tool whose name matches send or issue until approval exists [c11] [c12]."
+     ]
+    },
+    {
+     "title": "The Agent SDK agent",
+     "points": [
+      "Install claude-agent-sdk in a virtual environment [c9].",
+      "Configure ClaudeAgentOptions with allowed_tools set to the read-only MCP tools and disallowed_tools removing Bash and file writes [c9].",
+      "Set output_format to a json_schema derived from the Pydantic model with model_json_schema() [c9] [c27].",
+      "Use query() for batch intake and ClaudeSDKClient for the reviewer's interactive questions [c9].",
+      "Re-validate every response with model_validate_json() before use [c27]."
+     ]
+    },
+    {
+     "title": "The read-only billing MCP server",
+     "points": [
+      "Tools: search_mail(since, sender), get_mail(message_id), get_vendor(gstin or vendor_id), get_rate_card(vendor_id, date).",
+      "Each tool has an inputSchema and an outputSchema and returns structuredContent [c10].",
+      "Return business errors (vendor not found) with isError: true [c10].",
+      "Validate inputs, enforce access control and rate limits, and log every call [c10].",
+      "Do not trust tool annotations from servers you do not control [c10]; there are no write tools in this module."
+     ]
+    },
+    {
+     "title": "Connecting and secrets",
+     "points": [
+      "Register with claude mcp add --transport stdio billing -- python -m billing_mcp and choose --scope project to share via .mcp.json [c13].",
+      "Approve the project server deliberately when Claude Code prompts [c13].",
+      "Mailbox client secret, Claude API key and ServiceNow credentials are environment variables read by the server or a secrets manager.",
+      "Never paste credentials into prompts; Claude does not need them because the server holds them.",
+      "Agent SDK tools are named mcp__billing__<tool>, which is what hooks and allowed_tools match [c9] [c12]."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Scaffold the repository and show CLAUDE.md and the rules folder [c11].",
+    "Start the MCP server and register it; show /mcp [c13].",
+    "Ask Claude Code for the last ten candidate mails; show the tools/call and structuredContent [c10].",
+    "Ask Claude Code to 'send the bill now' and show the hook deny it [c12].",
+    "Run the Agent SDK script with output_format and print the validated object [c9]."
+   ],
+   "lab": {
+    "brief": "Build and run the MCP server, connect it to Claude Code, and have the agent list the last ten candidate mails without altering anything.",
+    "steps": [
+     "Create the virtual environment and install claude-agent-sdk, pydantic, the MCP Python SDK and pytest.",
+     "Define MailSummary, Vendor and RateCard models with extra='forbid' [c27].",
+     "Implement the four read-only tools with output schemas against the synthetic mailbox and SQLite vendor master [c10].",
+     "Register the server at project scope and confirm it in /mcp [c13].",
+     "Write CLAUDE.md and rules/gst.md [c11].",
+     "Add the PreToolUse hook that denies send or issue tools [c12].",
+     "Write the Agent SDK script that lists the last ten mails with allowed_tools limited to the MCP read tools [c9].",
+     "Confirm the mailbox fixture is byte-identical before and after the run."
+    ],
+    "success_criteria": [
+     "The agent lists ten mails using only MCP tools.",
+     "The final output parses into the MailSummary list schema.",
+     "The hook blocks any attempt to send or issue.",
+     "The mailbox is unchanged and no secret is present in the repository."
+    ]
+   },
+   "common_pitfalls": [
+    "Relying on CLAUDE.md to stop sends instead of a hook [c11] [c12].",
+    "Listing future write tools in allowed_tools, which bypasses the can_use_tool callback [c9].",
+    "Using float in models for amounts.",
+    "Committing .mcp.json with inline secrets."
+   ],
+   "knowledge_check": [
+    {
+     "q": "Why does this module expose no send or write tools?",
+     "a": "So the agent cannot change anything while intake and checks are built; writes come only after the approval gate exists."
+    },
+    {
+     "q": "What does the hook do that CLAUDE.md cannot?",
+     "a": "It enforces the rule by denying the tool call; CLAUDE.md is only context [c11] [c12]."
+    },
+    {
+     "q": "What must a tool with an outputSchema return?",
+     "a": "structuredContent that conforms to the schema [c10]."
+    },
+    {
+     "q": "Where do mailbox credentials live?",
+     "a": "In the MCP server's environment or a secrets manager, never in prompts or the repository."
+    }
+   ],
+   "slides_and_assets": [
+    "CLAUDE.md and rules/gst.md templates [c11].",
+    "Hook script deny_send_issue.py [c12].",
+    "Architecture diagram: Claude Code, Agent SDK, billing MCP server, mailbox, SQLite.",
+    "Starter MCP server code with four read-only tools [c10].",
+    "Secrets checklist."
+   ],
+   "sources": [
+    "c9",
+    "c10",
+    "c11",
+    "c12",
+    "c13",
+    "c27"
+   ]
+  },
+  {
+   "day": 1,
+   "title": "Mail intake and structured extraction",
+   "goal": "Learners read confirmation mails through Microsoft Graph or IMAP, pass PDF and image attachments to Claude, and produce a strictly validated BillRequest with unknowns marked.",
+   "learning_objectives": [
+    "Learners can read messages and attachments through Microsoft Graph with least privilege, or through IMAP read-only.",
+    "Learners can send PDF attachments to Claude within the documented limits.",
+    "Learners can extract a BillRequest with per-field confidence and explicit unknown and conflict states.",
+    "Learners can produce a rejection report and a clarification queue."
+   ],
+   "lessons": [
+    {
+     "title": "Reading the mailbox",
+     "points": [
+      "Graph: GET /users/{id}/messages pages 10 at a time by default, $top up to 1000; follow the full @odata.nextLink [c2].",
+      "List returns HTML bodies only; for text, GET the single message with Prefer: outlook.body-content-type=\"text\" [c2] [c3].",
+      "GET /messages/{id}/$value returns MIME, which Python's email package can parse into parts and attachments [c3].",
+      "Start from the least-privileged permission listed (Mail.ReadBasic) and move to Mail.Read only if the fields you need are not returned [c2] [c3].",
+      "IMAP alternative: IMAP4_SSL on port 993 with ssl.create_default_context() (the default does not verify certificates), select('INBOX', readonly=True), and UIDs rather than message numbers [c20].",
+      "Gmail alternative: messages.list returns ids, messages.get returns details, attachments.get returns the attachment body with gmail.readonly [c4] [c5]."
+     ]
+    },
+    {
+     "title": "Attachments to Claude",
+     "points": [
+      "Send PDFs as document blocks with media_type application/pdf [c6].",
+      "Limits: 128 MB request on the first-party API, 600 pages (100 under a 1M-token context), and no encrypted or password-protected PDFs [c6].",
+      "Reject encrypted PDFs before the call and route them to clarification.",
+      "Use the Files API and file_id for large attachments reused across steps [c6].",
+      "Images (scanned joining letters) go as image blocks; record the source attachment id for each extracted field."
+     ]
+    },
+    {
+     "title": "The BillRequest record",
+     "points": [
+      "Fields: candidate_name, vendor_name, vendor_gstin, recipient_gstin, amount, currency, service_period_start, service_period_end, joining_date, source_message_id, attachment_ids.",
+      "Each field holds value, status (found, missing, conflicting), confidence and evidence (quoted text and location).",
+      "Amounts are strings in the schema and become Decimal in code; numeric bounds are checked in Pydantic because the schema sent to Claude cannot carry them [c7] [c27].",
+      "Objects need additionalProperties: false; check stop_reason for refusal or max_tokens before trusting output [c7].",
+      "Two amounts in one thread is a conflicting status, never a choice."
+     ]
+    },
+    {
+     "title": "Rejections and clarification",
+     "points": [
+      "Rules: missing GSTIN, conflicting amount, unknown vendor, encrypted attachment, currency not INR.",
+      "Each rejected mail gets a reason code and a draft clarification mail that a person sends.",
+      "The rejection report lists counts by reason per run.",
+      "Mail content is untrusted input: Claude extracts with no tools, and evidence must match the source text."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "List the last day's mails through Graph and show nextLink paging [c2].",
+    "Fetch BR-0931 as MIME and extract its PDF attachment [c3].",
+    "Send the PDF to Claude and show the BillRequest with evidence [c6] [c7].",
+    "Show BR-0932 come back with vendor_gstin status missing.",
+    "Show BR-0935 come back with amount status conflicting (36,000 and 38,000).",
+    "Run the same intake over IMAP read-only [c20]."
+   ],
+   "lab": {
+    "brief": "Run twenty synthetic mails through the extractor, including two with missing GSTINs and one with two amounts, and inspect what is flagged.",
+    "steps": [
+     "Implement the Graph reader with paging and the IMAP reader with read-only select and UIDs [c2] [c20].",
+     "Parse MIME into body text and attachments [c3].",
+     "Define BillRequest with per-field status, confidence and evidence [c27].",
+     "Implement extraction with structured outputs and PDF document blocks [c6] [c7].",
+     "Add the evidence check and the stop_reason check [c7].",
+     "Run all twenty mails and write the rejection report.",
+     "Inspect the two missing-GSTIN mails and the two-amount mail.",
+     "Write pytest cases for missing, conflicting and encrypted-attachment outcomes."
+    ],
+    "success_criteria": [
+     "Seventeen requests parse and three go to clarification, matching the fixture's answer key.",
+     "No missing or conflicting field is filled with a guess.",
+     "Every extracted field has evidence pointing to body or attachment text.",
+     "The mailbox is unchanged after the run."
+    ]
+   },
+   "common_pitfalls": [
+    "Building $skip by hand instead of following @odata.nextLink [c2].",
+    "Leaving IMAP certificate verification off because the default context does not verify [c20].",
+    "Selecting the IMAP inbox read-write and marking messages seen.",
+    "Sending encrypted PDFs and treating the error as an extraction failure [c6].",
+    "Converting amounts to float during parsing."
+   ],
+   "knowledge_check": [
+    {
+     "q": "How do you page through Graph messages correctly?",
+     "a": "Apply the whole @odata.nextLink URL to the next request; do not extract $skip [c2]."
+    },
+    {
+     "q": "What must you pass to IMAP4_SSL to verify the server certificate?",
+     "a": "An ssl_context from ssl.create_default_context() [c20]."
+    },
+    {
+     "q": "What is the page limit for a PDF request to Claude?",
+     "a": "600 pages, or 100 when the context window is under 1M tokens [c6]."
+    },
+    {
+     "q": "What does the extractor return when a thread contains two amounts?",
+     "a": "The amount field with status conflicting and both candidates as evidence; the request goes to clarification."
+    }
+   ],
+   "slides_and_assets": [
+    "Graph and IMAP reader reference code [c2] [c3] [c20].",
+    "BillRequest JSON Schema poster.",
+    "Twenty-mail synthetic mailbox with answer key.",
+    "Rejection reason codes and clarification mail templates.",
+    "Slide: PDF limits and document blocks [c6]."
+   ],
+   "sources": [
+    "c2",
+    "c3",
+    "c4",
+    "c5",
+    "c6",
+    "c7",
+    "c20",
+    "c27"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "Vendor master, amount verification and reconciliation",
+   "goal": "Learners load the vendor master and rate card into SQLite, validate GSTINs, and reconcile claimed amounts against agreed rates with explicit mismatch reasons that Claude explains but never changes.",
+   "learning_objectives": [
+    "Learners can model a vendor master and rate card in SQLite.",
+    "Learners can validate GSTIN format and check character and derive the State code in Python.",
+    "Learners can reconcile claimed amounts against the rate card with a configurable tolerance.",
+    "Learners can have Claude explain a mismatch in plain language without altering numbers."
+   ],
+   "lessons": [
+    {
+     "title": "Vendor master and rate card",
+     "points": [
+      "Vendor: vendor_id, legal_name, gstin, state_code, registration_type (regular, composition, unregistered), status, payment_terms.",
+      "Registration is PAN based and State specific, so one vendor PAN can have several GSTINs, one per State [c15].",
+      "Rate card: vendor_id, line, role or band, rate, unit (per placement, per month), valid_from, valid_to.",
+      "Store amounts as TEXT holding exact decimals and convert to Decimal in code [c17].",
+      "Version the rate card; reconciliation always uses the line valid on the joining or service date."
+     ]
+    },
+    {
+     "title": "GSTIN validation",
+     "points": [
+      "Structure: State code (2 digits), PAN (10), entity code, and a final check sum character, 15 in total [c15].",
+      "Validate with a regular expression, then the check character with the course's reference routine.",
+      "The check algorithm is not given on the official flyer cited here, so test the routine against GSTINs confirmed on the GST portal before trusting it.",
+      "Derive supplier State from the first two digits [c15]; compare with the vendor master State.",
+      "A valid format does not mean an active registration; a person confirms status on the GST portal for new vendors."
+     ]
+    },
+    {
+     "title": "Reconciliation",
+     "points": [
+      "Compute expected amount from the rate card line, quantity and period in Decimal [c17].",
+      "Compare with the claimed amount; tolerance is configured per vendor (absolute and percentage).",
+      "Outcomes: OK, MISMATCH (with difference and percentage), NO_RATE_LINE, VENDOR_INACTIVE.",
+      "Every outcome stores the rate card line id used.",
+      "Mismatches go to the reviewer; the claimed amount is never silently replaced."
+     ]
+    },
+    {
+     "title": "Claude explains, code decides",
+     "points": [
+      "Claude receives the reconciliation record and source mail and writes a two-sentence explanation for the reviewer.",
+      "The explanation must quote the rate card line and the claimed figure exactly; a check compares numbers in the text with the record.",
+      "Claude has no tool that writes amounts.",
+      "If the explanation contradicts the record, it is discarded and the raw record is shown."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Load the fictional vendor master and show a vendor with two State GSTINs [c15].",
+    "Validate 27AAACN1234F1ZX and show the State code 27 derived [c15].",
+    "Reconcile BR-0931 (OK) and BR-0933 (claimed 61,000, agreed 58,000, +5.2%).",
+    "Ask Claude for an explanation of BR-0933 and show the number check passing.",
+    "Tamper the explanation to a wrong figure and show it rejected."
+   ],
+   "lab": {
+    "brief": "Load the fictional vendor master, reconcile the extracted amounts, and trace one over-claim to its rate-card line.",
+    "steps": [
+     "Create the SQLite schema for vendors and rate cards.",
+     "Load the fixture CSVs and verify row counts.",
+     "Implement GSTIN format, check character and State derivation with unit tests [c15].",
+     "Implement reconcile() with Decimal arithmetic and tolerance [c17].",
+     "Run reconciliation over the seventeen parsed requests.",
+     "Trace BR-0933 to rate card NS-2026-03 line 4 and record the reason.",
+     "Generate Claude explanations for mismatches and run the number check.",
+     "Write pytest cases for OK, MISMATCH, NO_RATE_LINE and VENDOR_INACTIVE."
+    ],
+    "success_criteria": [
+     "Every request has a reconciliation outcome with a rate card line id or a reason.",
+     "The over-claim is traced to the exact line and date.",
+     "Explanations contain only numbers that appear in the record.",
+     "All validation and reconciliation tests pass."
+    ]
+   },
+   "common_pitfalls": [
+    "Matching the vendor by name instead of GSTIN.",
+    "Using today's rate card instead of the line valid on the service date.",
+    "Treating a valid GSTIN format as proof of active registration.",
+    "Letting the reviewer's explanation step write back an adjusted amount."
+   ],
+   "knowledge_check": [
+    {
+     "q": "What do the first two digits of a GSTIN tell you?",
+     "a": "The State code of the registration [c15]."
+    },
+    {
+     "q": "Why can a vendor have several GSTINs?",
+     "a": "Registration is PAN based and State specific, one GSTIN per State [c15]."
+    },
+    {
+     "q": "Which rate card line applies?",
+     "a": "The line valid on the joining or service date."
+    },
+    {
+     "q": "What may Claude change in a reconciliation?",
+     "a": "Nothing; it only explains the record."
+    }
+   ],
+   "slides_and_assets": [
+    "Vendor master and rate card schema diagram.",
+    "GSTIN anatomy slide [c15].",
+    "Fixture CSVs with an over-claim and an inactive vendor.",
+    "Reconciliation outcome codes.",
+    "Explanation number-check code."
+   ],
+   "sources": [
+    "c15",
+    "c17"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "The GST computation engine",
+   "goal": "Learners implement the GST engine as pure, tested Python that decides intra-State or inter-State, applies the rate from the SAC mapping, handles reverse charge, and produces the no-GST path with a recorded reason.",
+   "learning_objectives": [
+    "Learners can derive intra-State or inter-State supply from supplier State and place of supply.",
+    "Learners can compute CGST and SGST or IGST from a SAC rate table with exact rounding.",
+    "Learners can implement reverse charge and the without-GST path with reasons.",
+    "Learners can prove correctness with table-driven and property-based tests."
+   ],
+   "lessons": [
+    {
+     "title": "Nature of supply",
+     "points": [
+      "Intra-State: supplier location and place of supply in the same State or Union territory; inter-State: different States or Union territories [c14].",
+      "For B2B services outside the specified categories, the default place of supply is the registered recipient's location [c14].",
+      "Supplier State comes from the supplier GSTIN, recipient State from the recipient GSTIN [c15].",
+      "Specified service categories (immovable property, events, transport and others) have their own rules; the engine refuses them unless a rule is configured."
+     ]
+    },
+    {
+     "title": "Rates, SAC and rounding",
+     "points": [
+      "Map service type to SAC and rate in a versioned table owned by finance; the code never hard-codes rates.",
+      "Manpower supply has been held to fall under SAC 998519 at 18% in an advance ruling [c25]; an advance ruling binds only its applicant, so the client's tax advisor confirms the mapping.",
+      "Intra-State: CGST and SGST each at half the rate; inter-State: IGST at the full rate, broadly equal to CGST plus SGST [c14].",
+      "Use Decimal and quantize to two places with the rounding mode finance signs off, for example ROUND_HALF_UP; never rely on the default ROUND_HALF_EVEN by accident [c17].",
+      "Decide and test whether rounding is per line or on the total; both previews use the same rule."
+     ]
+    },
+    {
+     "title": "Reverse charge and the without-GST path",
+     "points": [
+      "For notified reverse-charge categories the recipient pays the tax; the invoice must state that tax is payable on reverse charge [c16] [c1].",
+      "The engine sets reverse_charge true and records the tax the recipient must account for; finance confirms how the template presents it.",
+      "Without-GST path: exempt-only supplier or composition issues a bill of supply [c1]; an unregistered supplier below threshold issues a non-GST bill [c15].",
+      "The reason is a coded field (EXEMPT_ONLY, COMPOSITION, UNREGISTERED_BELOW_THRESHOLD) and appears on the document.",
+      "The output is one TaxBreakdown object: taxable value, lines, CGST, SGST, IGST, total, reverse_charge, document_type, reason."
+     ]
+    },
+    {
+     "title": "Testing the engine",
+     "points": [
+      "Table-driven tests: every rate slab against intra-State and inter-State pairs, plus each without-GST reason.",
+      "Property-based tests with Hypothesis: CGST equals SGST, intra-State IGST is zero, inter-State CGST and SGST are zero, total equals value plus taxes [c18].",
+      "Hypothesis generates 100 examples per property by default and reports a minimal failing case [c18].",
+      "Golden cases from finance with hand-checked figures, including BR-0931: 84,000 at 18% intra-State gives CGST 7,560 and SGST 7,560."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Compute BR-0931 (Maharashtra to Maharashtra) and show CGST 7,560, SGST 7,560, IGST 0 [c14].",
+    "Change the recipient GSTIN to Karnataka and show IGST 15,120 [c14].",
+    "Compute an exempt-only supplier case and show a bill of supply with reason [c1].",
+    "Show a ROUND_HALF_EVEN versus ROUND_HALF_UP difference on a crafted amount [c17].",
+    "Run the Hypothesis properties and show a deliberately broken engine fail with a minimal example [c18]."
+   ],
+   "lab": {
+    "brief": "Implement the engine with Claude Code, review every diff, and make the test suite prove intra-state, inter-state and exempt cases.",
+    "steps": [
+     "Write the TaxBreakdown model and the SAC rate table loader.",
+     "Ask Claude Code to draft nature_of_supply() and review the diff line by line [c14].",
+     "Implement compute_gst() with Decimal and the configured rounding [c17].",
+     "Implement the reverse-charge flag and the without-GST path with reason codes [c16] [c1].",
+     "Write table-driven tests for every slab and State pair in the fixture.",
+     "Write Hypothesis property tests [c18].",
+     "Add finance's golden cases.",
+     "Run coverage and close any gap in branches."
+    ],
+    "success_criteria": [
+     "Intra-State, inter-State, reverse-charge and each without-GST case pass.",
+     "Property tests pass with the default example count [c18].",
+     "No float appears anywhere in the engine.",
+     "Every reviewed diff has a reviewer note in the pull request."
+    ]
+   },
+   "common_pitfalls": [
+    "Using float and getting off-by-one-paisa totals [c17].",
+    "Deriving State from a typed address instead of the GSTIN [c15].",
+    "Hard-coding 18% instead of reading the SAC table.",
+    "Treating an advance ruling as binding on everyone [c25].",
+    "Applying the default place-of-supply rule to a specified service category [c14]."
+   ],
+   "knowledge_check": [
+    {
+     "q": "When is IGST charged instead of CGST plus SGST?",
+     "a": "When the supplier location and place of supply are in different States or Union territories [c14]."
+    },
+    {
+     "q": "What is the default B2B place of supply for ordinary services?",
+     "a": "The location of the registered recipient [c14]."
+    },
+    {
+     "q": "Why is rounding mode set explicitly?",
+     "a": "Decimal's default context rounds ROUND_HALF_EVEN, which may differ from the policy finance signs off [c17]."
+    },
+    {
+     "q": "Name one property-based test of the engine.",
+     "a": "For intra-State supplies CGST equals SGST and IGST is zero [c18]."
+    }
+   ],
+   "slides_and_assets": [
+    "Nature-of-supply decision flow [c14].",
+    "SAC and rate table fixture with version history.",
+    "TaxBreakdown JSON Schema.",
+    "Golden case workbook from finance.",
+    "Slide: rounding modes compared [c17]."
+   ],
+   "sources": [
+    "c1",
+    "c14",
+    "c15",
+    "c16",
+    "c17",
+    "c18",
+    "c25"
+   ]
+  },
+  {
+   "day": 2,
+   "title": "Bill generation, numbering and templates",
+   "goal": "Learners render tax invoice and bill of supply previews from the same BillRequest, serve them from a FastAPI billing service, and hold a gap-free invoice sequence that only the approved path advances.",
+   "learning_objectives": [
+    "Learners can build two versioned templates that carry every required field.",
+    "Learners can render deterministic PDFs from HTML templates.",
+    "Learners can expose draft, preview and issue endpoints with issue gated on approval.",
+    "Learners can implement gap-free numbering unique for the financial year."
+   ],
+   "lessons": [
+    {
+     "title": "Two templates, one source",
+     "points": [
+      "tax-invoice v3 and bill-of-supply v2 are HTML templates with a field list checked against Rule 46 [c1].",
+      "Both render from the same validated BillRequest and TaxBreakdown; the bill of supply has no tax lines and shows the reason.",
+      "Services copies are marked ORIGINAL FOR RECIPIENT and DUPLICATE FOR SUPPLIER [c1].",
+      "Templates are versioned files in git; the version is printed in the footer and stored with each preview."
+     ]
+    },
+    {
+     "title": "Rendering to PDF",
+     "points": [
+      "Render HTML with a template engine, then print with headless Chromium via Puppeteer's page.pdf() [c8].",
+      "page.pdf() uses the print media type; design print CSS or call emulateMediaType('screen') first [c8].",
+      "Pin fonts and the renderer version so the same input gives the same layout.",
+      "Previews are watermarked DRAFT and show 'number reserved on approval'."
+     ]
+    },
+    {
+     "title": "The billing service",
+     "points": [
+      "POST /bills/draft creates both previews and returns their ids.",
+      "GET /bills/{id}/preview?type=tax_invoice or bill_of_supply returns the PDF.",
+      "POST /bills/{id}/issue requires an approval id, issues only the document that applies, and returns the number.",
+      "Claude drafts the covering mail and a one-paragraph reviewer summary; every number in them comes from the engine."
+     ]
+    },
+    {
+     "title": "Gap-free numbering",
+     "points": [
+      "The serial is consecutive, unique for the financial year, and uses letters, numerals, '-' and '/' [c1].",
+      "Keep the format within sixteen characters, the limit the same guidance gives for credit and debit note serials [c1]; for example INV/26-27/00418.",
+      "The sequence lives in SQLite and is advanced in the same transaction that records the approval and issue.",
+      "Numbers are never reused; a wrong bill is corrected with a credit note, not by deleting the number [c1].",
+      "Issued serial numbers are later reported in GSTR-1 [c1], so gaps cause questions."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Draft BR-0931 and open both previews side by side.",
+    "Diff the two previews field by field: GSTIN, CGST, SGST and the reason line.",
+    "Call issue without approval and show the 403 and audit event.",
+    "Show the sequence table unchanged after a failed issue.",
+    "Show Claude's covering mail and the check that its figures match the engine."
+   ],
+   "lab": {
+    "brief": "Generate the with-GST and without-GST previews for the same request and diff them field by field.",
+    "steps": [
+     "Write the two HTML templates and their field lists [c1].",
+     "Render with page.pdf() and fixed fonts [c8].",
+     "Implement the draft and preview endpoints in FastAPI.",
+     "Implement the issue endpoint that requires an approval id.",
+     "Implement the sequence table and number allocation in one transaction.",
+     "Generate both previews for BR-0931.",
+     "Extract text from both PDFs and produce a field-by-field diff.",
+     "Have Claude draft the covering mail and reviewer summary and run the number check."
+    ],
+    "success_criteria": [
+     "Both previews carry every field their document type requires [c1].",
+     "The diff shows only the expected differences.",
+     "No number is allocated by drafting or previewing.",
+     "The covering mail's figures match the TaxBreakdown exactly."
+    ]
+   },
+   "common_pitfalls": [
+    "Allocating the invoice number at draft time and creating gaps.",
+    "Rendering with system fonts that differ between laptops and CI.",
+    "Letting Claude write totals in the covering mail from its own reading of the PDF.",
+    "Exceeding sixteen characters with long prefixes [c1]."
+   ],
+   "knowledge_check": [
+    {
+     "q": "When is an invoice number allocated?",
+     "a": "Only on the approved issue path, in the same transaction as the approval record."
+    },
+    {
+     "q": "Which characters may an invoice serial contain?",
+     "a": "Letters, numerals, hyphen and slash [c1]."
+    },
+    {
+     "q": "How is a wrongly issued bill corrected?",
+     "a": "With a credit note referencing it; the number is never reused or deleted [c1]."
+    },
+    {
+     "q": "What CSS media type does page.pdf() use by default?",
+     "a": "print [c8]."
+    }
+   ],
+   "slides_and_assets": [
+    "Template files tax-invoice v3 and bill-of-supply v2.",
+    "Field coverage matrix against Rule 46 [c1].",
+    "FastAPI endpoint reference.",
+    "Numbering scheme slide with a sixteen-character example.",
+    "PDF diff tool script."
+   ],
+   "sources": [
+    "c1",
+    "c8"
+   ]
+  },
+  {
+   "day": 3,
+   "title": "Guardrails, approvals and audit for bill issuance",
+   "goal": "Learners assemble the approval package, route it to a person through a ServiceNow catalog request or a review CLI, enforce hard limits, and keep an append-only audit log.",
+   "learning_objectives": [
+    "Learners can build an approval package that lets a reviewer decide without opening other systems.",
+    "Learners can create a ServiceNow requested item through the Service Catalog API and read the decision back.",
+    "Learners can enforce thresholds, duplicate detection and approver identity in code.",
+    "Learners can make the audit log append-only and define retention and reviewer access."
+   ],
+   "lessons": [
+    {
+     "title": "The approval package",
+     "points": [
+      "Source mail, extracted fields with evidence, reconciliation result, TaxBreakdown, both previews, Claude's summary.",
+      "The package is one JSON record plus attachments; its hash is what the approver approves.",
+      "If anything in the package changes after approval, the approval is void.",
+      "The reviewer sees which document will be issued and why."
+     ]
+    },
+    {
+     "title": "Approval through ServiceNow or a CLI",
+     "points": [
+      "Order the 'Bill approval' catalog item with POST /sn_sc/servicecatalog/items/{sys_id}/order_now, sysparm_quantity 1 and the package reference in variables [c21].",
+      "The response gives request_number and request_id [c21]; find the requested item with GET /api/now/table/sc_req_item and a sysparm_query on the request [c22].",
+      "Poll or receive the approval state and the approver's user from the Table API [c22]; store the RITM number and approver with the bill.",
+      "The integration user needs only the roles required to order the item and read sc_req_item [c22].",
+      "Teams without ServiceNow use review approve BR-0931, which records the OS user and a typed reason."
+     ]
+    },
+    {
+     "title": "Hard limits",
+     "points": [
+      "Amount threshold: above it, a second approver is required.",
+      "Duplicate detection: same vendor, candidate and period, or same source message id, blocks issue.",
+      "No issue without an approver identity distinct from the person who triggered the draft.",
+      "Unknown or conflicting fields block issue regardless of approval.",
+      "A PreToolUse hook denies issue and send tools to Claude entirely [c12]."
+     ]
+    },
+    {
+     "title": "The audit log",
+     "points": [
+      "Log prompts, model request ids, tool calls, extraction results, decisions, approvals and issued documents with hashes [c10].",
+      "Make the table append-only with BEFORE UPDATE and BEFORE DELETE triggers that call RAISE(ABORT, ...), which returns SQLITE_CONSTRAINT [c26].",
+      "The triggers only raise; they do not modify rows, avoiding the undefined behavior SQLite warns about [c26].",
+      "Define retention with finance and give reviewers read-only access to the log and documents."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Assemble the package for BR-0931 and walk through it as a reviewer.",
+    "Order the catalog item and show the REQ number returned [c21].",
+    "Query sc_req_item for the RITM and approval state [c22].",
+    "Submit a bill above threshold and show it blocked pending a second approver.",
+    "Try to UPDATE an audit row and show the SQLITE_CONSTRAINT error [c26].",
+    "Show the full audit trail for BR-0931."
+   ],
+   "lab": {
+    "brief": "Submit a bill above threshold, see it blocked, approve it as a reviewer, and read the full audit trail for that bill.",
+    "steps": [
+     "Implement the package builder and its hash.",
+     "Create the 'Bill approval' catalog item in the ServiceNow developer instance, or enable the review CLI.",
+     "Implement order_now and the sc_req_item lookup [c21] [c22].",
+     "Implement threshold, duplicate and approver-identity checks.",
+     "Create the audit table and append-only triggers [c26].",
+     "Submit an above-threshold bill and confirm it is blocked.",
+     "Approve as two reviewers and issue.",
+     "Query the audit trail for the bill and export it."
+    ],
+    "success_criteria": [
+     "The above-threshold bill cannot issue with one approval.",
+     "A duplicate submission is blocked.",
+     "Audit rows cannot be updated or deleted.",
+     "The trail shows every prompt, tool call, approval and the issued document hash."
+    ]
+   },
+   "common_pitfalls": [
+    "Approving a package and then letting the data change underneath.",
+    "Expecting order_now to return the RITM number directly; it returns the request [c21].",
+    "Using one shared ServiceNow account so approver identity is lost.",
+    "Writing triggers that modify rows during update or delete [c26]."
+   ],
+   "knowledge_check": [
+    {
+     "q": "What does order_now return?",
+     "a": "The request number and request id; the RITM is looked up separately [c21] [c22]."
+    },
+    {
+     "q": "What voids an approval?",
+     "a": "Any change to the approval package after it was approved."
+    },
+    {
+     "q": "How is the audit table made append-only in SQLite?",
+     "a": "BEFORE UPDATE and BEFORE DELETE triggers that RAISE(ABORT) [c26]."
+    },
+    {
+     "q": "Name three hard limits.",
+     "a": "Amount threshold needing a second approver, duplicate detection, and a distinct approver identity."
+    }
+   ],
+   "slides_and_assets": [
+    "Approval package JSON Schema.",
+    "ServiceNow catalog item definition and API samples [c21] [c22].",
+    "Review CLI usage card.",
+    "Audit table SQL with triggers [c26].",
+    "Retention and access policy template."
+   ],
+   "sources": [
+    "c10",
+    "c12",
+    "c21",
+    "c22",
+    "c26"
+   ]
+  },
+  {
+   "day": 3,
+   "title": "Testing, CI and accounting hand-off",
+   "goal": "Learners put the pipeline under pytest and GitHub Actions, export approved bills to CSV or Tally XML, dispatch mail through Graph only after approval, and write the operator runbook.",
+   "learning_objectives": [
+    "Learners can maintain fixture, engine and golden-PDF tests.",
+    "Learners can run the suite in GitHub Actions on every pull request and push, with Claude Code drafting changes.",
+    "Learners can export approved bills as CSV or Tally XML and dispatch mail with Graph after approval.",
+    "Learners can write a runbook for reruns, voids and credential rotation."
+   ],
+   "lessons": [
+    {
+     "title": "Test suites",
+     "points": [
+      "Extraction fixtures: twenty mails with expected BillRequests.",
+      "Reconciliation and GST engine: table-driven and Hypothesis tests [c18].",
+      "Golden PDFs: compare extracted text and field positions rather than raw bytes, because PDF metadata varies.",
+      "Approval and audit tests: issue without approval fails; audit updates fail [c26]."
+     ]
+    },
+    {
+     "title": "Pull requests and Actions",
+     "points": [
+      "Claude Code drafts changes on a branch; a person reviews every diff.",
+      "The workflow runs pytest on pull_request and push and uploads failing PDF diffs as artifacts.",
+      "Rate table and template changes require finance review in the pull request.",
+      "A rate slab change that breaks golden cases must fail the build before merge."
+     ]
+    },
+    {
+     "title": "Accounting export and dispatch",
+     "points": [
+      "CSV export: one row per issued bill with number, date, GSTINs, taxable value, taxes and total.",
+      "Tally: build an ENVELOPE with TALLYREQUEST Import Data and REPORTNAME Vouchers, VOUCHER elements inside TALLYMESSAGE, and post to the TallyPrime HTTP server on port 9000 or hand the file to finance [c23].",
+      "Check the response STATUS (1 success, 0 failure with CODE and DESC) and log it [c23].",
+      "Dispatch with POST /users/{billing-mailbox}/sendMail and a fileAttachment, using Mail.Send [c19].",
+      "202 Accepted means accepted, not delivered; record the send and watch for bounces [c19].",
+      "With application permissions, ask the Exchange administrator to restrict the app to the billing mailbox."
+     ]
+    },
+    {
+     "title": "Operator runbook",
+     "points": [
+      "Re-running a mail: idempotent by source message id; a rerun never creates a second bill.",
+      "Voiding a bill: issue a credit note referencing the original serial; never delete [c1].",
+      "Rotating credentials: Graph client secret, ServiceNow user, Claude API key, Tally access.",
+      "If the client is in e-invoicing scope, the runbook includes IRP failures and retries [c24]."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Open a pull request that changes the 18% slab and show Actions fail the golden tests.",
+    "Download the PDF diff artifact and explain the failure.",
+    "Fix the change and merge.",
+    "Export BR-0931 to Tally XML and post it to a TallyPrime test company [c23].",
+    "Send the approved bill through Graph and show the 202 [c19]."
+   ],
+   "lab": {
+    "brief": "Open a pull request that changes a rate slab, watch Actions fail the golden tests, fix it and merge.",
+    "steps": [
+     "Write the GitHub Actions workflow for pytest on pull_request and push.",
+     "Add golden PDF tests with text extraction comparison.",
+     "Ask Claude Code to change a rate slab in the SAC table on a branch.",
+     "Open the pull request and watch the golden tests fail.",
+     "Inspect the artifact, correct the change with finance's figure and push.",
+     "Merge after checks pass.",
+     "Generate the CSV and Tally XML exports for approved bills [c23].",
+     "Draft the operator runbook sections."
+    ],
+    "success_criteria": [
+     "The broken change cannot merge with failing checks.",
+     "The fixed change passes all suites.",
+     "Exports contain only approved, issued bills.",
+     "The runbook covers rerun, void and credential rotation."
+    ]
+   },
+   "common_pitfalls": [
+    "Comparing PDF bytes and getting failures from timestamps.",
+    "Exporting drafts to accounts.",
+    "Treating Graph's 202 as proof of delivery [c19].",
+    "Granting application Mail.Send to the whole tenant without restricting mailboxes."
+   ],
+   "knowledge_check": [
+    {
+     "q": "What does a 202 from sendMail mean?",
+     "a": "The request was accepted; processing and delivery are not yet confirmed [c19]."
+    },
+    {
+     "q": "What tells you a Tally import succeeded?",
+     "a": "A response with STATUS 1; failures return 0 with CODE and DESC [c23]."
+    },
+    {
+     "q": "How is a wrong issued bill voided?",
+     "a": "With a credit note referencing the original; the number is kept [c1]."
+    },
+    {
+     "q": "Why compare extracted text in golden PDF tests?",
+     "a": "Raw PDF bytes vary with metadata such as creation time."
+    }
+   ],
+   "slides_and_assets": [
+    "GitHub Actions workflow YAML.",
+    "Golden PDF test helper.",
+    "Tally XML sample voucher [c23].",
+    "Graph sendMail request sample [c19].",
+    "Operator runbook template."
+   ],
+   "sources": [
+    "c1",
+    "c18",
+    "c19",
+    "c23",
+    "c24",
+    "c26"
+   ]
+  },
+  {
+   "day": 3,
+   "title": "Capstone: end-to-end bill creation pipeline",
+   "goal": "Teams wire intake, reconciliation, GST engine, templates and the approval gate into one runnable pipeline, issue the one bill that applies only after approval, and walk the audit trail.",
+   "learning_objectives": [
+    "Learners can run the full pipeline on unseen mails.",
+    "Learners can demonstrate that no bill is numbered or sent without approval.",
+    "Learners can walk the audit trail for one issued bill and state the pipeline's limitations."
+   ],
+   "lessons": [
+    {
+     "title": "Wiring the pipeline",
+     "points": [
+      "Intake, extraction, reconciliation, GST engine, previews, approval, issue, export and dispatch run as one command over the synthetic mailbox.",
+      "Each stage writes to the audit log and can be rerun idempotently.",
+      "Clarification and mismatch queues are worked by a person before approval.",
+      "The without-GST preview is kept but never numbered when the tax invoice applies."
+     ]
+    },
+    {
+     "title": "Acceptance criteria",
+     "points": [
+      "Every issued bill has an approval record with approver identity and package hash.",
+      "Tax figures match finance's hand calculation for a sample [c14].",
+      "Documents carry every required field for their type [c1].",
+      "No duplicate bills and no numbering gaps."
+     ]
+    },
+    {
+     "title": "Audit walk-through and limitations",
+     "points": [
+      "Pick one bill and show every prompt, tool call, approval and the issued hash [c26].",
+      "State the limits: SAC mapping owned by finance, GSTIN status checked by a person, specified service categories not handled, e-invoicing not included unless added [c24].",
+      "State who owns each part after handover.",
+      "Demo to a reviewer panel acting as finance."
+     ]
+    }
+   ],
+   "instructor_demo": [
+    "Show the capstone brief and acceptance checklist.",
+    "Run a short end-to-end pass on two mails as a model.",
+    "Show an audit walk-through the panel will expect.",
+    "Show a good limitations statement."
+   ],
+   "lab": {
+    "brief": "Capstone build and demo.",
+    "steps": [
+     "Receive the unseen capstone mailbox.",
+     "Run intake and work the clarification queue.",
+     "Run reconciliation and resolve mismatches with the reviewer.",
+     "Compute GST and generate paired previews.",
+     "Route packages for approval and issue approved bills.",
+     "Export to CSV or Tally XML and dispatch approved mails.",
+     "Walk the audit trail for one bill.",
+     "Present results, limitations and runbook."
+    ],
+    "success_criteria": [
+     "Zero bills numbered or sent without approval.",
+     "Sample tax figures match the hand calculation.",
+     "Every issued document carries its required fields.",
+     "The audit walk-through is complete and the panel accepts the limitations statement."
+    ]
+   },
+   "common_pitfalls": [
+    "Skipping the clarification queue to finish faster.",
+    "Approving your own team's bills.",
+    "Leaving the without-GST preview numbered by mistake."
+   ],
+   "knowledge_check": [
+    {
+     "q": "What is the capstone's hard pass condition?",
+     "a": "No bill numbered or sent without an approval record."
+    },
+    {
+     "q": "What happens to the preview that does not apply?",
+     "a": "It is retained for the record but never numbered or sent."
+    },
+    {
+     "q": "Name two stated limitations of the pipeline.",
+     "a": "SAC mapping and GSTIN status depend on finance and a person; e-invoicing is not included unless added [c24]."
+    }
+   ],
+   "slides_and_assets": [
+    "Capstone brief and unseen mailbox.",
+    "Acceptance checklist.",
+    "Audit walk-through script.",
+    "Demo schedule."
+   ],
+   "sources": [
+    "c1",
+    "c14",
+    "c24",
+    "c26"
+   ]
+  }
+ ],
+ "capstone_plan": {
+  "brief": "Each team runs the full pipeline on an unseen synthetic mailbox: read the confirmation mails, extract and validate the bill requests, reconcile amounts against the vendor master, compute GST in tested code, draft both the with-GST and without-GST previews, and issue only the document that applies after a person approves, with every step in the audit log.",
+  "milestones": [
+   "Intake run with rejection report and clarification queue worked.",
+   "Reconciliation complete with every mismatch reviewed.",
+   "GST computed and paired previews generated.",
+   "Approvals recorded and applicable bills issued and numbered.",
+   "Exports produced and approved mails dispatched.",
+   "Audit walk-through, limitations statement and runbook presented."
+  ],
+  "evaluation_notes": [
+   "Hard fail if any bill is numbered or sent without an approval record.",
+   "The panel recomputes tax for a sample of bills by hand [c14].",
+   "Each issued document is checked against the field list for its type [c1].",
+   "The sequence is checked for gaps and duplicates.",
+   "The limitations statement must mention e-invoicing applicability and SAC ownership [c24] [c25]."
+  ]
+ },
+ "promo_video_research": {
+  "hook_basis": "The opening (a confirmation mail at ten, a bill needed today, a figure retyped from a spreadsheet and a tax rate picked from memory) is a teaching scenario built from the client's request to read the candidate's mail, check the amount and create a bill with or without GST. The time pressure is realistic because a services invoice issued after supply must be issued within 30 days [c1].",
+  "claims_check": [
+   {
+    "claim": "A candidate's mail. The right bill by noon.",
+    "basis": "Teaching scenario from the client's use case; not a measured turnaround."
+   },
+   {
+    "claim": "9 build steps; 3 days, hands-on",
+    "basis": "Matches the outline: nine modules across three days."
+   },
+   {
+    "claim": "What a compliant invoice carries",
+    "basis": "Rule 46 fields as summarised in the official GST flyer [c1]."
+   },
+   {
+    "claim": "When the company issues with GST and when it issues a bill of supply without it",
+    "basis": "Bill of supply for exempt-only or composition suppliers [c1]; unregistered suppliers below threshold cannot charge GST [c15]."
+   },
+   {
+    "claim": "An MCP server that exposes your mailbox and vendor master as read-only tools",
+    "basis": "MCP tools with schemas [c10]; read-only design is a course decision enforced with hooks [c12]."
+   },
+   {
+    "claim": "The agent reads each mail through the Microsoft Graph API or IMAP, including the PDF attachments",
+    "basis": "Graph list and get message [c2] [c3]; Python imaplib [c20]; Claude PDF support [c6]."
+   },
+   {
+    "claim": "billagent ingest: 20 mails read, 17 bill requests parsed, 3 sent to clarification",
+    "basis": "Illustrative output matching the synthetic mailbox fixture's answer key."
+   },
+   {
+    "claim": "BR-0931 Nimbus Staffing INR 84,000.00 gstin 27AAACN1234F1ZX; recipient 27AABCE5678G1ZF",
+    "basis": "Fictional values. Both have the documented structure: State code 27, a ten-character PAN, entity code and check character [c15]. They pass the mod-36 check routine used in the course's reference validator; that algorithm is not on the official flyer cited, so the routine should be confirmed against GSTINs verified on the GST portal."
+   },
+   {
+    "claim": "supplier state 27 (MH), place of supply 27 (MH) -> intra-state",
+    "basis": "Same State for supplier and place of supply means intra-State [c14]; default B2B place of supply is the registered recipient's location [c14]. Code 27 is Maharashtra in the GST State code list (not stated on the flyers cited)."
+   },
+   {
+    "claim": "SAC 998519 rate 18%  CGST 7,560.00  SGST 7,560.00  IGST 0.00; total with GST 99,120.00",
+    "basis": "Arithmetic is correct (9% of 84,000 is 7,560 each). An advance ruling placed manpower supply under SAC 998519 at 18% [c25], but advance rulings bind only the applicant and secondary sources disagree on the exact SAC for staffing, so the course treats the mapping as finance-owned configuration."
+   },
+   {
+    "claim": "reconcile BR-0933: claimed 61,000.00 agreed 58,000.00 +5.2% MISMATCH",
+    "basis": "Illustrative fixture; 3,000 over 58,000 is 5.17%, shown rounded to 5.2%."
+   },
+   {
+    "claim": "Claude explains the computation to the reviewer. It never performs it.",
+    "basis": "Course design decision; the engine uses Decimal with explicit rounding [c17]."
+   },
+   {
+    "claim": "Hook narration: someone picks a tax rate from memory",
+    "basis": "Teaching scenario; the course replaces it with a versioned SAC and rate table."
+   },
+   {
+    "claim": "Preview diff: reason 'GST not charged: exempt supply (no tax lines)'",
+    "basis": "Illustrative contrast between the two previews. For BR-0931 the supply is taxable, so only the tax invoice may be issued; the bill of supply preview is retained and never numbered, as the cards panel shows [c1]."
+   },
+   {
+    "claim": "invoice number (reserved on approval only); issued INV/26-27/00418",
+    "basis": "Serials must be consecutive and unique per financial year using letters, numerals, '-' and '/' [c1]; the example has 14 characters, within the sixteen-character limit the same guidance gives for credit and debit notes [c1]."
+   },
+   {
+    "claim": "A person approves in ServiceNow or in the review CLI; SNOW RITM0048211",
+    "basis": "Service Catalog order_now returns the request; the RITM is read through the Table API [c21] [c22]. The RITM number is illustrative."
+   },
+   {
+    "claim": "ci: gst-engine 146/146 passed, templates golden 12/12, PR #57 merged",
+    "basis": "Illustrative test counts; the mechanism is pytest with Hypothesis properties [c18] in GitHub Actions."
+   },
+   {
+    "claim": "Pytest covers the GST engine across every rate slab and every state pair",
+    "basis": "Achievable for the slabs and State pairs in the fixture tables; 'every State pair' means every pair in the configured table, not an exhaustive legal test."
+   },
+   {
+    "claim": "export: tally_2026-10-28.xml; approved bills export as CSV or Tally XML",
+    "basis": "TallyPrime XML voucher import format [c23]."
+   },
+   {
+    "claim": "mail sent via Graph API",
+    "basis": "sendMail with Mail.Send; 202 Accepted means accepted, not delivered [c19]."
+   },
+   {
+    "claim": "audit entries: 23; 0 bills issued without approval",
+    "basis": "Illustrative count; zero unapproved issues is the capstone's hard pass condition, a design property rather than a statistic. The append-only log uses SQLite triggers [c26]."
+   },
+   {
+    "claim": "You will feed the agent a mail with a missing GSTIN and watch it refuse to proceed.",
+    "basis": "Lab outcome of the intake module: the request goes to the clarification queue rather than being guessed."
+   }
+  ]
+ },
+ "citations": [
+  {
+   "id": "c1",
+   "title": "GST Tax Invoice and other such instruments in GST (GST flyer)",
+   "url": "https://www.gstcouncil.gov.in/sites/default/files/e-version-gst-flyers/Tax_Invoice_and_other_new.pdf",
+   "publisher": "GST Council / CBIC Directorate General of Taxpayer Services (prepared by NACIN)",
+   "supports": "Workflow, numbering and template modules: tax invoice and bill of supply contents",
+   "key_fact": "No invoice format is prescribed but Rule 46 of the CGST Rules makes fields mandatory, including supplier name, address and GSTIN; a consecutive serial number of letters, numerals, '-' and '/' unique for a financial year; date; recipient name, address and GSTIN; HSN or accounting (SAC) code; description; taxable value; rate and amount of central, State and integrated tax; place of supply with State name for inter-State supplies; whether tax is payable on reverse charge; and signature (not required for electronic invoices under the IT Act). A registered person dealing only in exempted supplies or under composition issues a bill of supply instead; no invoice is needed under Rs 200 subject to conditions; a services invoice issued after supply must be within 30 days; services invoices are prepared in duplicate (ORIGINAL FOR RECIPIENT, DUPLICATE FOR SUPPLIER); credit and debit note serials must not exceed sixteen characters; invoice serial numbers are furnished in GSTR-1.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c2",
+   "title": "List messages - Microsoft Graph v1.0",
+   "url": "https://learn.microsoft.com/en-us/graph/api/user-list-messages?view=graph-rest-1.0",
+   "publisher": "Microsoft Learn",
+   "supports": "Mail intake module: listing messages in the billing mailbox",
+   "key_fact": "GET /me/messages or /users/{id}/messages returns 10 messages per page by default and $top accepts 1 to 1000; follow the whole @odata.nextLink URL and do not extract $skip from it; this operation returns bodies only in HTML; Mail.ReadBasic is least privileged (Mail.ReadBasic.All for application permissions), with Mail.Read and Mail.ReadWrite higher privileged.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c3",
+   "title": "Get message - Microsoft Graph v1.0",
+   "url": "https://learn.microsoft.com/en-us/graph/api/message-get?view=graph-rest-1.0",
+   "publisher": "Microsoft Learn",
+   "supports": "Mail intake module: reading one message as text or MIME",
+   "key_fact": "GET /me/messages/{id} or /users/{id}/messages/{id} returns the message; appending /$value returns the MIME content instead of a message resource; Prefer: outlook.body-content-type=\"text\" returns body and uniqueBody as text; permissions from least to most privileged are Mail.ReadBasic then Mail.Read (Mail.ReadBasic.All, Mail.Read for application).",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c4",
+   "title": "List Gmail messages",
+   "url": "https://developers.google.com/workspace/gmail/api/guides/list-messages",
+   "publisher": "Google for Developers",
+   "supports": "Mail intake module: Gmail alternative for teams on Google Workspace",
+   "key_fact": "messages.list returns message objects containing id and threadId; full details need messages.get; the q parameter takes Gmail search syntax such as from:someuser@example.com is:unread.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c5",
+   "title": "Method: users.messages.attachments.get | Gmail",
+   "url": "https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages.attachments/get",
+   "publisher": "Google for Developers",
+   "supports": "Mail intake module: downloading PDF attachments from Gmail",
+   "key_fact": "GET https://gmail.googleapis.com/gmail/v1/users/{userId}/messages/{messageId}/attachments/{id} with an empty body returns a MessagePartBody; gmail.readonly is one of the accepted scopes.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c6",
+   "title": "PDF support",
+   "url": "https://platform.claude.com/docs/en/build-with-claude/pdf-support",
+   "publisher": "Anthropic (Claude Developer Platform docs)",
+   "supports": "Mail intake module: passing PDF attachments to Claude",
+   "key_fact": "Claude reads text, tables and charts in standard PDFs; the maximum request size is 128 MB on the first-party Claude API (varies by platform), up to 600 pages per request (100 when the context window is under 1M tokens); PDFs must not be password-protected or encrypted; large PDFs can be uploaded with the Files API and referenced by file_id; PDFs are sent as document blocks with media_type application/pdf.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c7",
+   "title": "Structured outputs",
+   "url": "https://platform.claude.com/docs/en/build-with-claude/structured-outputs",
+   "publisher": "Anthropic (Claude Developer Platform docs)",
+   "supports": "Setup and intake modules: schema-constrained BillRequest JSON",
+   "key_fact": "The schema goes in output_config.format with type json_schema; objects must set additionalProperties to false; recursive schemas, numeric constraints and string length constraints are unsupported; a refusal or max_tokens stop can yield output that does not match the schema; the deprecated output_format parameter moved to output_config.format; client.messages.parse() accepts a Pydantic model and returns parsed_output.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c8",
+   "title": "Page.pdf() method | Puppeteer",
+   "url": "https://pptr.dev/api/puppeteer.page.pdf",
+   "publisher": "Puppeteer (pptr.dev)",
+   "supports": "Templates module: rendering HTML bill templates to PDF",
+   "key_fact": "page.pdf() generates a PDF using the print CSS media type and adjusts colours for printing by default; call page.emulateMediaType('screen') first to use screen styling.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c9",
+   "title": "Agent SDK reference - Python",
+   "url": "https://code.claude.com/docs/en/agent-sdk/python",
+   "publisher": "Anthropic (Claude Code docs)",
+   "supports": "Setup module: the billing agent on the Claude Agent SDK",
+   "key_fact": "Install with pip install claude-agent-sdk in a virtual environment; query() runs a new session per call while ClaudeSDKClient reuses a session; ClaudeAgentOptions includes allowed_tools, disallowed_tools, permission_mode, mcp_servers, output_format (json_schema), can_use_tool, hooks, setting_sources and max_turns; @tool and create_sdk_mcp_server() build in-process MCP tools named mcp__<server>__<tool>; can_use_tool is not invoked for calls auto-approved by allowed_tools.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c10",
+   "title": "Tools - Model Context Protocol specification (2025-06-18)",
+   "url": "https://modelcontextprotocol.io/specification/2025-06-18/server/tools",
+   "publisher": "Model Context Protocol",
+   "supports": "Setup module: the read-only billing MCP server",
+   "key_fact": "Tools are listed with tools/list and invoked with tools/call; a tool has name, title, description, inputSchema, optional outputSchema and annotations, and clients must treat annotations as untrusted unless the server is trusted; with an outputSchema servers must return conforming structuredContent; execution errors use isError: true; a human SHOULD be able to deny invocations; servers MUST validate inputs and enforce access control and rate limits; clients SHOULD log tool usage for audit.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c11",
+   "title": "How Claude remembers your project (CLAUDE.md)",
+   "url": "https://code.claude.com/docs/en/memory",
+   "publisher": "Anthropic (Claude Code docs)",
+   "supports": "Setup module: billing conventions in CLAUDE.md",
+   "key_fact": "Project instructions live in ./CLAUDE.md or ./.claude/CLAUDE.md; /init drafts one; @path imports other files; target under 200 lines; .claude/rules/ holds modular rules; CLAUDE.md is context, not enforced configuration, so use a PreToolUse hook to block an action regardless.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c12",
+   "title": "Hooks reference",
+   "url": "https://code.claude.com/docs/en/hooks",
+   "publisher": "Anthropic (Claude Code docs)",
+   "supports": "Setup and guardrails modules: enforcing no-send and no-issue rules",
+   "key_fact": "Hooks are configured under hooks in settings files; a PreToolUse hook blocks a call with exit code 2 or with hookSpecificOutput permissionDecision deny and a reason; MCP tools are matched as mcp__<server>__<tool>, and mcp__memory__.* matches all tools on a server.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c13",
+   "title": "Connect Claude Code to tools via MCP",
+   "url": "https://code.claude.com/docs/en/mcp",
+   "publisher": "Anthropic (Claude Code docs)",
+   "supports": "Setup module: registering the billing MCP server",
+   "key_fact": "claude mcp add [options] <name> -- <command> [args...] adds a stdio server; --env passes variables; --scope local, project (.mcp.json at the project root) or user; project servers need approval in interactive sessions; /mcp shows status; verify you trust each server because servers that fetch external content can expose you to prompt injection.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c14",
+   "title": "Integrated Goods and Services Tax Act (GST flyer, Chapter 21)",
+   "url": "https://www.gstcouncil.gov.in/sites/default/files/e-version-gst-flyers/51_GST_Flyer_Chapter21.pdf",
+   "publisher": "GST Council / CBIC (NACIN GST flyers compilation)",
+   "supports": "GST engine module: intra-State versus inter-State supply and place of supply",
+   "key_fact": "A supply is inter-State where the location of the supplier and the place of supply are in two different States or Union territories, and intra-State where they are in the same State or Union territory; the kind of tax (IGST or CGST plus SGST) depends on that; the IGST rate broadly equals the CGST rate plus the SGST rate; for services other than the specified categories the default B2B place of supply is the location of the registered recipient.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c15",
+   "title": "Registration under GST Law (GST flyer)",
+   "url": "https://gstcouncil.gov.in/sites/default/files/e-version-gst-flyers/Registration_under_GST_Law_new.pdf",
+   "publisher": "GST Council / CBIC Directorate General of Taxpayer Services",
+   "supports": "Vendor master module: GSTIN structure and registration thresholds",
+   "key_fact": "Registration is PAN based and State specific, with one GSTIN per State for a PAN; the 15-digit GSTIN has the State code in the first 2 digits, the PAN in the next 10, two digits for entity code and a final check sum digit; suppliers of services with aggregate turnover below Rs 20 lakh (Rs 10 lakh in specified States) need not register.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c16",
+   "title": "Reverse Charge Mechanism (GST flyer)",
+   "url": "https://gstcouncil.gov.in/sites/default/files/e-version-gst-flyers/Reverse%20charge%20Mechanism.pdf",
+   "publisher": "GST Council / CBIC Directorate General of Taxpayer Services",
+   "supports": "GST engine module: reverse-charge handling",
+   "key_fact": "Under reverse charge the recipient, not the supplier, is liable to pay tax for notified categories under section 9(3) of the CGST Act (section 5(3) IGST Act); every tax invoice must mention whether tax is payable on reverse charge (section 31 read with Rule 46); a supplier cannot take ITC on inputs used for supplies on which the recipient pays tax.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c17",
+   "title": "decimal - Decimal fixed-point and floating-point arithmetic",
+   "url": "https://docs.python.org/3/library/decimal.html",
+   "publisher": "Python Software Foundation",
+   "supports": "GST engine module: exact money arithmetic and rounding",
+   "key_fact": "Decimal represents decimal fractions exactly (0.1 + 0.1 + 0.1 - 0.3 is exactly zero) and is preferred for accounting; quantize() rounds to a fixed exponent with an explicit rounding mode such as ROUND_HALF_UP; the default context uses ROUND_HALF_EVEN.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c18",
+   "title": "Hypothesis quickstart",
+   "url": "https://hypothesis.readthedocs.io/en/latest/quickstart.html",
+   "publisher": "Hypothesis",
+   "supports": "GST engine and testing modules: property-based tests",
+   "key_fact": "@given with strategies such as st.integers() generates inputs (100 by default, configurable with max_examples) and reports a minimal failing example; install with pip install hypothesis.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c19",
+   "title": "user: sendMail - Microsoft Graph v1.0",
+   "url": "https://learn.microsoft.com/en-us/graph/api/user-sendmail?view=graph-rest-1.0",
+   "publisher": "Microsoft Learn",
+   "supports": "Testing, CI and hand-off module: dispatching the approved bill",
+   "key_fact": "POST /me/sendMail or /users/{id}/sendMail sends a JSON or MIME message, can include a fileAttachment, saves to Sent Items unless saveToSentItems is false, needs Mail.Send (delegated or application), and returns 202 Accepted, which does not mean processing or delivery has completed.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c20",
+   "title": "imaplib - IMAP4 protocol client",
+   "url": "https://docs.python.org/3/library/imaplib.html",
+   "publisher": "Python Software Foundation",
+   "supports": "Mail intake module: IMAP alternative to Microsoft Graph",
+   "key_fact": "IMAP4_SSL uses port 993 by default; with the default ssl_context the server certificate and hostname are not verified, so pass ssl.create_default_context(); select(mailbox, readonly=True) prevents modifications; message numbers change after EXPUNGE so UIDs via the uid command are advised; FETCH responses can contain unsolicited data.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c21",
+   "title": "Service Catalog API | ServiceNow",
+   "url": "https://www.servicenow.com/docs/bundle/zurich-api-reference/page/integrate/inbound-rest/concept/c_ServiceCatalogAPI.html",
+   "publisher": "ServiceNow (API reference)",
+   "supports": "Guardrails module: requesting approval through a catalog item",
+   "key_fact": "POST /sn_sc/servicecatalog/items/{sys_id}/order_now orders a catalog item; sysparm_quantity is required, sysparm_requested_for is optional and variables carries the mandatory item variables; the response returns number, request_number, request_id and sys_id of the order request.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c22",
+   "title": "Table API | ServiceNow",
+   "url": "https://www.servicenow.com/docs/bundle/zurich-api-reference/page/integrate/inbound-rest/concept/c_TableAPI.html",
+   "publisher": "ServiceNow (API reference)",
+   "supports": "Guardrails module: reading the requested item and approval state",
+   "key_fact": "The Table API at /api/now/table/{tableName} supports GET, POST, PUT, PATCH and DELETE; the calling user needs roles for the table; sysparm_query filters with encoded queries, sysparm_fields limits fields, sysparm_limit defaults to 10000; sys_id identifies each record.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c23",
+   "title": "XML Integration | TallyPrime Developer",
+   "url": "https://help.tallysolutions.com/xml-integration/",
+   "publisher": "Tally Solutions (TallyPrime help)",
+   "supports": "Testing, CI and hand-off module: Tally XML export",
+   "key_fact": "Enable the HTTP Server under F1 (Help) > Settings > Advanced Configuration (default port 9000) and post XML to it; an import uses an ENVELOPE with HEADER TALLYREQUEST Import Data and BODY IMPORTDATA with REQUESTDESC REPORTNAME Vouchers and REQUESTDATA TALLYMESSAGE holding VOUCHER elements; responses carry STATUS 1 for success or 0 with STATUS.LIST CODE and DESC on failure.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c24",
+   "title": "RSM India Newsflash: Turnover exemption limit for e-invoicing reduced to INR 5 crores w.e.f. 1 August 2023",
+   "url": "https://www.rsm.global/india/sites/default/files/media/documents/5.%20RSM%20India%20Newsflash%20-%20Turnover%20exemption%20limit%20for%20e-invoicing%20reduced%20to%205%20crores%20w.e.f%201%20August%202023.pdf",
+   "publisher": "RSM India (professional advisory newsflash, 12 May 2023)",
+   "supports": "Workflow and limitations: e-invoicing applicability",
+   "key_fact": "CBIC Notification No. 10/2023 - Central Tax dated 10 May 2023 reduced the e-invoicing turnover threshold from INR 10 crores to INR 5 crores with effect from 1 August 2023, after earlier reductions from INR 500 crores (2020) through 100, 50, 20 and 10 crores. Secondary source; the notification itself is on the CBIC site.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c25",
+   "title": "Manpower and labour supply services attract 18% GST: Telangana AAR",
+   "url": "https://www.livelaw.in/amp/news-updates/telangana-authority-of-advance-ruling-aar-gst-itc-manpower-and-labour-supply-services-206279",
+   "publisher": "LiveLaw (report of TSAAR Order No. 38/2022 dated 14.07.2022)",
+   "supports": "GST engine module and promo check: SAC and rate for manpower supply",
+   "key_fact": "The Telangana Authority for Advance Ruling (M/s Sri Bhavani Developers, TSAAR Order No. 38/2022, 14 July 2022) held that manpower or labour supply services provided by a manpower supply agency fall under SAC 998519 and are taxable at 18%. An advance ruling binds only the applicant; secondary report.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c26",
+   "title": "CREATE TRIGGER - SQLite",
+   "url": "https://www.sqlite.org/lang_createtrigger.html",
+   "publisher": "SQLite",
+   "supports": "Guardrails module: append-only audit log and invoice sequence in SQLite",
+   "key_fact": "RAISE(ABORT, msg) inside a trigger terminates the current statement and returns SQLITE_CONSTRAINT with the message; from 3.47.0 the message can be an expression; BEFORE UPDATE or BEFORE DELETE triggers that modify or delete the affected row give undefined results.",
+   "verified": "2026-10-30"
+  },
+  {
+   "id": "c27",
+   "title": "Models - Pydantic Validation",
+   "url": "https://pydantic.dev/docs/validation/latest/concepts/models/",
+   "publisher": "Pydantic",
+   "supports": "Setup and intake modules: BillRequest validation",
+   "key_fact": "model_validate() and model_validate_json() validate dicts and JSON; all failures are raised in one ValidationError; extra='forbid' rejects unknown fields; model_json_schema() returns the JSON Schema.",
+   "verified": "2026-10-30"
+  }
+ ]
+}
